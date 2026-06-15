@@ -1,0 +1,352 @@
+{
+  "version": 1,
+  "last_updated": "2026-06-15T20:28:03.641Z",
+  "agents": {
+    "buffy": {
+      "name": "Buffy (Codebuff)",
+      "description": "Стратегический ассистент — архитектура, API, сложные компоненты, code review"
+    },
+    "mimo": {
+      "name": "MiMo Code Agent",
+      "description": "Исполнительный агент — UI компоненты, страницы, интеграции, установка пакетов"
+    }
+  },
+  "tasks": [
+    {
+      "id": "pdf-generation",
+      "title": "PDF генерация документов",
+      "assignee": "mimo",
+      "status": "done",
+      "priority": 1,
+      "depends_on": [],
+      "description": "html2canvas + jsPDF, DocPreview, generateProposalPdf, generateContractPdf",
+      "completed_at": "2026-06-15T12:00:00.000Z"
+    },
+    {
+      "id": "visual-editor",
+      "title": "Визуальный редактор шаблонов (переделка)",
+      "assignee": "mimo",
+      "status": "done",
+      "priority": 1,
+      "depends_on": [
+        "pdf-generation"
+      ],
+      "description": "A4Page, A4Canvas, BlockEditor, dnd-kit, диалоги, undo/redo, autosave",
+      "completed_at": "2026-06-15T14:00:00.000Z"
+    },
+    {
+      "id": "table-templates",
+      "title": "Шаблоны таблиц",
+      "assignee": "mimo",
+      "status": "done",
+      "priority": 1,
+      "depends_on": [],
+      "description": "API CRUD, редактор, DnD колонок",
+      "completed_at": "2026-06-15T12:30:00.000Z"
+    },
+    {
+      "id": "api-doc-templates",
+      "title": "API document-templates CRUD",
+      "assignee": "buffy",
+      "status": "done",
+      "priority": 1,
+      "depends_on": [],
+      "description": "5 endpoints: GET list, POST, GET/:id, PUT/:id, DELETE/:id",
+      "completed_at": "2026-06-15T13:00:00.000Z"
+    },
+    {
+      "id": "api-table-templates",
+      "title": "API table-templates CRUD",
+      "assignee": "buffy",
+      "status": "done",
+      "priority": 1,
+      "depends_on": [],
+      "description": "5 endpoints: GET list, POST, GET/:id, PUT/:id, DELETE/:id",
+      "completed_at": "2026-06-15T13:00:00.000Z"
+    },
+    {
+      "id": "api-doc-types",
+      "title": "API doc-types",
+      "assignee": "buffy",
+      "status": "done",
+      "priority": 1,
+      "depends_on": [],
+      "description": "GET list endpoint",
+      "completed_at": "2026-06-15T13:00:00.000Z"
+    },
+    {
+      "id": "proposal-showcase",
+      "title": "Proposal Showcase — скидка, НДС, наценка, редактор строк",
+      "assignee": "buffy",
+      "status": "done",
+      "priority": 1,
+      "depends_on": [],
+      "description": "Расчёты, диалоги, финансовая логика",
+      "completed_at": "2026-06-15T15:00:00.000Z"
+    },
+    {
+      "id": "canvas-integration",
+      "title": "A4Canvas → Proposal Showcase (proposal-block-builder.ts)",
+      "assignee": "mimo",
+      "status": "done",
+      "priority": 1,
+      "depends_on": [
+        "visual-editor",
+        "proposal-showcase"
+      ],
+      "description": "Сборщик блоков из шаблона + данные корзины, замена правой панели на A4Canvas",
+      "completed_at": "2026-06-15T16:00:00.000Z"
+    },
+    {
+      "id": "status-api",
+      "title": "API статусов КП (draft→sent→approved→rejected)",
+      "assignee": "mimo",
+      "status": "done",
+      "priority": 2,
+      "depends_on": [],
+      "description": "StatusWorkflow модель, API переходов",
+      "completed_at": "2026-06-15T16:30:00.000Z"
+    },
+    {
+      "id": "pdf-invoice",
+      "title": "Шаблон счёта для PDF",
+      "assignee": "mimo",
+      "status": "done",
+      "priority": 2,
+      "depends_on": [
+        "pdf-generation"
+      ],
+      "description": "Шаблон счёта на основе генератора PDF",
+      "completed_at": "2026-06-15T17:00:00.000Z"
+    },
+    {
+      "id": "user-crud",
+      "title": "CRUD пользователей (User management)",
+      "assignee": "mimo",
+      "status": "done",
+      "priority": 2,
+      "depends_on": [],
+      "description": "Полный CRUD + страницы управления",
+      "completed_at": "2026-06-15T18:00:00.000Z"
+    },
+    {
+      "id": "gantt-chart",
+      "title": "Гантт-чарт (производство)",
+      "assignee": "buffy",
+      "status": "done",
+      "priority": 2,
+      "depends_on": [],
+      "description": "GanttChart компонент, страница /production/gantt, сайдбар",
+      "completed_at": "2026-06-15T19:00:00.000Z"
+    },
+    {
+      "id": "confirm-dialogs",
+      "title": "Confirm-диалоги при удалении",
+      "assignee": "mimo",
+      "status": "done",
+      "priority": 3,
+      "depends_on": [],
+      "description": "Добавить confirm-dialog на все страницы администрирования",
+      "completed_at": "2026-06-15T20:28:03.621Z"
+    },
+    {
+      "id": "breadcrumbs",
+      "title": "Breadcrumbs навигация",
+      "assignee": "mimo",
+      "status": "done",
+      "priority": 3,
+      "depends_on": [],
+      "description": "Хлебные крошки на всех страницах",
+      "completed_at": "2026-06-15T20:28:03.623Z"
+    },
+    {
+      "id": "finance-module",
+      "title": "Финансовый модуль — OrderClosing, ReconciliationAct, FinancialReport",
+      "assignee": "buffy",
+      "status": "in_progress",
+      "priority": 1,
+      "depends_on": [],
+      "description": "Создать страницы: /finance/order-closings, /finance/reconciliation, /finance/reports с CrudPage таблицами и базовыми формами.",
+      "started_at": "2026-06-15T20:22:56.042Z"
+    },
+    {
+      "id": "warehouse-module",
+      "title": "Склад (дашборд, заявки, заказы поставщикам)",
+      "assignee": "buffy",
+      "status": "pending",
+      "priority": 3,
+      "depends_on": [],
+      "description": "Warehouse dashboard, PurchaseRequest, SupplierOrder — страницы и API"
+    },
+    {
+      "id": "user-view-page",
+      "title": "Страница просмотра пользователя",
+      "assignee": "mimo",
+      "status": "pending",
+      "priority": 3,
+      "depends_on": [
+        "user-crud"
+      ],
+      "description": "Страница /admin/users/[id] — просмотр деталей пользователя"
+    },
+    {
+      "id": "error-boundaries",
+      "title": "Глобальный ErrorBoundary + кастомный fallback UI",
+      "assignee": "mimo",
+      "status": "done",
+      "priority": 1,
+      "depends_on": [],
+      "description": "Создать ErrorBoundary React-компонент, обернуть dashboard layout, кастомный fallback с кнопкой \"Попробовать снова\" и иконкой",
+      "completed_at": "2026-06-15T21:30:00.000Z"
+    },
+    {
+      "id": "dashboard-charts",
+      "title": "Дашборд — графики и аналитика (recharts)",
+      "assignee": "mimo",
+      "status": "done",
+      "priority": 1,
+      "depends_on": [],
+      "description": "Установить recharts. Добавить на дашборд: график доходов за месяц, круговую диаграмму статусов заказов, активность по неделям, топ-5 товаров. Данные через API эндпоинты.",
+      "completed_at": "2026-06-15T21:35:00.000Z"
+    },
+    {
+      "id": "login-redesign",
+      "title": "Редизайн страницы логина — премиум уровень",
+      "assignee": "mimo",
+      "status": "done",
+      "priority": 1,
+      "depends_on": [],
+      "description": "Анимированный градиентный фон, логотип с glow эффектом, плавные переходы состояний, секция KeyFeatures под формой (3 карточки: безопасность, скорость, аналитика)",
+      "completed_at": "2026-06-15T21:40:00.000Z"
+    },
+    {
+      "id": "page-transitions",
+      "title": "Анимация переходов между страницами",
+      "assignee": "mimo",
+      "status": "done",
+      "priority": 2,
+      "depends_on": [],
+      "description": "Добавить animate-fadeIn на все page.tsx. Создать PageTransition компонент-обёртку. Единый стиль появления контента.",
+      "completed_at": "2026-06-15T21:45:00.000Z"
+    },
+    {
+      "id": "empty-states",
+      "title": "Кастомные empty states для всех списков",
+      "assignee": "mimo",
+      "status": "done",
+      "priority": 2,
+      "depends_on": [],
+      "description": "Для каждой страницы списка: большая иконка, описание, кнопка действия (Создать первый...). Убрать стандартное \"Ничего не найдено\".",
+      "completed_at": "2026-06-15T22:00:00.000Z"
+    },
+    {
+      "id": "form-select-fix",
+      "title": "Заменить ID inputs на выпадающие списки в формах",
+      "assignee": "mimo",
+      "status": "pending",
+      "priority": 2,
+      "depends_on": [],
+      "description": "ProposalForm: clientId, organizationId на <select> с данными из API. ProductionOrderForm: workTypeId, workCenterId на <select>."
+    },
+    {
+      "id": "theme-toggle",
+      "title": "Переключатель тёмной/светлой темы в топбаре",
+      "assignee": "mimo",
+      "status": "done",
+      "priority": 2,
+      "depends_on": [],
+      "description": "Добавить кнопку Sun/Moon в топбар. Использовать useThemeStore. Плавный transition на body.",
+      "completed_at": "2026-06-15T21:50:00.000Z"
+    },
+    {
+      "id": "crud-statuses",
+      "title": "CRUD статусов",
+      "assignee": "mimo",
+      "status": "done",
+      "priority": 2,
+      "depends_on": [],
+      "description": "StatusWorkflow CRUD",
+      "completed_at": "2026-06-15T20:28:03.623Z"
+    },
+    {
+      "id": "crud-certificates",
+      "title": "CRUD сертификатов",
+      "assignee": "mimo",
+      "status": "done",
+      "priority": 2,
+      "depends_on": [],
+      "description": "Certificates CRUD",
+      "completed_at": "2026-06-15T20:28:03.623Z"
+    },
+    {
+      "id": "crud-rpp",
+      "title": "CRUD РПП",
+      "assignee": "mimo",
+      "status": "done",
+      "priority": 2,
+      "depends_on": [],
+      "description": "RPP entries CRUD",
+      "completed_at": "2026-06-15T20:28:03.623Z"
+    },
+    {
+      "id": "crud-cad",
+      "title": "CRUD CAD-файлов",
+      "assignee": "mimo",
+      "status": "done",
+      "priority": 2,
+      "depends_on": [],
+      "description": "InventorFiles CRUD",
+      "completed_at": "2026-06-15T20:28:03.623Z"
+    },
+    {
+      "id": "admin-dashboard",
+      "title": "Админ-дашборд",
+      "assignee": "mimo",
+      "status": "done",
+      "priority": 2,
+      "depends_on": [],
+      "description": "Статистика и сводка для админа",
+      "completed_at": "2026-06-15T20:28:03.623Z"
+    }
+  ],
+  "signals": [
+    {
+      "id": "sig-001",
+      "from": "buffy",
+      "to": "mimo",
+      "type": "info",
+      "message": "Гантт-чарт готов. Я начинаю Финансовый модуль. Бери confirm-dialogs или breadcrumbs.",
+      "created_at": "2026-06-15T19:00:00.000Z",
+      "acknowledged": true,
+      "acknowledged_at": "2026-06-15T20:25:06.802Z"
+    },
+    {
+      "id": "sig-002",
+      "from": "buffy",
+      "to": "mimo",
+      "type": "protocol",
+      "message": "Создана новая система коммуникации: agent-queue.json + agent-cli.js + AGENT-PROTOCOL.md. Прочти AGENT-PROTOCOL.md перед продолжением работы.",
+      "created_at": "2026-06-15T19:00:00.000Z",
+      "acknowledged": true,
+      "acknowledged_at": "2026-06-15T20:25:06.802Z"
+    },
+    {
+      "id": "sig-003",
+      "from": "buffy",
+      "to": "mimo",
+      "type": "info",
+      "message": "НОВЫЕ ЗАДАЧИ: error-boundaries (P1), dashboard-charts (P1), login-redesign (P1), page-transitions (P2), empty-states (P2), form-select-fix (P2), theme-toggle (P2). Приоритет: ErrorBoundary → Дашборд → Логин. После них: confirm-dialogs, breadcrumbs. Прочти AGENT-PROTOCOL.md!",
+      "created_at": "2026-06-15T20:25:06.802Z",
+      "acknowledged": false
+    },
+    {
+      "id": "sig-004",
+      "from": "buffy",
+      "to": "mimo",
+      "type": "info",
+      "message": "Отличная работа по confirm-dialogs, breadcrumbs, CRUDам и админ-дашборду! Я обновил agent-queue.json с твоими завершёнными задачами. Теперь бери error-boundaries (P1) — самый важный архитектурный элемент. После него dashboard-charts (P1) и login-redesign (P1). Используй: node agent-cli.js mimo take error-boundaries",
+      "created_at": "2026-06-15T20:28:03.640Z",
+      "acknowledged": false
+    }
+  ]
+}

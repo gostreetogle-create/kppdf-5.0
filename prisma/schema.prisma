@@ -1,0 +1,659 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+// ========================================
+// AUTH
+// ========================================
+
+model User {
+  id          String   @id @default(cuid())
+  username    String   @unique
+  password    String
+  displayName String
+  email       String?
+  phone       String?
+  role        String   @default("viewer") // admin | manager | production | storekeeper | accountant | viewer
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([username])
+  @@index([role])
+}
+
+// ========================================
+// REFERENCE DATA
+// ========================================
+
+model Organization {
+  id               String   @id @default(cuid())
+  name             String
+  shortName        String   @default("")
+  legalForm        String   @default("")
+  inn              String   @default("")
+  kpp              String   @default("")
+  ogrn             String   @default("")
+  phone            String   @default("")
+  email            String   @default("")
+  legalAddress     String   @default("")
+  postalAddress    String   @default("")
+  bankName         String   @default("")
+  bankBik          String   @default("")
+  bankAccount      String   @default("")
+  signerName       String   @default("")
+  signerPosition   String   @default("")
+  contactPerson    String   @default("")
+  paymentTermDays  Int      @default(0)
+  vatRate          Float    @default(20)
+  isActive         Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  roles            OrgRole[]
+  clients          Client[]
+  proposals        Proposal[]
+  contracts        Contract[]
+
+  @@index([name])
+  @@index([inn])
+}
+
+model OrgRole {
+  id             String       @id @default(cuid())
+  name           String
+  slug           String       @unique
+  description    String       @default("")
+  isActive       Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  organizations  Organization[]
+
+  @@index([slug])
+}
+
+model Client {
+  id                    String    @id @default(cuid())
+  lastName              String
+  firstName             String
+  patronymic            String?
+  phone                 String
+  email                 String?
+  inn                   String?
+  address               String?
+  personalMarkupPercent Float?
+  notes                 String?
+  isActive              Boolean   @default(true)
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  organizationId        String?
+  organization          Organization? @relation(fields: [organizationId], references: [id])
+
+  proposals             Proposal[]
+  contracts             Contract[]
+
+  @@index([lastName])
+  @@index([phone])
+}
+
+// ========================================
+// PRODUCTS
+// ========================================
+
+model ProductCategory {
+  id          String   @id @default(cuid())
+  name        String
+  prefix      String   @default("")
+  description String?
+  sortOrder   Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  products    Product[]
+
+  @@index([prefix])
+}
+
+model Product {
+  id                    String   @id @default(cuid())
+  sku                   String   @unique
+  name                  String
+  description           String?
+  productType           String   @default("purchased") // purchased | manufactured
+  basePrice             Float    @default(0)
+  defaultMarkupPercent  Float    @default(0)
+  unit                  String   @default("шт")
+  weightKg              Float?
+  dimensions            String?
+  material              String?
+  hasPassport           Boolean  @default(false)
+  hasDrawing            Boolean  @default(false)
+  isActive              Boolean  @default(true)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  categoryId            String?
+  category              ProductCategory? @relation(fields: [categoryId], references: [id])
+
+  photos                ProductPhoto[]
+  components            ProductComponent[]
+  cartItems             CartItem[]
+  proposalItems         ProposalItem[]
+  storageItems          StorageItem[]
+
+  @@index([sku])
+  @@index([name])
+  @@index([categoryId])
+}
+
+model ProductPhoto {
+  id        String   @id @default(cuid())
+  url       String
+  caption   String?
+  isMain    Boolean  @default(false)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+}
+
+model ProductComponent {
+  id        String @id @default(cuid())
+  name      String
+  material  String?
+  quantity  Float  @default(1)
+  unit      String @default("шт")
+  workTypeId String?
+
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+}
+
+// ========================================
+// CART & PROPOSALS
+// ========================================
+
+model CartItem {
+  id              String @id @default(cuid())
+  quantity        Int    @default(1)
+  priceSnapshot   Float
+  markupPercent   Float?
+
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+
+  sessionId String
+  session   CartSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+}
+
+model CartSession {
+  id        String     @id @default(cuid())
+  createdAt DateTime   @default(now())
+  items     CartItem[]
+}
+
+model Proposal {
+  id           String   @id @default(cuid())
+  number       String   @unique
+  title        String
+  status       String   @default("draft") // draft | sent | accepted | rejected | converted
+  clientId     String?
+  client       Client?  @relation(fields: [clientId], references: [id])
+  organizationId String?
+  organization Organization? @relation(fields: [organizationId], references: [id])
+  markupPercent Float    @default(0)
+  notes        String?
+  validUntil   DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  items        ProposalItem[]
+  contract     Contract?
+
+  @@index([number])
+  @@index([status])
+}
+
+model ProposalItem {
+  id              String   @id @default(cuid())
+  quantity        Int      @default(1)
+  unitPrice       Float
+  markupPercent   Float    @default(0)
+  total           Float    @default(0)
+  sortOrder       Int      @default(0)
+
+  productId String?
+  product   Product? @relation(fields: [productId], references: [id])
+
+  proposalId String
+  proposal   Proposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+
+  @@index([proposalId])
+}
+
+// ========================================
+// CONTRACTS
+// ========================================
+
+model Contract {
+  id           String   @id @default(cuid())
+  number       String   @unique
+  title        String
+  status       String   @default("draft") // draft | active | completed | cancelled
+  clientId     String?
+  client       Client?  @relation(fields: [clientId], references: [id])
+  organizationId String?
+  organization Organization? @relation(fields: [organizationId], references: [id])
+  proposalId   String?  @unique
+  proposal     Proposal? @relation(fields: [proposalId], references: [id])
+  totalAmount  Float    @default(0)
+  signedAt     DateTime?
+  expiresAt    DateTime?
+  notes        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  items        ContractItem[]
+
+  @@index([number])
+  @@index([status])
+}
+
+model ContractItem {
+  id            String   @id @default(cuid())
+  name          String
+  quantity      Int      @default(1)
+  unit          String   @default("шт")
+  unitPrice     Float
+  total         Float    @default(0)
+  sortOrder     Int      @default(0)
+
+  contractId String
+  contract   Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+
+  @@index([contractId])
+}
+
+// ========================================
+// PRODUCTION
+// ========================================
+
+model WorkType {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  hourlyRate  Float    @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  orders      ProductionOrder[]
+  tasks       OrderTask[]
+}
+
+model WorkCenter {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  capacity    Int      @default(1)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  orders      ProductionOrder[]
+}
+
+model Worker {
+  id          String   @id @default(cuid())
+  firstName   String
+  lastName    String
+  phone       String?
+  role        String   @default("worker")
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tasks       OrderTask[]
+}
+
+model ProductionOrder {
+  id          String   @id @default(cuid())
+  number      String   @unique
+  title       String
+  status      String   @default("planned") // planned | in_progress | completed | cancelled
+  priority    Int      @default(0)
+  plannedStart DateTime?
+  plannedEnd   DateTime?
+  actualStart  DateTime?
+  actualEnd    DateTime?
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  workTypeId  String?
+  workType    WorkType? @relation(fields: [workTypeId], references: [id])
+  workCenterId String?
+  workCenter   WorkCenter? @relation(fields: [workCenterId], references: [id])
+
+  tasks       OrderTask[]
+
+  @@index([number])
+  @@index([status])
+}
+
+model OrderTask {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  status      String   @default("pending") // pending | in_progress | completed | blocked
+  estimatedHours Float?
+  actualHours Float?
+  plannedStart DateTime?
+  plannedEnd   DateTime?
+  actualStart  DateTime?
+  actualEnd    DateTime?
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  orderId     String
+  order       ProductionOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  workTypeId  String?
+  workType    WorkType? @relation(fields: [workTypeId], references: [id])
+
+  workerId    String?
+  worker      Worker? @relation(fields: [workerId], references: [id])
+
+  @@index([orderId])
+  @@index([status])
+  @@index([workerId])
+}
+
+// ========================================
+// WAREHOUSE
+// ========================================
+
+model Warehouse {
+  id          String   @id @default(cuid())
+  name        String
+  address     String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  storageItems StorageItem[]
+}
+
+model StorageItem {
+  id          String   @id @default(cuid())
+  quantity    Int      @default(0)
+  reservedQty Int      @default(0)
+  minQuantity Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  warehouseId String
+  warehouse   Warehouse @relation(fields: [warehouseId], references: [id])
+
+  productId String?
+  product   Product? @relation(fields: [productId], references: [id])
+
+  @@unique([warehouseId, productId])
+}
+
+model PurchaseRequest {
+  id          String   @id @default(cuid())
+  number      String   @unique
+  title       String
+  status      String   @default("draft") // draft | approved | ordered | received | cancelled
+  totalAmount Float    @default(0)
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  items       PurchaseRequestItem[]
+}
+
+model PurchaseRequestItem {
+  id          String @id @default(cuid())
+  name        String
+  quantity    Int
+  unit        String @default("шт")
+  unitPrice   Float  @default(0)
+  total       Float  @default(0)
+
+  requestId String
+  request   PurchaseRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+}
+
+model SupplierOrder {
+  id              String   @id @default(cuid())
+  number          String   @unique
+  title           String
+  status          String   @default("draft") // draft | confirmed | shipped | delivered | cancelled
+  supplierId      String?
+  totalAmount     Float    @default(0)
+  deliveryDate    DateTime?
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  items           SupplierOrderItem[]
+}
+
+model SupplierOrderItem {
+  id          String @id @default(cuid())
+  name        String
+  quantity    Int
+  unit        String @default("шт")
+  unitPrice   Float  @default(0)
+  total       Float  @default(0)
+
+  orderId String
+  order   SupplierOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+}
+
+model IncomingInvoice {
+  id           String   @id @default(cuid())
+  number       String   @unique
+  supplierId   String?
+  totalAmount  Float    @default(0)
+  status       String   @default("draft") // draft | paid | overdue
+  invoiceDate  DateTime @default(now())
+  dueDate      DateTime?
+  notes        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+// ========================================
+// FINANCE
+// ========================================
+
+model OrderClosing {
+  id           String   @id @default(cuid())
+  number       String   @unique
+  orderId      String?
+  closingType  String   @default("full") // full | partial
+  totalAmount  Float    @default(0)
+  status       String   @default("draft") // draft | approved | completed
+  notes        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model ReconciliationAct {
+  id            String   @id @default(cuid())
+  number        String   @unique
+  organizationId String?
+  periodStart   DateTime
+  periodEnd     DateTime
+  totalDebit    Float    @default(0)
+  totalCredit   Float    @default(0)
+  status        String   @default("draft") // draft | signed
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model FinancialReport {
+  id          String   @id @default(cuid())
+  number      String   @unique
+  reportType  String   @default("monthly") // monthly | quarterly | yearly
+  periodStart DateTime
+  periodEnd   DateTime
+  totalIncome Float    @default(0)
+  totalExpense Float   @default(0)
+  netProfit   Float    @default(0)
+  status      String   @default("draft") // draft | published
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// ========================================
+// ADMIN
+// ========================================
+
+model Tender {
+  id           String   @id @default(cuid())
+  number       String   @unique
+  title        String
+  status       String   @default("draft") // draft | submitted | won | lost | cancelled
+  customerName String?
+  totalAmount  Float    @default(0)
+  deadline     DateTime?
+  notes        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model DocType {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  templates   DocumentTemplate[]
+
+  @@index([slug])
+}
+
+model DocumentTemplate {
+  id               String   @id @default(cuid())
+  name             String
+  description      String?
+  pageSize         String   @default("A4")
+  backgroundOpacity Float   @default(1)
+  isDefault        Boolean  @default(false)
+  organizationId   String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  docTypeId String?
+  docType   DocType? @relation(fields: [docTypeId], references: [id])
+
+  blocks     TemplateBlock[]
+}
+
+model TemplateBlock {
+  id           String   @id @default(cuid())
+  type         String   // text | table | separator
+  order        Int      @default(0)
+  title        String?
+  content      String?
+  height       Int?
+  showLine     Boolean  @default(false)
+  settings     String?  // JSON string for flexible settings
+
+  templateId String
+  template   DocumentTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@index([templateId])
+}
+
+model TableTemplate {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  columns     String?  // JSON string for flexible column config
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model StatusWorkflow {
+  id          String   @id @default(cuid())
+  name        String
+  entity      String
+  fromStatus  String
+  toStatus    String
+  roles       String   @default("admin")
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([entity, fromStatus])
+}
+
+model RppEntry {
+  id          String   @id @default(cuid())
+  number      String   @unique
+  title       String
+  status      String   @default("draft")
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Certificate {
+  id          String   @id @default(cuid())
+  number      String   @unique
+  title       String
+  issuer      String?
+  issuedAt    DateTime?
+  expiresAt   DateTime?
+  status      String   @default("active") // active | expired | revoked
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model InventorFile {
+  id          String   @id @default(cuid())
+  filename    String
+  fileType    String   @default("dwg") // dwg | dxf | pdf
+  fileSize    Int?
+  url         String?
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model FeatureFlag {
+  id              String   @id @default(cuid())
+  key             String   @unique
+  label           String
+  description     String?
+  enabledByDefault Boolean @default(true)
+  category        String   @default("general")
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([key])
+}

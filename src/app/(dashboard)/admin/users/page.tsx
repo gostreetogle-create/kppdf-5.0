@@ -1,0 +1,334 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { Plus, Search, Edit, Trash2, UserCheck, UserX } from 'lucide-react';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { EmptyState } from '@/components/ui/empty-state';
+
+interface User {
+  id: string;
+  username: string;
+  displayName: string;
+  email: string | null;
+  phone: string | null;
+  role: string;
+  isActive: boolean;
+  createdAt: string;
+}
+
+const ROLE_LABELS: Record<string, string> = {
+  admin: 'Администратор',
+  manager: 'Менеджер',
+  production: 'Производство',
+  storekeeper: 'Кладовщик',
+  accountant: 'Бухгалтер',
+  viewer: 'Наблюдатель',
+};
+
+const ROLE_COLORS: Record<string, string> = {
+  admin: 'bg-red-100 text-red-700',
+  manager: 'bg-blue-100 text-blue-700',
+  production: 'bg-orange-100 text-orange-700',
+  storekeeper: 'bg-green-100 text-green-700',
+  accountant: 'bg-purple-100 text-purple-700',
+  viewer: 'bg-gray-100 text-gray-600',
+};
+
+export default function UsersPage() {
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [showDialog, setShowDialog] = useState(false);
+  const [editUser, setEditUser] = useState<User | null>(null);
+  const [form, setForm] = useState({ username: '', password: '', displayName: '', email: '', phone: '', role: 'viewer' });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+
+  const loadUsers = async () => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams({ limit: '100' });
+      if (search) params.set('search', search);
+      const res = await fetch(`/api/users?${params}`);
+      const data = await res.json();
+      if (data.success) setUsers(data.data.items || []);
+    } catch (e) {
+      console.error('Load users error:', e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { loadUsers(); }, [search]);
+
+  const openCreate = () => {
+    setEditUser(null);
+    setForm({ username: '', password: '', displayName: '', email: '', phone: '', role: 'viewer' });
+    setError('');
+    setShowDialog(true);
+  };
+
+  const openEdit = (user: User) => {
+    setEditUser(user);
+    setForm({ username: user.username, password: '', displayName: user.displayName, email: user.email || '', phone: user.phone || '', role: user.role });
+    setError('');
+    setShowDialog(true);
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    setError('');
+    try {
+      if (editUser) {
+        const body: Record<string, string> = {};
+        if (form.displayName) body.displayName = form.displayName;
+        if (form.email) body.email = form.email;
+        if (form.phone) body.phone = form.phone;
+        if (form.role) body.role = form.role;
+        if (form.password) body.password = form.password;
+        const res = await fetch(`/api/users/${editUser.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        const data = await res.json();
+        if (!data.success) { setError(data.message); return; }
+      } else {
+        if (!form.username || !form.password) { setError('Логин и пароль обязательны'); return; }
+        const res = await fetch('/api/users', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(form),
+        });
+        const data = await res.json();
+        if (!data.success) { setError(data.message); return; }
+      }
+      setShowDialog(false);
+      loadUsers();
+    } catch (e) {
+      setError('Ошибка сети');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    try {
+      await fetch(`/api/users/${deleteTarget}`, { method: 'DELETE' });
+      setDeleteTarget(null);
+      loadUsers();
+    } catch (e) {
+      console.error('Delete user error:', e);
+    }
+  };
+
+  const toggleActive = async (user: User) => {
+    try {
+      await fetch(`/api/users/${user.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isActive: !user.isActive }),
+      });
+      loadUsers();
+    } catch (e) {
+      console.error('Toggle active error:', e);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-[var(--foreground)]">Пользователи</h1>
+          <p className="text-sm text-[var(--muted-foreground)] mt-1">Управление учётными записями</p>
+        </div>
+        <button
+          onClick={openCreate}
+          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-[var(--primary)] text-[var(--primary-foreground)] text-sm font-medium hover:opacity-90 transition-all shadow-sm"
+        >
+          <Plus className="h-4 w-4" />
+          Добавить
+        </button>
+      </div>
+
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--muted-foreground)]" />
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Поиск по логину, имени или email..."
+          className="w-full h-10 pl-9 pr-3 rounded-lg border border-[var(--input)] bg-[var(--background)] text-sm text-[var(--foreground)] placeholder:text-[var(--muted-foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)]"
+        />
+      </div>
+
+      <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl shadow-sm overflow-hidden">
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="h-6 w-6 animate-spin rounded-full border-2 border-[var(--primary)] border-t-transparent" />
+          </div>
+        ) : users.length === 0 ? (
+          <EmptyState
+            title="Нет пользователей"
+            description="Добавьте первого пользователя для начала работы"
+            actionLabel="Добавить"
+            onAction={openCreate}
+          />
+        ) : (
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-[var(--border)] bg-[var(--muted)]/30">
+                <th className="text-left px-4 py-3 font-medium text-[var(--muted-foreground)]">Логин</th>
+                <th className="text-left px-4 py-3 font-medium text-[var(--muted-foreground)]">Имя</th>
+                <th className="text-left px-4 py-3 font-medium text-[var(--muted-foreground)]">Email</th>
+                <th className="text-left px-4 py-3 font-medium text-[var(--muted-foreground)]">Роль</th>
+                <th className="text-center px-4 py-3 font-medium text-[var(--muted-foreground)]">Статус</th>
+                <th className="text-right px-4 py-3 font-medium text-[var(--muted-foreground)]">Действия</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[var(--border)]">
+              {users.map((user) => (
+                <tr key={user.id} className="hover:bg-[var(--muted)]/20 transition-colors">
+                  <td className="px-4 py-3 font-medium text-[var(--foreground)]">{user.username}</td>
+                  <td className="px-4 py-3 text-[var(--foreground)]">{user.displayName}</td>
+                  <td className="px-4 py-3 text-[var(--muted-foreground)]">{user.email || '—'}</td>
+                  <td className="px-4 py-3">
+                    <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${ROLE_COLORS[user.role] || 'bg-gray-100 text-gray-600'}`}>
+                      {ROLE_LABELS[user.role] || user.role}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${user.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                      {user.isActive ? 'Активен' : 'Заблокирован'}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center justify-end gap-1">
+                      <button
+                        onClick={() => toggleActive(user)}
+                        className="p-1.5 rounded-lg hover:bg-[var(--muted)] transition-colors"
+                        title={user.isActive ? 'Заблокировать' : 'Активировать'}
+                      >
+                        {user.isActive ? <UserX className="h-4 w-4 text-[var(--muted-foreground)]" /> : <UserCheck className="h-4 w-4 text-[var(--success)]" />}
+                      </button>
+                      <button
+                        onClick={() => openEdit(user)}
+                        className="p-1.5 rounded-lg hover:bg-[var(--muted)] transition-colors"
+                        title="Редактировать"
+                      >
+                        <Edit className="h-4 w-4 text-[var(--muted-foreground)]" />
+                      </button>
+                      <button
+                        onClick={() => setDeleteTarget(user.id)}
+                        className="p-1.5 rounded-lg hover:bg-[var(--destructive)]/10 transition-colors"
+                        title="Удалить"
+                      >
+                        <Trash2 className="h-4 w-4 text-[var(--destructive)]" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      {showDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={() => setShowDialog(false)}>
+          <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl shadow-xl p-6 w-full max-w-md mx-4" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold mb-4">{editUser ? 'Редактировать' : 'Добавить'} пользователя</h3>
+            {error && <div className="mb-3 p-2 rounded-lg bg-[var(--destructive)]/10 text-[var(--destructive)] text-sm">{error}</div>}
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs font-medium text-[var(--muted-foreground)]">Логин *</label>
+                <input
+                  type="text"
+                  value={form.username}
+                  onChange={(e) => setForm({ ...form, username: e.target.value })}
+                  disabled={!!editUser}
+                  className="w-full h-9 px-3 mt-1 rounded-lg border border-[var(--input)] bg-[var(--background)] text-sm disabled:opacity-50"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-[var(--muted-foreground)]">{editUser ? 'Новый пароль' : 'Пароль *'}</label>
+                <input
+                  type="password"
+                  value={form.password}
+                  onChange={(e) => setForm({ ...form, password: e.target.value })}
+                  placeholder={editUser ? 'Оставьте пустым, чтобы не менять' : ''}
+                  className="w-full h-9 px-3 mt-1 rounded-lg border border-[var(--input)] bg-[var(--background)] text-sm"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-[var(--muted-foreground)]">Отображаемое имя</label>
+                <input
+                  type="text"
+                  value={form.displayName}
+                  onChange={(e) => setForm({ ...form, displayName: e.target.value })}
+                  className="w-full h-9 px-3 mt-1 rounded-lg border border-[var(--input)] bg-[var(--background)] text-sm"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-[var(--muted-foreground)]">Email</label>
+                <input
+                  type="email"
+                  value={form.email}
+                  onChange={(e) => setForm({ ...form, email: e.target.value })}
+                  className="w-full h-9 px-3 mt-1 rounded-lg border border-[var(--input)] bg-[var(--background)] text-sm"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-[var(--muted-foreground)]">Телефон</label>
+                <input
+                  type="tel"
+                  value={form.phone}
+                  onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                  className="w-full h-9 px-3 mt-1 rounded-lg border border-[var(--input)] bg-[var(--background)] text-sm"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-[var(--muted-foreground)]">Роль</label>
+                <select
+                  value={form.role}
+                  onChange={(e) => setForm({ ...form, role: e.target.value })}
+                  className="w-full h-9 px-3 mt-1 rounded-lg border border-[var(--input)] bg-[var(--background)] text-sm appearance-none"
+                >
+                  {Object.entries(ROLE_LABELS).map(([key, label]) => (
+                    <option key={key} value={key}>{label}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 mt-6">
+              <button
+                onClick={() => setShowDialog(false)}
+                className="px-4 py-2 rounded-lg border border-[var(--border)] text-sm hover:bg-[var(--muted)] transition-colors"
+              >
+                Отмена
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                className="px-4 py-2 rounded-lg bg-[var(--primary)] text-[var(--primary-foreground)] text-sm font-medium hover:opacity-90 disabled:opacity-50"
+              >
+                {saving ? 'Сохранение...' : 'Сохранить'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        title="Удалить пользователя?"
+        message="Это действие нельзя отменить. Пользователь будет удалён навсегда."
+        confirmLabel="Удалить"
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
+    </div>
+  );
+}
