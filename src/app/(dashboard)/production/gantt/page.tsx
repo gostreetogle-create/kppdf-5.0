@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { GanttChart, type GanttItem } from '@/components/ui/gantt-chart';
+import { GanttChart, type GanttItem, type GanttItemUpdate } from '@/components/ui/gantt-chart';
 import { BarChart3, RefreshCw, X, Calendar, Clock, User, MapPin, FileText } from 'lucide-react';
 
 const STATUS_LABELS: Record<string, string> = {
@@ -80,6 +80,32 @@ export default function GanttPage() {
     setSelectedItem(item);
   }, []);
 
+  const handleItemUpdate = useCallback(async (update: GanttItemUpdate) => {
+    const apiPath = update.type === 'order' ? '/api/production-orders' : '/api/order-tasks';
+    const body = {
+      plannedStart: update.startDate,
+      plannedEnd: update.endDate,
+    };
+    try {
+      await fetch(`${apiPath}/${update.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      // Update local state optimistically (already done via drag, just sync)
+      setItems(prev => prev.map(i => {
+        if (i.id === update.id) {
+          return { ...i, startDate: update.startDate, endDate: update.endDate };
+        }
+        return i;
+      }));
+    } catch (err) {
+      console.error('Failed to update item dates:', err);
+      // Reload on error to reset
+      loadData();
+    }
+  }, [loadData]);
+
   const formatDate = (d: string) => {
     try {
       return new Date(d).toLocaleDateString('ru-RU', { day: '2-digit', month: 'long', year: 'numeric' });
@@ -122,6 +148,7 @@ export default function GanttPage() {
         items={items}
         loading={loading}
         onItemClick={handleItemClick}
+        onItemUpdate={handleItemUpdate}
       />
 
       {/* Detail dialog */}

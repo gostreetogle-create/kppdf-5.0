@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Calendar, LayoutList, LayoutGrid, Users, Filter, X } from 'lucide-react';
 
 export interface GanttItem {
@@ -21,10 +21,18 @@ export interface GanttItem {
   notes?: string;
 }
 
+export interface GanttItemUpdate {
+  id: string;
+  type: 'order' | 'task';
+  startDate: string;
+  endDate: string;
+}
+
 interface GanttChartProps {
   items: GanttItem[];
   loading?: boolean;
   onItemClick?: (item: GanttItem) => void;
+  onItemUpdate?: (update: GanttItemUpdate) => void;
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -49,21 +57,41 @@ const STATUS_LABELS: Record<string, string> = {
 
 const PRIORITY_COLORS = ['#94a3b8', '#60a5fa', '#fbbf24', '#f97316', '#ef4444'];
 const MS_IN_DAY = 86400000;
+const HANDLE_WIDTH = 6;
+const MIN_BAR_WIDTH = 4;
 
 type ZoomPreset = 'day' | 'week' | 'month';
 const ZOOM_SCALES: Record<ZoomPreset, number> = { day: 1, week: 0.4, month: 0.15 };
+
+type DragMode = 'move' | 'resize-left' | 'resize-right';
+
+interface DragState {
+  itemId: string;
+  mode: DragMode;
+  startMouseX: number;
+  originalStartMs: number;
+  originalEndMs: number;
+  currentDeltaDays: number;
+}
 
 function isWeekend(date: Date): boolean {
   const d = date.getDay();
   return d === 0 || d === 6;
 }
 
-export function GanttChart({ items, loading = false, onItemClick }: GanttChartProps) {
+function toISODate(ms: number): string {
+  return new Date(ms).toISOString().split('T')[0] + 'T00:00:00.000Z';
+}
+
+export function GanttChart({ items, loading = false, onItemClick, onItemUpdate }: GanttChartProps) {
   const [zoom, setZoom] = useState<ZoomPreset>('week');
   const scale = ZOOM_SCALES[zoom];
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [typeFilter, setTypeFilter] = useState<string>('');
   const [workerFilter, setWorkerFilter] = useState<string>('');
+  const [drag, setDrag] = useState<DragState | null>(null);
+  const hasMoved = useRef(false);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const filtered = useMemo(() => {
     return items.filter(i => {
@@ -111,7 +139,6 @@ export function GanttChart({ items, loading = false, onItemClick }: GanttChartPr
     return { grouped: g, standalone };
   }, [filtered]);
 
-  // Worker workload summary
   const workload = useMemo(() => {
     const map = new Map<string, { count: number; inProgress: number }>();
     filtered.forEach(i => {
@@ -139,18 +166,118 @@ export function GanttChart({ items, loading = false, onItemClick }: GanttChartPr
   const formatDateFull = (d: Date) => d.toLocaleDateString('ru-RU', { day: '2-digit', month: 'long', year: 'numeric' });
   const formatDateShort = (d: Date) => d.toLocaleDateString('ru-RU', { day: '2-digit', month: 'short' });
 
-  const getBarStyle = (startStr: string, endStr: string) => {
-    const start = new Date(startStr);
-    const end = new Date(endStr);
-    const left = ((start.getTime() - startDate.getTime()) / MS_IN_DAY) * dayWidth;
-    const width = Math.max(((end.getTime() - start.getTime()) / MS_IN_DAY) * dayWidth, dayWidth * 0.5);
+  const getBarStyle = (startStr: string, endStr: string, dragItem?: DragState | null) => {
+    let startMs = new Date(startStr).getTime();
+    let endMs = new Date(endStr).getTime();
+
+    // Apply drag delta if this is the dragged item
+    if (dragItem) {
+      const deltaMs = dragItem.currentDeltaDays * MS_IN_DAY;
+      if (dragItem.mode === 'move') {
+        startMs = dragItem.originalStartMs + deltaMs;
+        endMs = dragItem.originalEndMs + deltaMs;
+      } else if (dragItem.mode === 'resize-left') {
+        startMs = dragItem.originalStartMs + deltaMs;
+        // Keep end fixed
+      } else if (dragItem.mode === 'resize-right') {
+        endMs = dragItem.originalEndMs + deltaMs;
+        // Keep start fixed
+      }
+    }
+
+    const left = ((startMs - startDate.getTime()) / MS_IN_DAY) * dayWidth;
+    const width = Math.max(((endMs - startMs) / MS_IN_DAY) * dayWidth, MIN_BAR_WIDTH);
     return { left: `${left}px`, width: `${width}px` };
+  };
+
+  const applyDragForItem = (item: GanttItem): DragState | null => {
+    if (drag && drag.itemId === item.id) return drag;
+    return null;
   };
 
   const todayLeft = useMemo(() => {
     if (today < startDate || today > endDate) return null;
     return ((today.getTime() - startDate.getTime()) / MS_IN_DAY) * dayWidth;
   }, [today, startDate, dayWidth]);
+
+  // ── Drag handlers ──────────────────────────────────────────
+
+  const getContainerScrollLeft = (): number => {
+    const el = containerRef.current?.querySelector('.gantt-timeline') as HTMLElement | null;
+    return el?.scrollLeft ?? 0;
+  };
+
+  const startDrag = useCallback((item: GanttItem, mode: DragMode, clientX: number) => {
+    hasMoved.current = false;
+    setDrag({
+      itemId: item.id,
+      mode,
+      startMouseX: clientX,
+      originalStartMs: new Date(item.startDate).getTime(),
+      originalEndMs: new Date(item.endDate).getTime(),
+      currentDeltaDays: 0,
+    });
+  }, []);
+
+  // Handle pointer events at document level for cross-element drag
+  useEffect(() => {
+    if (!drag) return;
+    const handleMove = (e: PointerEvent) => {
+      const deltaPx = e.clientX - drag.startMouseX;
+      const deltaDays = Math.round(deltaPx / dayWidth);
+      if (Math.abs(deltaDays) > 0) hasMoved.current = true;
+      setDrag(prev => prev ? { ...prev, currentDeltaDays: deltaDays } : null);
+    };
+    const handleUp = () => {
+      if (!drag || !onItemUpdate) { setDrag(null); return; }
+      const item = items.find(i => i.id === drag.itemId);
+      if (!item) { setDrag(null); return; }
+
+      const deltaMs = drag.currentDeltaDays * MS_IN_DAY;
+      let newStartMs = drag.originalStartMs;
+      let newEndMs = drag.originalEndMs;
+
+      if (drag.mode === 'move') {
+        newStartMs = drag.originalStartMs + deltaMs;
+        newEndMs = drag.originalEndMs + deltaMs;
+      } else if (drag.mode === 'resize-left') {
+        newStartMs = drag.originalStartMs + deltaMs;
+      } else if (drag.mode === 'resize-right') {
+        newEndMs = drag.originalEndMs + deltaMs;
+      }
+
+      if (newEndMs - newStartMs < MS_IN_DAY) {
+        if (drag.mode === 'resize-left') {
+          newStartMs = newEndMs - MS_IN_DAY;
+        } else {
+          newEndMs = newStartMs + MS_IN_DAY;
+        }
+      }
+
+      if (newStartMs !== drag.originalStartMs || newEndMs !== drag.originalEndMs) {
+        onItemUpdate({
+          id: item.id,
+          type: item.type,
+          startDate: toISODate(newStartMs),
+          endDate: toISODate(newEndMs),
+        });
+      }
+
+      setDrag(null);
+    };
+
+    document.addEventListener('pointermove', handleMove);
+    document.addEventListener('pointerup', handleUp);
+    return () => {
+      document.removeEventListener('pointermove', handleMove);
+      document.removeEventListener('pointerup', handleUp);
+    };
+  }, [drag, items, onItemUpdate, dayWidth]);
+
+  // Cancel drag on zoom change
+  useEffect(() => {
+    setDrag(null);
+  }, [zoom]);
 
   const renderMonthHeaders = () => {
     const headers: { label: string; width: number; start: number }[] = [];
@@ -190,7 +317,7 @@ export function GanttChart({ items, loading = false, onItemClick }: GanttChartPr
   const dayHeaders = renderDayHeaders();
 
   const handleScroll = (direction: number) => {
-    const container = document.querySelector('.gantt-timeline') as HTMLElement | null;
+    const container = containerRef.current?.querySelector('.gantt-timeline') as HTMLElement | null;
     if (container) {
       container.scrollBy({ left: direction * dayWidth * (zoom === 'day' ? 3 : zoom === 'week' ? 7 : 30), behavior: 'smooth' });
     }
@@ -201,7 +328,6 @@ export function GanttChart({ items, loading = false, onItemClick }: GanttChartPr
     return PRIORITY_COLORS[p];
   };
 
-  // Weekend columns (memoized)
   const weekendCols = useMemo(() => {
     if (zoom === 'month') return [];
     const cols: { left: number; width: number }[] = [];
@@ -225,9 +351,8 @@ export function GanttChart({ items, loading = false, onItemClick }: GanttChartPr
     return cols;
   }, [startDate, endDate, dayWidth, zoom]);
 
-  // Scroll to today
   const scrollToToday = useCallback(() => {
-    const container = document.querySelector('.gantt-timeline') as HTMLElement | null;
+    const container = containerRef.current?.querySelector('.gantt-timeline') as HTMLElement | null;
     if (container && todayLeft !== null) {
       container.scrollTo({ left: Math.max(0, todayLeft - 200), behavior: 'smooth' });
     }
@@ -236,7 +361,9 @@ export function GanttChart({ items, loading = false, onItemClick }: GanttChartPr
   const renderBar = (item: GanttItem, rowH = 36) => {
     const start = new Date(item.startDate);
     const end = new Date(item.endDate);
-    const barStyle = getBarStyle(item.startDate, item.endDate);
+    const dragItem = applyDragForItem(item);
+    const isDragging = !!dragItem;
+    const barStyle = getBarStyle(item.startDate, item.endDate, dragItem);
     const statusColor = STATUS_COLORS[item.status] || '#94a3b8';
     const priorityColor = getPriorityColor(item);
     const progress = item.progress || 0;
@@ -247,30 +374,61 @@ export function GanttChart({ items, loading = false, onItemClick }: GanttChartPr
       <div key={item.id} className="relative" style={{ height: `${rowH}px` }}>
         {/* Planned bar */}
         <div
-          className="absolute top-1/2 -translate-y-[60%] rounded cursor-pointer transition-all hover:brightness-110 hover:shadow-md flex items-center overflow-hidden"
+          className={`absolute top-1/2 -translate-y-[60%] rounded flex items-center overflow-hidden select-none ${
+            isDragging ? 'shadow-lg opacity-70' : 'hover:brightness-110 hover:shadow-md cursor-grab active:cursor-grabbing'
+          } ${onItemClick ? 'cursor-pointer' : ''}`}
           style={{
             ...barStyle,
-            minWidth: '4px',
+            minWidth: `${MIN_BAR_WIDTH}px`,
             height: hasActual ? '14px' : '20px',
             backgroundColor: statusColor,
             borderLeft: `3px solid ${priorityColor}`,
-            opacity: hasActual ? 0.7 : 0.9,
+            opacity: hasActual && !isDragging ? 0.7 : isDragging ? 0.65 : 0.9,
           }}
-          onClick={() => onItemClick?.(item)}
-          title={`${item.title} (план): ${formatDateFull(start)} → ${formatDateFull(end)}`}
+          onClick={(e) => {
+            if (!drag && !hasMoved.current) onItemClick?.(item);
+          }}
+          onPointerDown={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            startDrag(item, 'move', e.clientX);
+          }}
+          title={`${item.title} (план): ${formatDateFull(start)} → ${formatDateFull(end)}${isDragging ? ' — перетаскивание' : ''}`}
         >
+          {/* Resize handle: left edge */}
+          <div
+            className="absolute left-0 top-0 bottom-0 cursor-col-resize hover:bg-white/30 transition-colors z-20"
+            style={{ width: `${HANDLE_WIDTH}px` }}
+            onPointerDown={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              startDrag(item, 'resize-left', e.clientX);
+            }}
+          />
+
           {/* Progress fill */}
           {progress > 0 && (
             <div
-              className="absolute inset-0 bg-white/25 rounded-r"
+              className="absolute inset-0 bg-white/25 rounded-r pointer-events-none"
               style={{ width: `${progress}%` }}
             />
           )}
           {barStyle.width && parseFloat(barStyle.width) > 60 && (
-            <span className="text-[10px] text-white font-medium px-1.5 truncate w-full relative z-10" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.3)' }}>
+            <span className="text-[10px] text-white font-medium px-1.5 truncate w-full relative z-10 pointer-events-none" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.3)' }}>
               {item.title} {progress > 0 ? `${progress}%` : ''}
             </span>
           )}
+
+          {/* Resize handle: right edge */}
+          <div
+            className="absolute right-0 top-0 bottom-0 cursor-col-resize hover:bg-white/30 transition-colors z-20"
+            style={{ width: `${HANDLE_WIDTH}px` }}
+            onPointerDown={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              startDrag(item, 'resize-right', e.clientX);
+            }}
+          />
         </div>
 
         {/* Actual bar (if dates differ from planned) */}
@@ -287,6 +445,23 @@ export function GanttChart({ items, loading = false, onItemClick }: GanttChartPr
             title={`${item.title} (факт): ${formatDateFull(new Date(item.actualStart!))} → ${formatDateFull(new Date(item.actualEnd!))}`}
           />
         )}
+
+        {/* Drag delta tooltip */}
+        {isDragging && (
+          <div
+            className="absolute top-0 -translate-y-full mb-1 left-0 bg-[var(--card)] border border-[var(--border)] rounded-md px-2 py-1 text-[10px] font-medium text-[var(--foreground)] shadow-lg z-50 whitespace-nowrap pointer-events-none"
+            style={{ marginLeft: '8px' }}
+          >
+            {dragItem.mode === 'resize-left' ? 'Начало:' : dragItem.mode === 'resize-right' ? 'Окончание:' : ''}
+            {dragItem.mode !== 'move' ? ' ' : ''}
+            {dragItem.currentDeltaDays > 0 ? '+' : ''}{dragItem.currentDeltaDays} дн.
+            {dragItem.mode === 'move' && (
+              <>
+                {' '}&rarr; {formatDateShort(new Date(dragItem.originalStartMs + dragItem.currentDeltaDays * MS_IN_DAY))}
+              </>
+            )}
+          </div>
+        )}
       </div>
     );
   };
@@ -302,7 +477,7 @@ export function GanttChart({ items, loading = false, onItemClick }: GanttChartPr
   const hasFilters = statusFilter || typeFilter || workerFilter;
 
   return (
-    <div className="flex gap-4">
+    <div className="flex gap-4" ref={containerRef}>
       {/* Main chart */}
       <div className="flex-1 min-w-0 bg-[var(--card)] border border-[var(--border)] rounded-xl overflow-hidden shadow-sm">
         {/* Toolbar */}
@@ -413,7 +588,6 @@ export function GanttChart({ items, loading = false, onItemClick }: GanttChartPr
                 <div className="h-10 border-b border-[var(--border)] px-4 flex items-center bg-[var(--muted)]/20">
                   <span className="text-xs font-semibold text-[var(--muted-foreground)] uppercase tracking-wider">Название</span>
                 </div>
-                {/* Day header spacer — matches timeline day/week header row */}
                 {dayHeaders && (
                   <div className="h-7 border-b border-[var(--border)] bg-[var(--muted)]/10" />
                 )}
@@ -488,7 +662,7 @@ export function GanttChart({ items, loading = false, onItemClick }: GanttChartPr
                 )}
 
                 {/* Timeline rows */}
-                <div className="relative">
+                <div className="relative" style={{ minHeight: '100px' }}>
                   {/* Weekend columns */}
                   {weekendCols.map((c, i) => (
                     <div
@@ -529,6 +703,7 @@ export function GanttChart({ items, loading = false, onItemClick }: GanttChartPr
           <span>·</span>
           <span>Масштаб: {zoom === 'day' ? 'День' : zoom === 'week' ? 'Неделя' : 'Месяц'}</span>
           {hasFilters && <span className="ml-auto text-[var(--primary)]">Фильтры активны</span>}
+          {onItemUpdate && <span className="ml-auto text-[10px] text-[var(--primary)]">🖱 Перетаскивайте полосы для изменения сроков</span>}
         </div>
       </div>
 
