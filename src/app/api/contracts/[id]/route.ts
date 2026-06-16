@@ -23,6 +23,10 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     await requireAuth();
     const { id } = await params;
     const body = await request.json();
+    if (body.number) {
+      const existing = await prisma.contract.findUnique({ where: { number: body.number } });
+      if (existing && existing.id !== id) return apiError(`Документ с номером ${body.number} уже существует`, 400);
+    }
     const item = await prisma.contract.update({ where: { id }, data: body, include });
     return apiOk(item);
   } catch (error) {

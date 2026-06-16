@@ -40,6 +40,10 @@ export async function POST(request: NextRequest) {
   try {
     await requireAuth();
     const body = await request.json();
+    if (body.number) {
+      const existing = await prisma.supplierOrder.findUnique({ where: { number: body.number } });
+      if (existing) return apiError(`Документ с номером ${body.number} уже существует`, 400);
+    }
     const { items, ...data } = body;
 
     const item = await prisma.supplierOrder.create({

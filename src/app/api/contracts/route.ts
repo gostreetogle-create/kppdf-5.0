@@ -42,6 +42,8 @@ export async function POST(request: NextRequest) {
     await requireAuth();
     const body = await request.json();
     const number = body.number || await nextContractNumber();
+    const existing = await prisma.contract.findUnique({ where: { number } });
+    if (existing) return apiError(`Документ с номером ${number} уже существует`, 400);
     const item = await prisma.contract.create({
       data: { ...body, number },
       include: { items: true, client: true, organization: true },

@@ -48,15 +48,17 @@ export async function POST(request: NextRequest) {
         isDefault: !!isDefault,
         organizationId: organizationId || null,
         blocks: blocks ? {
-          create: blocks.map((b: Record<string, unknown>, i: number) => ({
-            type: String(b.type || 'text'),
-            order: i,
-            title: b.title ? String(b.title) : null,
-            content: b.content ? String(b.content) : null,
-            height: typeof b.height === 'number' ? b.height : null,
-            showLine: !!b.showLine,
-            settings: b.settings ? JSON.stringify(b.settings) : null,
-          })),
+          create: (Array.isArray(blocks) ? blocks : (blocks.create || [])).map(
+            (b: Record<string, unknown>, i: number) => ({
+              type: String(b.type || 'text'),
+              order: i,
+              title: b.title ? String(b.title) : null,
+              content: b.content ? String(b.content) : null,
+              height: typeof b.height === 'number' ? b.height : null,
+              showLine: !!b.showLine,
+              settings: b.settings ? JSON.stringify(b.settings) : null,
+            })
+          ),
         } : undefined,
       },
       include: { docType: true, blocks: { orderBy: { order: 'asc' } } },

@@ -21,6 +21,10 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     await requireAuth();
     const { id } = await params;
     const body = await request.json();
+    if (body.number) {
+      const existing = await prisma.tender.findUnique({ where: { number: body.number } });
+      if (existing && existing.id !== id) return apiError(`Документ с номером ${body.number} уже существует`, 400);
+    }
     const item = await prisma.tender.update({ where: { id }, data: body });
     return apiOk(item);
   } catch (error) {
