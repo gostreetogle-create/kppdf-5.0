@@ -235,6 +235,7 @@ model Proposal {
 
   items        ProposalItem[]
   contract     Contract?
+  productionOrders ProductionOrder[]
 
   @@index([number])
   @@index([status])
@@ -280,6 +281,7 @@ model Contract {
   updatedAt    DateTime @updatedAt
 
   items        ContractItem[]
+  productionOrders ProductionOrder[]
 
   @@index([number])
   @@index([status])
@@ -361,10 +363,18 @@ model ProductionOrder {
   workCenterId String?
   workCenter   WorkCenter? @relation(fields: [workCenterId], references: [id])
 
+  // Связи с документами-источниками
+  contractId  String?
+  contract    Contract? @relation(fields: [contractId], references: [id])
+  proposalId  String?
+  proposal    Proposal? @relation(fields: [proposalId], references: [id])
+
   tasks       OrderTask[]
 
   @@index([number])
   @@index([status])
+  @@index([contractId])
+  @@index([proposalId])
 }
 
 model OrderTask {

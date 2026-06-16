@@ -158,7 +158,7 @@ export function formatDateShort(dateStr: string | Date): string {
 
 // ─── PDF Generation ──────────────────────────────────────────────────────────
 
-const MARGIN = 20;
+const MARGIN = 4;
 const PAGE_W = 210;
 
 /** Сгенерировать PDF для КП */

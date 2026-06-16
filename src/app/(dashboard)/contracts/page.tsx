@@ -95,7 +95,7 @@ function ContractForm({ item, onClose }: { item: Contract | null; onClose: () =>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium text-[var(--foreground)] mb-1">Номер</label>
-          <input type="text" value={form.number} onChange={(e) => setForm({ ...form, number: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-[var(--input)] bg-[var(--background)] text-[var(--foreground)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ring)]" required />
+          <input type="text" value={form.number} onChange={(e) => setForm({ ...form, number: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-[var(--input)] bg-[var(--background)] text-[var(--foreground)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ring)]" required readOnly={!!item} placeholder={item ? undefined : 'Д-XXXX (авто)'} />
         </div>
         <div>
           <label className="block text-sm font-medium text-[var(--foreground)] mb-1">Название</label>

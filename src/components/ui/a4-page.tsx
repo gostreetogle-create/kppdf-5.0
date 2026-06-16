@@ -30,12 +30,12 @@ export const A4Page = forwardRef<HTMLDivElement, A4PageProps>(
           style={{
             width: '210mm',
             minHeight: '297mm',
-            padding: '20mm',
+            padding: '4mm',
           }}
         >
           {backgroundImage && (
             <div
-              className="absolute inset-0 bg-cover bg-center pointer-events-none"
+              className="absolute inset-0 bg-cover bg-center pointer-events-none z-0"
               style={{
                 backgroundImage: `url(${backgroundImage})`,
                 opacity: backgroundOpacity,
@@ -43,7 +43,7 @@ export const A4Page = forwardRef<HTMLDivElement, A4PageProps>(
             />
           )}
 
-          <div className="relative z-10">
+          <div className="relative z-10 w-full">
             {children}
           </div>
 

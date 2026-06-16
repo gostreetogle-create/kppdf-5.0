@@ -3,7 +3,7 @@
 :root {
   --background: #fefaf2;
   --foreground: #2d2318;
-  --primary: #b8860b;
+  --primary: #b87333;
   --primary-foreground: #ffffff;
   --secondary: #f5ede0;
   --secondary-foreground: #2d2318;
@@ -11,7 +11,7 @@
   --card-foreground: #2d2318;
   --border: #e8dcc8;
   --input: #e8dcc8;
-  --ring: #c8882a;
+  --ring: #b87333;
   --muted: #f8f2e8;
   --muted-foreground: #8b7355;
   --destructive: #c0392b;
@@ -48,7 +48,7 @@
 [data-theme="dark"] {
   --background: #1a1510;
   --foreground: #e8dcc8;
-  --primary: #daa520;
+  --primary: #c8963e;
   --primary-foreground: #1a1510;
   --secondary: #2d2318;
   --secondary-foreground: #e8dcc8;
@@ -56,7 +56,7 @@
   --card-foreground: #e8dcc8;
   --border: #3d3020;
   --input: #3d3020;
-  --ring: #daa520;
+  --ring: #c8963e;
   --muted: #2d2318;
   --muted-foreground: #a08c70;
   --destructive: #e74c3c;

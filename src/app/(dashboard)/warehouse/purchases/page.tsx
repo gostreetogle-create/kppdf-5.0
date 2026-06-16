@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { CrudPage } from '@/components/crud-page';
 
 interface PurchaseRequest {
@@ -40,6 +40,15 @@ function PurchaseRequestForm({ item, onClose }: { item: PurchaseRequest | null; 
   });
   const [saving, setSaving] = useState(false);
 
+  // Авто-генерация номера при создании
+  useEffect(() => {
+    if (!item && !form.number) {
+      const year = new Date().getFullYear();
+      const num = String(Math.floor(Math.random() * 9999) + 1).padStart(4, '0');
+      setForm(f => f.number ? f : { ...f, number: `ЗАК-${year}-${num}` });
+    }
+  }, [item]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
@@ -67,7 +76,7 @@ function PurchaseRequestForm({ item, onClose }: { item: PurchaseRequest | null; 
       <div className="space-y-4">
         <div>
           <label className="block text-sm font-medium text-[var(--foreground)] mb-1">Номер</label>
-          <input type="text" value={form.number} onChange={(e) => setForm({ ...form, number: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-[var(--input)] bg-[var(--background)] text-[var(--foreground)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ring)]" required />
+          <input type="text" value={form.number} onChange={(e) => setForm({ ...form, number: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-[var(--input)] bg-[var(--background)] text-[var(--foreground)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ring)]" required readOnly={!!item} placeholder={item ? undefined : 'Авто-генерация...'} />
         </div>
         <div>
           <label className="block text-sm font-medium text-[var(--foreground)] mb-1">Название</label>

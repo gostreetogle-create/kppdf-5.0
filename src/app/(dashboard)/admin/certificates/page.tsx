@@ -52,9 +52,11 @@ export default function CertificatesPage() {
 
   const openCreate = () => {
     setEditItem(null);
-    setForm({ number: '', title: '', issuer: '', issuedAt: '', expiresAt: '', status: 'active' });
     setError('');
     setShowDialog(true);
+    const year = new Date().getFullYear();
+    const num = String(Math.floor(Math.random() * 9999) + 1).padStart(4, '0');
+    setForm({ number: `СЕРТ-${year}-${num}`, title: '', issuer: '', issuedAt: '', expiresAt: '', status: 'active' });
   };
 
   const openEdit = (item: Certificate) => {
@@ -179,7 +181,7 @@ export default function CertificatesPage() {
             <div className="space-y-3">
               <div>
                 <label className="text-xs font-medium text-[var(--muted-foreground)]">Номер *</label>
-                <input type="text" value={form.number} onChange={(e) => setForm({ ...form, number: e.target.value })} className="w-full h-9 px-3 mt-1 rounded-lg border border-[var(--input)] bg-[var(--background)] text-sm" />
+                <input type="text" value={form.number} onChange={(e) => setForm({ ...form, number: e.target.value })} className="w-full h-9 px-3 mt-1 rounded-lg border border-[var(--input)] bg-[var(--background)] text-sm" readOnly={!!editItem} placeholder={editItem ? undefined : 'Авто-генерация...'} />
               </div>
               <div>
                 <label className="text-xs font-medium text-[var(--muted-foreground)]">Название *</label>

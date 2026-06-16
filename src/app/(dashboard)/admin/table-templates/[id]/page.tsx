@@ -2,7 +2,10 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Save, Plus, Trash2, ChevronUp, ChevronDown, EyeOff, Eye, Settings2, Lock, Unlock, Bold, Italic } from 'lucide-react';
+import { ArrowLeft, Save, Plus, Trash2, ChevronLeft, ChevronRight, GripVertical, EyeOff, Eye, Settings2, Lock, Unlock, Bold, Italic } from 'lucide-react';
+import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
+import { SortableContext, useSortable, horizontalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import {
   DATA_SOURCES,
   getDataSourceOptions,
@@ -67,6 +70,302 @@ function migrateV5toV4(cols: any[]): TableTemplateColumnV4[] {
   }));
 }
 
+// ── Sortable chip wrapper ──────────────────────────────────────────
+function SortableColumnChip({
+  col,
+  index,
+  columns,
+  isEditing,
+  onToggleEdit,
+  onMoveLeft,
+  onMoveRight,
+  onDelete,
+  onUpdate,
+}: {
+  col: TableTemplateColumnV4;
+  index: number;
+  columns: TableTemplateColumnV4[];
+  isEditing: boolean;
+  onToggleEdit: () => void;
+  onMoveLeft: () => void;
+  onMoveRight: () => void;
+  onDelete: () => void;
+  onUpdate: (patch: Partial<TableTemplateColumnV4>) => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: col.id });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.4 : 1,
+    zIndex: isDragging ? 50 : undefined,
+    position: 'relative' as const,
+  };
+
+  const isVisible = col.visible !== false;
+  const sourceColor = SOURCE_COLORS[col.tableName] || 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300';
+  const typeIcon = FIELD_TYPE_ICONS[col.type || 'text'] || 'Aa';
+
+  return (
+    <div ref={setNodeRef} style={style} className="group flex-shrink-0">
+      {/* Drag grip — left side, visible on hover */}
+      <button
+        {...attributes}
+        {...listeners}
+        className="absolute -left-8 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 cursor-grab active:cursor-grabbing p-1.5 rounded-lg hover:bg-[var(--muted)] transition-all z-10"
+        title="Перетащить"
+      >
+        <GripVertical size={14} className="text-[var(--muted-foreground)]" />
+      </button>
+
+      {/* Column chip */}
+      <div
+        onClick={onToggleEdit}
+        role="button"
+        tabIndex={0}
+        className={`relative flex items-center gap-2 h-12 px-4 rounded-xl border-2 transition-all duration-150 cursor-pointer ${
+          isEditing
+            ? 'border-[var(--primary)] bg-[var(--primary)]/5 shadow-md'
+            : isVisible
+              ? 'border-[var(--border)] bg-[var(--card)] hover:border-[var(--muted-foreground)]/30 hover:shadow-sm'
+              : 'border-dashed border-[var(--border)] bg-[var(--muted)]/30 opacity-60'
+        }`}
+      >
+        {/* Order badge */}
+        <span className="flex items-center justify-center w-5 h-5 rounded-md bg-[var(--muted)] text-[10px] font-bold text-[var(--muted-foreground)] flex-shrink-0">
+          {index + 1}
+        </span>
+
+        {/* Type hint */}
+        <span className="text-[10px] font-mono text-[var(--muted-foreground)] opacity-60 w-4 text-center flex-shrink-0">
+          {typeIcon}
+        </span>
+
+        {/* Label */}
+        <span className="text-sm font-medium text-[var(--foreground)] truncate max-w-[120px]">
+          {col.label || col.fieldName}
+        </span>
+
+        {/* Source badge */}
+        <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-md flex-shrink-0 ${sourceColor}`}>
+          {DATA_SOURCES[col.tableName]?.label?.slice(0, 8) || col.tableName.slice(0, 8)}
+        </span>
+
+        {/* Width hint */}
+        {col.width && (
+          <span className="text-[10px] text-[var(--muted-foreground)] opacity-50 font-mono hidden sm:inline flex-shrink-0">
+            {col.width}
+          </span>
+        )}
+
+        {/* Visibility icon */}
+        {!isVisible && (
+          <EyeOff size={12} className="text-[var(--muted-foreground)] flex-shrink-0" />
+        )}
+
+        {/* Edit indicator */}
+        {isEditing && (
+          <span className="absolute -top-1.5 -right-1.5 w-3 h-3 rounded-full bg-[var(--primary)] border-2 border-[var(--card)] animate-scale-in" />
+        )}
+
+        {/* Quick move arrows (hover, inline at right) — keep as fallback */}
+        <div className="hidden group-hover:flex items-center gap-0.5 ml-1">
+          <button
+            onClick={(e) => { e.stopPropagation(); onMoveLeft(); }}
+            className="w-6 h-6 flex items-center justify-center rounded-md hover:bg-[var(--muted)] transition-colors"
+            title="Переместить влево"
+            disabled={index === 0}
+          >
+            <ChevronLeft size={14} className="text-[var(--muted-foreground)]" />
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); onMoveRight(); }}
+            className="w-6 h-6 flex items-center justify-center rounded-md hover:bg-[var(--muted)] transition-colors"
+            title="Переместить вправо"
+            disabled={index === columns.length - 1}
+          >
+            <ChevronRight size={14} className="text-[var(--muted-foreground)]" />
+          </button>
+        </div>
+      </div>
+
+      {/* Editing popover */}
+      {isEditing && (
+        <>
+          <div className="fixed inset-0 z-10" onClick={onToggleEdit} />
+          <div className="fixed left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 z-20 w-[360px] bg-[var(--card)] rounded-2xl border border-[var(--border)] shadow-xl p-5 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-semibold text-[var(--foreground)] flex items-center gap-2">
+                <Settings2 size={14} />
+                Колонка #{index + 1}
+              </h3>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => onUpdate({ visible: !isVisible })}
+                  className={`p-1.5 rounded-lg transition-colors ${isVisible ? 'text-[var(--muted-foreground)] hover:bg-[var(--muted)]' : 'text-[var(--primary)] bg-[var(--primary)]/10'}`}
+                  title={isVisible ? 'Скрыть' : 'Показать'}
+                >
+                  {isVisible ? <Eye size={14} /> : <EyeOff size={14} />}
+                </button>
+                <button
+                  onClick={onDelete}
+                  className="p-1.5 rounded-lg text-[var(--muted-foreground)] hover:bg-red-50 hover:text-red-500 transition-colors"
+                  title="Удалить колонку"
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              {/* Source */}
+              <div>
+                <label className="block text-[10px] font-semibold text-[var(--muted-foreground)] uppercase tracking-wider mb-1">Источник</label>
+                <select
+                  value={col.tableName}
+                  onChange={(e) => {
+                    const fields = getFieldOptions(e.target.value);
+                    const first = fields[0];
+                    onUpdate({
+                      tableName: e.target.value,
+                      fieldName: first?.value || '',
+                      label: first?.label || '',
+                      type: (first?.type || 'text') as 'text' | 'number' | 'date' | 'currency',
+                      align: (first?.align || 'left') as 'left' | 'center' | 'right',
+                    });
+                  }}
+                  className="w-full h-9 px-3 rounded-xl border border-[var(--input)] bg-[var(--background)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ring)] appearance-none cursor-pointer"
+                >
+                  {getDataSourceOptions().map(s => (
+                    <option key={s.value} value={s.value}>{s.label}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Field */}
+              <div>
+                <label className="block text-[10px] font-semibold text-[var(--muted-foreground)] uppercase tracking-wider mb-1">Поле</label>
+                <select
+                  value={col.fieldName}
+                  onChange={(e) => {
+                    const fieldOptions = getFieldOptions(col.tableName);
+                    const fi = fieldOptions.find(f => f.value === e.target.value);
+                    const label = getFieldLabel(col.tableName, e.target.value);
+                    onUpdate({
+                      fieldName: e.target.value,
+                      label,
+                      type: (fi?.type || 'text') as 'text' | 'number' | 'date' | 'currency',
+                      align: (fi?.align || 'left') as 'left' | 'center' | 'right',
+                    });
+                  }}
+                  className="w-full h-9 px-3 rounded-xl border border-[var(--input)] bg-[var(--background)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ring)] appearance-none cursor-pointer"
+                >
+                  {getFieldOptions(col.tableName).map(f => (
+                    <option key={f.value} value={f.value}>{f.label}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Label */}
+              <div>
+                <label className="block text-[10px] font-semibold text-[var(--muted-foreground)] uppercase tracking-wider mb-1">
+                  Заголовок <span className="font-normal normal-case tracking-normal text-[var(--muted-foreground)] opacity-60">(оставьте пустым для авто)</span>
+                </label>
+                <input
+                  type="text"
+                  value={col.label}
+                  onChange={(e) => onUpdate({ label: e.target.value })}
+                  className="w-full h-9 px-3 rounded-xl border border-[var(--input)] bg-[var(--background)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ring)] placeholder:text-[var(--muted-foreground)]"
+                  placeholder={getFieldLabel(col.tableName, col.fieldName)}
+                />
+              </div>
+
+              {/* Width + Align row */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] font-semibold text-[var(--muted-foreground)] uppercase tracking-wider mb-1">Ширина</label>
+                  <input
+                    type="text"
+                    value={col.width || ''}
+                    onChange={(e) => onUpdate({ width: e.target.value || undefined })}
+                    className="w-full h-9 px-3 rounded-xl border border-[var(--input)] bg-[var(--background)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ring)] placeholder:text-[var(--muted-foreground)]"
+                    placeholder="auto"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-semibold text-[var(--muted-foreground)] uppercase tracking-wider mb-1">Выравнивание</label>
+                  <div className="flex h-9 gap-1 p-0.5 rounded-xl bg-[var(--muted)]">
+                    {ALIGN_OPTIONS.map(a => (
+                      <button
+                        key={a.value}
+                        onClick={() => onUpdate({ align: a.value as 'left' | 'center' | 'right' })}
+                        className={`flex-1 flex items-center justify-center rounded-lg text-xs font-medium transition-all ${
+                          (col.align || 'left') === a.value
+                            ? 'bg-[var(--card)] text-[var(--foreground)] shadow-sm'
+                            : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'
+                        }`}
+                      >
+                        {a.value === 'left' ? '⬅' : a.value === 'center' ? '↔' : '➡'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Bold / Italic toggles */}
+              <div>
+                <label className="block text-[10px] font-semibold text-[var(--muted-foreground)] uppercase tracking-wider mb-1">Начертание</label>
+                <div className="flex gap-1">
+                  <button
+                    onClick={() => onUpdate({ bold: !col.bold })}
+                    className={`flex items-center gap-1 h-8 px-3 rounded-lg text-xs font-medium transition-all ${
+                      col.bold
+                        ? 'bg-[var(--primary)] text-[var(--primary-foreground)] shadow-sm'
+                        : 'bg-[var(--muted)] text-[var(--muted-foreground)] hover:bg-[var(--border)]'
+                    }`}
+                    title="Жирный"
+                  >
+                    <Bold size={13} />
+                  </button>
+                  <button
+                    onClick={() => onUpdate({ italic: !col.italic })}
+                    className={`flex items-center gap-1 h-8 px-3 rounded-lg text-xs font-medium transition-all ${
+                      col.italic
+                        ? 'bg-[var(--primary)] text-[var(--primary-foreground)] shadow-sm'
+                        : 'bg-[var(--muted)] text-[var(--muted-foreground)] hover:bg-[var(--border)]'
+                    }`}
+                    title="Курсив"
+                  >
+                    <Italic size={13} />
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Preview in popover */}
+            <div className="mt-4 pt-3 border-t border-[var(--border)]">
+              <div className="text-[10px] text-[var(--muted-foreground)] mb-2">Значение по умолчанию:</div>
+              <div className="h-9 px-3 rounded-xl bg-[var(--muted)] flex items-center text-sm" style={{ textAlign: col.align || 'left' }}>
+                <span className={
+                  col.type === 'currency' ? 'text-emerald-600 dark:text-emerald-400 font-semibold' :
+                  col.type === 'number' ? 'text-blue-600 dark:text-blue-400 font-mono' :
+                  col.type === 'date' ? 'text-violet-600 dark:text-violet-400' :
+                  'text-[var(--foreground)]'
+                }>
+                  {col.type === 'currency' ? '1 234,00 ₽' :
+                   col.type === 'number' ? '1234' :
+                   col.type === 'date' ? '01.06.2026' :
+                   getFieldLabel(col.tableName, col.fieldName)}
+                </span>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+// ── Main page ─────────────────────────────────────────────────────
 export default function TableTemplateEditorPage() {
   const params = useParams();
   const router = useRouter();
@@ -83,6 +382,11 @@ export default function TableTemplateEditorPage() {
   // Table width & lock
   const [tableWidth, setTableWidth] = useState('100%');
   const [tableLocked, setTableLocked] = useState(false);
+
+  // DnD sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
+  );
 
   // Drag-resize state
   const resizeRef = useRef<{
@@ -103,7 +407,8 @@ export default function TableTemplateEditorPage() {
     const { colIndex, startX, startWidth, nextColIndex, nextStartWidth } = resizeRef.current;
     const delta = e.clientX - startX;
     const newWidth = Math.max(40, startWidth + delta);
-    if (tableLockedRef.current && nextColIndex !== null) {
+    // Always adjust both: dragged column grows, neighbor shrinks → total width stays constant
+    if (nextColIndex !== null) {
       const nextNewWidth = Math.max(40, nextStartWidth - delta);
       setColumns(prev => {
         const next = [...prev];
@@ -112,6 +417,7 @@ export default function TableTemplateEditorPage() {
         return next;
       });
     } else {
+      // Last column — only grow/shrink the dragged column
       setColumns(prev => {
         const next = [...prev];
         next[colIndex] = { ...next[colIndex], width: `${newWidth}px` };
@@ -281,6 +587,18 @@ export default function TableTemplateEditorPage() {
     setColumns(reindexColumns(next));
   };
 
+  // DnD drag-end handler
+  const handleDragEnd = useCallback((event: DragEndEvent) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      const oldIndex = columns.findIndex(c => c.id === active.id);
+      const newIndex = columns.findIndex(c => c.id === over.id);
+      if (oldIndex !== -1 && newIndex !== -1) {
+        setColumns(reindexColumns(arrayMove(columns, oldIndex, newIndex)));
+      }
+    }
+  }, [columns]);
+
   const visibleColumns = columns.filter((c) => c.visible !== false);
 
   if (loading) {
@@ -314,7 +632,7 @@ export default function TableTemplateEditorPage() {
         <button
           onClick={handleSave}
           disabled={saving || !template.name}
-          className="flex items-center gap-2 h-10 px-5 rounded-xl bg-[var(--primary)] text-[var(--primary-foreground)] text-sm font-medium hover:opacity-90 transition-all disabled:opacity-50 shadow-lg shadow-[var(--primary)]/20"
+          className="flex items-center gap-2 h-10 px-5 rounded-xl bg-[var(--primary)] text-[var(--primary-foreground)] text-sm font-medium hover:opacity-90 transition-all disabled:opacity-50 shadow-lg shadow-[var(--primary)]/20 active:scale-[0.97]"
         >
           <Save size={16} />
           {saving ? 'Сохранение...' : 'Сохранить'}
@@ -385,14 +703,14 @@ export default function TableTemplateEditorPage() {
           </div>
           <button
             onClick={addColumn}
-            className="flex items-center gap-1.5 h-9 px-4 rounded-xl bg-[var(--primary)] text-[var(--primary-foreground)] text-xs font-semibold hover:opacity-90 transition-all shadow-sm"
+            className="flex items-center gap-1.5 h-9 px-4 rounded-xl bg-[var(--primary)] text-[var(--primary-foreground)] text-xs font-semibold hover:opacity-90 transition-all shadow-sm active:scale-[0.97]"
           >
             <Plus size={14} />
             Добавить колонку
           </button>
         </div>
 
-        {/* Columns grid */}
+        {/* Columns grid — DnD sortable */}
         <div className="p-5">
           {columns.length === 0 ? (
             <div className="text-center py-16">
@@ -403,276 +721,33 @@ export default function TableTemplateEditorPage() {
               <p className="text-[var(--muted-foreground)] text-xs mb-5">Нажмите «Добавить колонку», чтобы начать</p>
               <button
                 onClick={addColumn}
-                className="inline-flex items-center gap-1.5 h-9 px-5 rounded-xl bg-[var(--primary)] text-[var(--primary-foreground)] text-xs font-semibold hover:opacity-90 transition-all"
+                className="inline-flex items-center gap-1.5 h-9 px-5 rounded-xl bg-[var(--primary)] text-[var(--primary-foreground)] text-xs font-semibold hover:opacity-90 transition-all active:scale-[0.97]"
               >
                 <Plus size={14} />
                 Добавить колонку
               </button>
             </div>
           ) : (
-            <div className="flex flex-wrap gap-2.5">
-              {columns.map((col, index) => {
-                const isVisible = col.visible !== false;
-                const isEditing = editingIndex === index;
-                const sourceColor = SOURCE_COLORS[col.tableName] || 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300';
-                const typeIcon = FIELD_TYPE_ICONS[col.type || 'text'] || 'Aa';
-
-                return (
-                  <div key={col.id} className="group relative">
-                    {/* Column chip */}
-                    <button
-                      onClick={() => setEditingIndex(isEditing ? null : index)}
-                      className={`relative flex items-center gap-2 h-12 px-4 rounded-xl border-2 transition-all duration-150 ${
-                        isEditing
-                          ? 'border-[var(--primary)] bg-[var(--primary)]/5 shadow-md'
-                          : isVisible
-                            ? 'border-[var(--border)] bg-[var(--card)] hover:border-[var(--muted-foreground)]/30 hover:shadow-sm'
-                            : 'border-dashed border-[var(--border)] bg-[var(--muted)]/30 opacity-60'
-                      }`}>
-                      {/* Order badge */}
-                      <span className="flex items-center justify-center w-5 h-5 rounded-md bg-[var(--muted)] text-[10px] font-bold text-[var(--muted-foreground)]">
-                        {index + 1}
-                      </span>
-
-                      {/* Type hint */}
-                      <span className="text-[10px] font-mono text-[var(--muted-foreground)] opacity-60 w-4 text-center">
-                        {typeIcon}
-                      </span>
-
-                      {/* Label */}
-                      <span className="text-sm font-medium text-[var(--foreground)] truncate max-w-[120px]">
-                        {col.label || col.fieldName}
-                      </span>
-
-                      {/* Source badge */}
-                      <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-md ${sourceColor}`}>
-                        {DATA_SOURCES[col.tableName]?.label?.slice(0, 8) || col.tableName.slice(0, 8)}
-                      </span>
-
-                      {/* Width hint */}
-                      {col.width && (
-                        <span className="text-[10px] text-[var(--muted-foreground)] opacity-50 font-mono hidden sm:inline">
-                          {col.width}
-                        </span>
-                      )}
-
-                      {/* Visibility icon */}
-                      {!isVisible && (
-                        <EyeOff size={12} className="text-[var(--muted-foreground)]" />
-                      )}
-
-                      {/* Edit indicator */}
-                      {isEditing && (
-                        <span className="absolute -top-1.5 -right-1.5 w-3 h-3 rounded-full bg-[var(--primary)] border-2 border-[var(--card)] animate-scale-in" />
-                      )}
-                    </button>
-
-                    {/* Quick actions (appear on hover) */}
-                    <div className="absolute -top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button
-                        onClick={(e) => { e.stopPropagation(); moveColumn(index, index - 1); }}
-                        className="w-8 h-8 flex items-center justify-center rounded-lg bg-[var(--card)] border border-[var(--border)] shadow-sm hover:bg-[var(--muted)] transition-colors"
-                        title="Переместить влево"
-                      >
-                        <ChevronUp size={16} className="text-[var(--muted-foreground)]" />
-                      </button>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); moveColumn(index, index + 1); }}
-                        className="w-8 h-8 flex items-center justify-center rounded-lg bg-[var(--card)] border border-[var(--border)] shadow-sm hover:bg-[var(--muted)] transition-colors"
-                        title="Переместить вправо"
-                      >
-                        <ChevronDown size={16} className="text-[var(--muted-foreground)]" />
-                      </button>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); deleteColumn(index); }}
-                        className="w-8 h-8 flex items-center justify-center rounded-lg bg-[var(--card)] border border-[var(--border)] shadow-sm hover:bg-red-50 hover:border-red-200 transition-colors"
-                        title="Удалить"
-                      >
-                        <Trash2 size={16} className="text-[var(--muted-foreground)] hover:text-red-500" />
-                      </button>
-                    </div>
-
-                    {/* Editing popover */}
-                    {isEditing && (
-                      <>
-                        {/* Backdrop */}
-                        <div
-                          className="fixed inset-0 z-10"
-                          onClick={() => setEditingIndex(null)}
-                        />
-                        <div className="fixed left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 z-20 w-[360px] bg-[var(--card)] rounded-2xl border border-[var(--border)] shadow-xl p-5 max-h-[90vh] overflow-y-auto">
-                          <div className="flex items-center justify-between mb-4">
-                            <h3 className="text-sm font-semibold text-[var(--foreground)] flex items-center gap-2">
-                              <Settings2 size={14} />
-                              Колонка #{index + 1}
-                            </h3>
-                            <div className="flex items-center gap-1">
-                              <button
-                                onClick={() => updateCol(index, { visible: !isVisible })}
-                                className={`p-1.5 rounded-lg transition-colors ${isVisible ? 'text-[var(--muted-foreground)] hover:bg-[var(--muted)]' : 'text-[var(--primary)] bg-[var(--primary)]/10'}`}
-                                title={isVisible ? 'Скрыть' : 'Показать'}
-                              >
-                                {isVisible ? <Eye size={14} /> : <EyeOff size={14} />}
-                              </button>
-                              <button
-                                onClick={() => { deleteColumn(index); }}
-                                className="p-1.5 rounded-lg text-[var(--muted-foreground)] hover:bg-red-50 hover:text-red-500 transition-colors"
-                                title="Удалить колонку"
-                              >
-                                <Trash2 size={14} />
-                              </button>
-                            </div>
-                          </div>
-
-                          <div className="space-y-3">
-                            {/* Source */}
-                            <div>
-                              <label className="block text-[10px] font-semibold text-[var(--muted-foreground)] uppercase tracking-wider mb-1">Источник</label>
-                              <select
-                                value={col.tableName}
-                                onChange={(e) => {
-                                  const fields = getFieldOptions(e.target.value);
-                                  const first = fields[0];
-                                  updateCol(index, {
-                                    tableName: e.target.value,
-                                    fieldName: first?.value || '',
-                                    label: first?.label || '',
-                                    type: (first?.type || 'text') as 'text' | 'number' | 'date' | 'currency',
-                                    align: (first?.align || 'left') as 'left' | 'center' | 'right',
-                                  });
-                                }}
-                                className="w-full h-9 px-3 rounded-xl border border-[var(--input)] bg-[var(--background)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ring)] appearance-none cursor-pointer"
-                              >
-                                {getDataSourceOptions().map(s => (
-                                  <option key={s.value} value={s.value}>{s.label}</option>
-                                ))}
-                              </select>
-                            </div>
-
-                            {/* Field */}
-                            <div>
-                              <label className="block text-[10px] font-semibold text-[var(--muted-foreground)] uppercase tracking-wider mb-1">Поле</label>
-                              <select
-                                value={col.fieldName}
-                                onChange={(e) => {
-                                  const fieldOptions = getFieldOptions(col.tableName);
-                                  const fi = fieldOptions.find(f => f.value === e.target.value);
-                                  const label = getFieldLabel(col.tableName, e.target.value);
-                                  updateCol(index, {
-                                    fieldName: e.target.value,
-                                    label,
-                                    type: (fi?.type || 'text') as 'text' | 'number' | 'date' | 'currency',
-                                    align: (fi?.align || 'left') as 'left' | 'center' | 'right',
-                                  });
-                                }}
-                                className="w-full h-9 px-3 rounded-xl border border-[var(--input)] bg-[var(--background)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ring)] appearance-none cursor-pointer"
-                              >
-                                {getFieldOptions(col.tableName).map(f => (
-                                  <option key={f.value} value={f.value}>{f.label}</option>
-                                ))}
-                              </select>
-                            </div>
-
-                            {/* Label */}
-                            <div>
-                              <label className="block text-[10px] font-semibold text-[var(--muted-foreground)] uppercase tracking-wider mb-1">
-                                Заголовок <span className="font-normal normal-case tracking-normal text-[var(--muted-foreground)] opacity-60">(оставьте пустым для авто)</span>
-                              </label>
-                              <input
-                                type="text"
-                                value={col.label}
-                                onChange={(e) => updateCol(index, { label: e.target.value })}
-                                className="w-full h-9 px-3 rounded-xl border border-[var(--input)] bg-[var(--background)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ring)] placeholder:text-[var(--muted-foreground)]"
-                                placeholder={getFieldLabel(col.tableName, col.fieldName)}
-                              />
-                            </div>
-
-                            {/* Width + Align row */}
-                            <div className="grid grid-cols-2 gap-3">
-                              <div>
-                                <label className="block text-[10px] font-semibold text-[var(--muted-foreground)] uppercase tracking-wider mb-1">Ширина</label>
-                                <input
-                                  type="text"
-                                  value={col.width || ''}
-                                  onChange={(e) => updateCol(index, { width: e.target.value || undefined })}
-                                  className="w-full h-9 px-3 rounded-xl border border-[var(--input)] bg-[var(--background)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ring)] placeholder:text-[var(--muted-foreground)]"
-                                  placeholder="auto"
-                                />
-                              </div>
-                              <div>
-                                <label className="block text-[10px] font-semibold text-[var(--muted-foreground)] uppercase tracking-wider mb-1">Выравнивание</label>
-                                <div className="flex h-9 gap-1 p-0.5 rounded-xl bg-[var(--muted)]">
-                                  {ALIGN_OPTIONS.map(a => (
-                                    <button
-                                      key={a.value}
-                                      onClick={() => updateCol(index, { align: a.value as 'left' | 'center' | 'right' })}
-                                      className={`flex-1 flex items-center justify-center rounded-lg text-xs font-medium transition-all ${
-                                        (col.align || 'left') === a.value
-                                          ? 'bg-[var(--card)] text-[var(--foreground)] shadow-sm'
-                                          : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'
-                                      }`}
-                                    >
-                                      {a.value === 'left' ? '⬅' : a.value === 'center' ? '↔' : '➡'}
-                                    </button>
-                                  ))}
-                                </div>
-                              </div>
-                            </div>
-
-                            {/* Bold / Italic toggles */}
-                            <div>
-                              <label className="block text-[10px] font-semibold text-[var(--muted-foreground)] uppercase tracking-wider mb-1">Начертание</label>
-                              <div className="flex gap-1">
-                                <button
-                                  onClick={() => updateCol(index, { bold: !col.bold })}
-                                  className={`flex items-center gap-1 h-8 px-3 rounded-lg text-xs font-medium transition-all ${
-                                    col.bold
-                                      ? 'bg-[var(--primary)] text-[var(--primary-foreground)] shadow-sm'
-                                      : 'bg-[var(--muted)] text-[var(--muted-foreground)] hover:bg-[var(--border)]'
-                                  }`}
-                                  title="Жирный"
-                                >
-                                  <Bold size={13} />
-                                </button>
-                                <button
-                                  onClick={() => updateCol(index, { italic: !col.italic })}
-                                  className={`flex items-center gap-1 h-8 px-3 rounded-lg text-xs font-medium transition-all ${
-                                    col.italic
-                                      ? 'bg-[var(--primary)] text-[var(--primary-foreground)] shadow-sm'
-                                      : 'bg-[var(--muted)] text-[var(--muted-foreground)] hover:bg-[var(--border)]'
-                                  }`}
-                                  title="Курсив"
-                                >
-                                  <Italic size={13} />
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Preview in popover */}
-                          <div className="mt-4 pt-3 border-t border-[var(--border)]">
-                            <div className="text-[10px] text-[var(--muted-foreground)] mb-2">Значение по умолчанию:</div>
-                            <div className="h-9 px-3 rounded-xl bg-[var(--muted)] flex items-center text-sm" style={{ textAlign: col.align || 'left' }}>
-                              <span className={
-                                col.type === 'currency' ? 'text-emerald-600 dark:text-emerald-400 font-semibold' :
-                                col.type === 'number' ? 'text-blue-600 dark:text-blue-400 font-mono' :
-                                col.type === 'date' ? 'text-violet-600 dark:text-violet-400' :
-                                'text-[var(--foreground)]'
-                              }>
-                                {col.type === 'currency' ? '1 234,00 ₽' :
-                                 col.type === 'number' ? '1234' :
-                                 col.type === 'date' ? '01.06.2026' :
-                                 getFieldLabel(col.tableName, col.fieldName)}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
+            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+              <SortableContext items={columns.map(c => c.id)} strategy={horizontalListSortingStrategy}>
+                <div className="flex flex-wrap gap-2.5 pl-8">
+                  {columns.map((col, index) => (
+                    <SortableColumnChip
+                      key={col.id}
+                      col={col}
+                      index={index}
+                      columns={columns}
+                      isEditing={editingIndex === index}
+                      onToggleEdit={() => setEditingIndex(editingIndex === index ? null : index)}
+                      onMoveLeft={() => moveColumn(index, index - 1)}
+                      onMoveRight={() => moveColumn(index, index + 1)}
+                      onDelete={() => deleteColumn(index)}
+                      onUpdate={(patch) => updateCol(index, patch)}
+                    />
+                  ))}
+                </div>
+              </SortableContext>
+            </DndContext>
           )}
         </div>
 
@@ -712,7 +787,7 @@ export default function TableTemplateEditorPage() {
               </div>
             </div>
             <div className="overflow-x-auto">
-              <table ref={tableRef} className="text-sm border-collapse" style={{ width: tableWidth, ...(tableLocked ? { tableLayout: 'fixed' as const } : {}) }}>
+              <table ref={tableRef} className="text-sm border-collapse" style={{ width: tableWidth, tableLayout: 'fixed' as const }}>
                 <thead>
                   <tr className="bg-[var(--muted)]/50">
                     {columns

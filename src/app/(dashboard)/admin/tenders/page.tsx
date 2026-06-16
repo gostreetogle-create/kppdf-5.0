@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { CrudPage } from '@/components/crud-page';
+import { nextTenderNumber } from '@/lib/counter';
 
 interface Tender {
   [key: string]: unknown;
@@ -45,6 +46,13 @@ function TenderForm({ item, onClose }: { item: Tender | null; onClose: () => voi
   });
   const [saving, setSaving] = useState(false);
 
+  useEffect(() => {
+    if (!item && !form.number) {
+      nextTenderNumber().then(n => setForm(f => f.number ? f : { ...f, number: n }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [item]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
@@ -72,7 +80,7 @@ function TenderForm({ item, onClose }: { item: Tender | null; onClose: () => voi
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium text-[var(--foreground)] mb-1">Номер</label>
-          <input type="text" value={form.number} onChange={(e) => setForm({ ...form, number: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-[var(--input)] bg-[var(--background)] text-[var(--foreground)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ring)]" required />
+          <input type="text" value={form.number} onChange={(e) => setForm({ ...form, number: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-[var(--input)] bg-[var(--background)] text-[var(--foreground)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ring)]" required readOnly={!!item} placeholder={item ? undefined : 'Авто-генерация...'} />
         </div>
         <div>
           <label className="block text-sm font-medium text-[var(--foreground)] mb-1">Название</label>

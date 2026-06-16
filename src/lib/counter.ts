@@ -28,36 +28,74 @@ export function formatDocNumber(prefix: string, value: number): string {
   return `${prefix}-${String(value).padStart(4, '0')}`;
 }
 
-/**
- * Сгенерировать номер для КП
- */
+// ── Документы продаж ──────────────────────────────────────────
+
+/** КП-0001 */
 export async function nextProposalNumber(): Promise<string> {
   const val = await nextCounter('proposal');
   return formatDocNumber('КП', val);
 }
 
-/**
- * Сгенерировать номер для договора
- */
+/** Д-0001 */
 export async function nextContractNumber(): Promise<string> {
   const val = await nextCounter('contract');
   return formatDocNumber('Д', val);
 }
 
-/**
- * Сгенерировать номер для счёта
- */
+/** СФ-0001 */
 export async function nextInvoiceNumber(): Promise<string> {
   const val = await nextCounter('invoice');
   return formatDocNumber('СФ', val);
 }
 
-/**
- * Сгенерировать номер для заказа поставщику
- */
+// ── Производство ──────────────────────────────────────────────
+
+/** ЗК-0001 — производственный заказ */
+export async function nextProductionOrderNumber(): Promise<string> {
+  const val = await nextCounter('production-order');
+  return formatDocNumber('ЗК', val);
+}
+
+// ── Снабжение ─────────────────────────────────────────────────
+
+/** ЗП-0001 — заказ поставщику / заявка на закупку */
 export async function nextSupplierOrderNumber(): Promise<string> {
   const val = await nextCounter('supplier-order');
   return formatDocNumber('ЗП', val);
+}
+
+// ── Администрирование ─────────────────────────────────────────
+
+/** Т-0001 — тендер */
+export async function nextTenderNumber(): Promise<string> {
+  const val = await nextCounter('tender');
+  return formatDocNumber('Т', val);
+}
+
+/** С-0001 — сертификат */
+export async function nextCertificateNumber(): Promise<string> {
+  const val = await nextCounter('certificate');
+  return formatDocNumber('С', val);
+}
+
+/** РПП-0001 */
+export async function nextRppNumber(): Promise<string> {
+  const val = await nextCounter('rpp-entry');
+  return formatDocNumber('РПП', val);
+}
+
+// ── Финансы ───────────────────────────────────────────────────
+
+/** ЗР-0001 — закрытие заказа */
+export async function nextOrderClosingNumber(): Promise<string> {
+  const val = await nextCounter('order-closing');
+  return formatDocNumber('ЗР', val);
+}
+
+/** АС-0001 — акт сверки */
+export async function nextReconciliationNumber(): Promise<string> {
+  const val = await nextCounter('reconciliation');
+  return formatDocNumber('АС', val);
 }
 
 /**

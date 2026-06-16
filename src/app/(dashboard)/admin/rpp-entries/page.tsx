@@ -50,9 +50,11 @@ export default function RppEntriesPage() {
 
   const openCreate = () => {
     setEditItem(null);
-    setForm({ number: '', title: '', status: 'draft', notes: '' });
     setError('');
     setShowDialog(true);
+    const year = new Date().getFullYear();
+    const num = String(Math.floor(Math.random() * 9999) + 1).padStart(4, '0');
+    setForm({ number: `РПП-${year}-${num}`, title: '', status: 'draft', notes: '' });
   };
 
   const openEdit = (item: RppEntry) => {
@@ -162,7 +164,7 @@ export default function RppEntriesPage() {
             <div className="space-y-3">
               <div>
                 <label className="text-xs font-medium text-[var(--muted-foreground)]">Номер *</label>
-                <input type="text" value={form.number} onChange={(e) => setForm({ ...form, number: e.target.value })} className="w-full h-9 px-3 mt-1 rounded-lg border border-[var(--input)] bg-[var(--background)] text-sm" />
+                <input type="text" value={form.number} onChange={(e) => setForm({ ...form, number: e.target.value })} className="w-full h-9 px-3 mt-1 rounded-lg border border-[var(--input)] bg-[var(--background)] text-sm" readOnly={!!editItem} placeholder={editItem ? undefined : 'Авто-генерация...'} />
               </div>
               <div>
                 <label className="text-xs font-medium text-[var(--muted-foreground)]">Название *</label>

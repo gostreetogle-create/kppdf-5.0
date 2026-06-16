@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { CrudPage } from '@/components/crud-page';
 
 interface OrderClosing {
@@ -26,6 +26,14 @@ function OrderClosingForm({ item, onClose }: { item: OrderClosing | null; onClos
   });
   const [saving, setSaving] = useState(false);
 
+  useEffect(() => {
+    if (!item && !form.number) {
+      const year = new Date().getFullYear();
+      const num = String(Math.floor(Math.random() * 9999) + 1).padStart(4, '0');
+      setForm(f => f.number ? f : { ...f, number: `ЗАК-${year}-${num}` });
+    }
+  }, [item]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
@@ -44,7 +52,7 @@ function OrderClosingForm({ item, onClose }: { item: OrderClosing | null; onClos
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium mb-1">Номер</label>
-          <input type="text" value={form.number} onChange={(e) => setForm({ ...form, number: e.target.value })} className="w-full px-3 py-2 rounded-lg border text-sm" required />
+          <input type="text" value={form.number} onChange={(e) => setForm({ ...form, number: e.target.value })} className="w-full px-3 py-2 rounded-lg border text-sm" required readOnly={!!item} placeholder={item ? undefined : 'Авто-генерация...'} />
         </div>
         <div>
           <label className="block text-sm font-medium mb-1">ID заказа</label>

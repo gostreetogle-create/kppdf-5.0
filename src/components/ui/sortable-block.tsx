@@ -50,7 +50,7 @@ export function SortableBlock({
       onDoubleClick={editable ? onEdit : undefined}
     >
       {editable && (
-        <div className="absolute -left-8 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col gap-1">
+        <div className="absolute -left-6 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col gap-1 z-20">
           <button
             {...attributes}
             {...listeners}
@@ -62,7 +62,7 @@ export function SortableBlock({
       )}
 
       {isSelected && editable && (
-        <div className="absolute -right-10 top-0 flex flex-col gap-1">
+        <div className="absolute -right-8 top-0 flex flex-col gap-1 z-20">
           <button
             onClick={(e) => { e.stopPropagation(); onEdit(); }}
             className="p-1.5 rounded bg-[var(--card)] shadow border border-[var(--border)] hover:bg-[var(--muted)] transition-colors"
@@ -101,14 +101,14 @@ function BlockContent({ block }: { block: DocBlock }) {
 function TextBlockContent({ block }: { block: DocBlock }) {
   if (block.columns && block.columns.length > 0) {
     return (
-      <div className="flex gap-2 overflow-x-auto pb-1">
+      <div className="flex gap-2 overflow-hidden">
         {block.columns.map((col) => (
           <div
             key={col.id}
             style={{
-              minWidth: '200px',
-              width: col.width || 'auto',
-              flex: '1 1 auto',
+              width: col.width || `${100 / block.columns!.length}%`,
+              flex: '1 1 0',
+              minWidth: 0,
               textAlign: col.textAlign || 'left',
               fontWeight: col.fontWeight || 'normal',
               fontStyle: col.fontStyle || 'normal',
@@ -118,7 +118,7 @@ function TextBlockContent({ block }: { block: DocBlock }) {
             className="text-sm"
           >
             <div
-              className="whitespace-pre-wrap break-words"
+              className="whitespace-pre-wrap break-words overflow-hidden"
               dangerouslySetInnerHTML={{ __html: col.content || 'Текст' }}
             />
           </div>

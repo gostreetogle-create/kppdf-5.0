@@ -46,7 +46,7 @@ function ReconciliationForm({ item, onClose }: { item: ReconciliationAct | null;
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium mb-1">Номер</label>
-          <input type="text" value={form.number} onChange={(e) => setForm({ ...form, number: e.target.value })} className="w-full px-3 py-2 rounded-lg border text-sm" required />
+          <input type="text" value={form.number} onChange={(e) => setForm({ ...form, number: e.target.value })} className="w-full px-3 py-2 rounded-lg border text-sm" required readOnly={!!item} placeholder={item ? undefined : 'Авто-генерация...'} />
         </div>
         <div>
           <label className="block text-sm font-medium mb-1">ID организации</label>

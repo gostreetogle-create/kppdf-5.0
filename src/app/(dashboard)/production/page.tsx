@@ -52,6 +52,14 @@ function ProductionOrderForm({ item, onClose }: { item: ProductionOrder | null; 
   const [workCenters, setWorkCenters] = useState<{ id: string; name: string }[]>([]);
 
   useEffect(() => {
+    if (!item && !form.number) {
+      const year = new Date().getFullYear();
+      const num = String(Math.floor(Math.random() * 9999) + 1).padStart(4, '0');
+      setForm(f => f.number ? f : { ...f, number: `ПЗ-${year}-${num}` });
+    }
+  }, [item]);
+
+  useEffect(() => {
     fetch('/api/work-types?limit=100').then(r => r.json()).then(d => {
       if (d.success) setWorkTypes(d.data.items);
     }).catch(() => {});
@@ -87,7 +95,7 @@ function ProductionOrderForm({ item, onClose }: { item: ProductionOrder | null; 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium text-[var(--foreground)] mb-1">Номер</label>
-          <input type="text" value={form.number} onChange={(e) => setForm({ ...form, number: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-[var(--input)] bg-[var(--background)] text-[var(--foreground)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ring)]" required />
+          <input type="text" value={form.number} onChange={(e) => setForm({ ...form, number: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-[var(--input)] bg-[var(--background)] text-[var(--foreground)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ring)]" required readOnly={!!item} placeholder={item ? undefined : 'Авто-генерация...'} />
         </div>
         <div>
           <label className="block text-sm font-medium text-[var(--foreground)] mb-1">Название</label>

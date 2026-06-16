@@ -23,13 +23,13 @@ const navigation: NavItem[] = [
       { label: 'Контрагенты', href: '/organizations' },
       { label: 'Клиенты', href: '/clients' },
       { label: 'Категории', href: '/products/categories' },
+      { label: 'Товары', href: '/products' },
     ],
   },
   {
-    label: 'Продажи', href: '/products', icon: Package,
+    label: 'Продажи', href: '/proposals', icon: Package,
     children: [
-      { label: 'Товары', href: '/products' },
-      { label: 'КП', href: '/proposals' },
+      { label: 'КП (список)', href: '/proposals' },
       { label: 'Оформить КП', href: '/proposals/new' },
       { label: 'Договоры', href: '/contracts' },
     ],
