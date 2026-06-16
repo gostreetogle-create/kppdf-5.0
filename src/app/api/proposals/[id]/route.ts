@@ -45,8 +45,9 @@ export async function DELETE(_request: NextRequest, { params }: { params: Promis
 
 const VALID_TRANSITIONS: Record<string, string[]> = {
   draft: ['sent'],
-  sent: ['accepted', 'rejected'],
-  accepted: ['converted'],
+  sent: ['accepted', 'rejected', 'paid'],
+  accepted: ['converted', 'paid'],
+  paid: ['converted'],
   rejected: ['draft'],
 };
 

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Edit, Trash2 } from 'lucide-react';
+import { ArrowLeft, Edit, Trash2, Factory } from 'lucide-react';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { ContractPreview } from '@/components/ui/contract-preview';
 import type { ContractPdfData } from '@/lib/pdf';
@@ -66,6 +66,9 @@ export default function ContractDetailPage() {
   const [contract, setContract] = useState<Contract | null>(null);
   const [loading, setLoading] = useState(true);
   const [showDelete, setShowDelete] = useState(false);
+  const [converting, setConverting] = useState(false);
+  const [convertedOrder, setConvertedOrder] = useState<{ number: string; id: string } | null>(null);
+  const [convertError, setConvertError] = useState('');
 
   useEffect(() => {
     const fetchContract = async () => {
@@ -86,6 +89,27 @@ export default function ContractDetailPage() {
       fetchContract();
     }
   }, [params.id]);
+
+  const handleConvertToProduction = async () => {
+    if (converting || convertedOrder) return;
+    setConverting(true);
+    setConvertError('');
+    try {
+      const res = await fetch(`/api/contracts/${params.id}/convert-to-production`, { method: 'POST' });
+      const data = await res.json();
+      if (res.ok) {
+        setConvertedOrder({ number: data.data?.number || data.number, id: data.data?.id || data.id });
+        // Обновляем статус договора локально
+        setContract(prev => prev ? { ...prev, status: 'active' } : prev);
+      } else {
+        setConvertError(data.error || data.message || 'Ошибка конвертации');
+      }
+    } catch {
+      setConvertError('Ошибка сети');
+    } finally {
+      setConverting(false);
+    }
+  };
 
   const handleDelete = async () => {
     try {
@@ -155,6 +179,16 @@ export default function ContractDetailPage() {
           <span className={`inline-flex px-3 py-1 rounded-full text-sm font-medium ${status.className}`}>
             {status.label}
           </span>
+          {contract.status !== 'active' && contract.status !== 'completed' && contract.items.length > 0 && (
+            <button
+              onClick={handleConvertToProduction}
+              disabled={converting || !!convertedOrder}
+              className="flex items-center gap-2 h-9 px-4 rounded-xl bg-[var(--success)] text-[var(--success-foreground)] text-sm font-semibold hover:opacity-90 transition-all shadow-sm disabled:opacity-50 active:scale-[0.97]"
+            >
+              <Factory size={15} />
+              {converting ? 'Создание...' : convertedOrder ? 'Заказ создан' : 'Передать в производство'}
+            </button>
+          )}
           <button
             onClick={() => router.push(`/contracts?edit=${contract.id}`)}
             className="p-2 rounded-lg border border-[var(--border)] hover:bg-[var(--muted)] transition-colors"
@@ -169,6 +203,39 @@ export default function ContractDetailPage() {
           </button>
         </div>
       </div>
+
+      {/* Success banner */}
+      {convertedOrder && (
+        <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-xl p-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-full bg-emerald-100 dark:bg-emerald-800 flex items-center justify-center">
+              <Factory size={16} className="text-emerald-600 dark:text-emerald-400" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">
+                Производственный заказ №{convertedOrder.number} создан
+              </p>
+              <p className="text-xs text-emerald-600 dark:text-emerald-400">
+                Заказ передан в производство. Статус договора обновлён на «Активно».
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => router.push('/production')}
+            className="flex items-center gap-1.5 h-8 px-4 rounded-lg bg-emerald-600 text-white text-xs font-semibold hover:bg-emerald-700 transition-colors"
+          >
+            Открыть заказы
+          </button>
+        </div>
+      )}
+
+      {/* Error banner */}
+      {convertError && (
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-3 flex items-center gap-2">
+          <span className="text-sm text-red-600 dark:text-red-400">{convertError}</span>
+          <button onClick={() => setConvertError('')} className="ml-auto text-red-400 hover:text-red-600">×</button>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">

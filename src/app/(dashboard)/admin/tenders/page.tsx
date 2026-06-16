@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { CrudPage } from '@/components/crud-page';
-import { nextTenderNumber } from '@/lib/counter';
 
 interface Tender {
   [key: string]: unknown;
@@ -48,9 +47,10 @@ function TenderForm({ item, onClose }: { item: Tender | null; onClose: () => voi
 
   useEffect(() => {
     if (!item && !form.number) {
-      nextTenderNumber().then(n => setForm(f => f.number ? f : { ...f, number: n }));
+      const year = new Date().getFullYear();
+      const num = String(Math.floor(Math.random() * 9999) + 1).padStart(4, '0');
+      setForm(f => f.number ? f : { ...f, number: `ТЕНДЕР-${year}-${num}` });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [item]);
 
   const handleSubmit = async (e: React.FormEvent) => {

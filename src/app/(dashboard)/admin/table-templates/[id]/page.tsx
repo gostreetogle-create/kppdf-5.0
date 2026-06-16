@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Save, Plus, Trash2, ChevronLeft, ChevronRight, GripVertical, EyeOff, Eye, Settings2, Lock, Unlock, Bold, Italic } from 'lucide-react';
-import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
+import { ArrowLeft, Save, Plus, Trash2, ChevronLeft, ChevronRight, EyeOff, Eye, Settings2, Lock, Unlock, Bold, Italic } from 'lucide-react';
+import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragOverlay, type DragStartEvent, type DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, useSortable, horizontalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import {
@@ -107,22 +107,14 @@ function SortableColumnChip({
 
   return (
     <div ref={setNodeRef} style={style} className="group flex-shrink-0">
-      {/* Drag grip — left side, visible on hover */}
-      <button
+      {/* Column chip — entire chip is the drag target */}
+      <div
         {...attributes}
         {...listeners}
-        className="absolute -left-8 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 cursor-grab active:cursor-grabbing p-1.5 rounded-lg hover:bg-[var(--muted)] transition-all z-10"
-        title="Перетащить"
-      >
-        <GripVertical size={14} className="text-[var(--muted-foreground)]" />
-      </button>
-
-      {/* Column chip */}
-      <div
         onClick={onToggleEdit}
         role="button"
         tabIndex={0}
-        className={`relative flex items-center gap-2 h-12 px-4 rounded-xl border-2 transition-all duration-150 cursor-pointer ${
+        className={`relative flex items-center gap-2 h-12 px-4 rounded-xl border-2 cursor-grab active:cursor-grabbing ${
           isEditing
             ? 'border-[var(--primary)] bg-[var(--primary)]/5 shadow-md'
             : isVisible
@@ -383,9 +375,12 @@ export default function TableTemplateEditorPage() {
   const [tableWidth, setTableWidth] = useState('100%');
   const [tableLocked, setTableLocked] = useState(false);
 
+  // DnD state
+  const [activeId, setActiveId] = useState<string | null>(null);
+
   // DnD sensors
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
   );
 
   // Drag-resize state
@@ -406,21 +401,13 @@ export default function TableTemplateEditorPage() {
     if (!resizeRef.current) return;
     const { colIndex, startX, startWidth, nextColIndex, nextStartWidth } = resizeRef.current;
     const delta = e.clientX - startX;
-    const newWidth = Math.max(40, startWidth + delta);
-    // Always adjust both: dragged column grows, neighbor shrinks → total width stays constant
+    const newWidth = Math.max(50, startWidth + delta);
     if (nextColIndex !== null) {
-      const nextNewWidth = Math.max(40, nextStartWidth - delta);
+      const nextNewWidth = Math.max(50, nextStartWidth - delta);
       setColumns(prev => {
         const next = [...prev];
         next[colIndex] = { ...next[colIndex], width: `${newWidth}px` };
         next[nextColIndex] = { ...next[nextColIndex], width: `${nextNewWidth}px` };
-        return next;
-      });
-    } else {
-      // Last column — only grow/shrink the dragged column
-      setColumns(prev => {
-        const next = [...prev];
-        next[colIndex] = { ...next[colIndex], width: `${newWidth}px` };
         return next;
       });
     }
@@ -450,27 +437,30 @@ export default function TableTemplateEditorPage() {
     e.preventDefault();
     e.stopPropagation();
     const cols = columnsRef.current;
+    // Use actual DOM widths for precision
+    const th = (e.target as HTMLElement).closest('th');
+    const nextTh = th?.nextElementSibling as HTMLElement | null;
+    if (!th || !nextTh) return;
+    const draggedWidth = th.getBoundingClientRect().width;
+    const nextWidth = nextTh.getBoundingClientRect().width;
+    // Map visible index back to full columns array
     const visibleSorted = cols
-      .map((c, i) => ({ col: c, origIndex: i }))
-      .filter(({ col }) => col.visible !== false)
-      .sort((a, b) => a.col.order - b.col.order);
-    const currentVisibleIndex = visibleSorted.findIndex(({ origIndex }) => origIndex === colIndex);
-    if (currentVisibleIndex === -1) return;
-    const next = currentVisibleIndex < visibleSorted.length - 1 ? visibleSorted[currentVisibleIndex + 1] : null;
-    const col = cols[colIndex];
-    const currentWidth = col.width ? parseInt(col.width, 10) : 150;
-    const nextWidth = next?.col.width ? parseInt(next.col.width, 10) : 150;
+      .filter(c => c.visible !== false)
+      .sort((a, b) => a.order - b.order);
+    const draggedColId = th.dataset.colId;
+    const nextColId = nextTh.dataset.colId;
     resizeRef.current = {
-      colIndex,
+      colIndex: cols.findIndex(c => c.id === draggedColId),
       startX: e.clientX,
-      startWidth: currentWidth,
-      nextColIndex: next?.origIndex ?? null,
+      startWidth: draggedWidth,
+      nextColIndex: cols.findIndex(c => c.id === nextColId),
       nextStartWidth: nextWidth,
     };
     document.addEventListener('mousemove', handleResizeMove);
     document.addEventListener('mouseup', handleResizeEnd);
     document.body.style.cursor = 'col-resize';
     document.body.style.userSelect = 'none';
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [handleResizeMove, handleResizeEnd]);
 
   useEffect(() => {
@@ -587,8 +577,13 @@ export default function TableTemplateEditorPage() {
     setColumns(reindexColumns(next));
   };
 
-  // DnD drag-end handler
+  // DnD handlers
+  const handleDragStart = useCallback((event: DragStartEvent) => {
+    setActiveId(String(event.active.id));
+  }, []);
+
   const handleDragEnd = useCallback((event: DragEndEvent) => {
+    setActiveId(null);
     const { active, over } = event;
     if (over && active.id !== over.id) {
       const oldIndex = columns.findIndex(c => c.id === active.id);
@@ -728,9 +723,9 @@ export default function TableTemplateEditorPage() {
               </button>
             </div>
           ) : (
-            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
               <SortableContext items={columns.map(c => c.id)} strategy={horizontalListSortingStrategy}>
-                <div className="flex flex-wrap gap-2.5 pl-8">
+                <div className="flex gap-2.5 overflow-x-auto pb-2 scrollbar-thin">
                   {columns.map((col, index) => (
                     <SortableColumnChip
                       key={col.id}
@@ -747,6 +742,27 @@ export default function TableTemplateEditorPage() {
                   ))}
                 </div>
               </SortableContext>
+              <DragOverlay dropAnimation={null}>
+                {activeId ? (() => {
+                  const activeCol = columns.find(c => c.id === activeId);
+                  const sourceColor = activeCol ? (SOURCE_COLORS[activeCol.tableName] || 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300') : '';
+                  return (
+                  <div className="flex items-center gap-2 h-12 px-4 rounded-xl border-2 border-[var(--primary)] bg-[var(--card)] shadow-xl opacity-95">
+                    <span className="flex items-center justify-center w-5 h-5 rounded-md bg-[var(--muted)] text-[10px] font-bold text-[var(--muted-foreground)] flex-shrink-0">
+                      {activeCol ? columns.indexOf(activeCol) + 1 : ''}
+                    </span>
+                    <span className="text-sm font-medium text-[var(--foreground)]">
+                      {activeCol?.label || activeCol?.fieldName || ''}
+                    </span>
+                    {activeCol && (
+                      <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-md flex-shrink-0 ${sourceColor}`}>
+                        {DATA_SOURCES[activeCol.tableName]?.label?.slice(0, 8) || activeCol.tableName.slice(0, 8)}
+                      </span>
+                    )}
+                  </div>
+                  );
+                })() : null}
+              </DragOverlay>
             </DndContext>
           )}
         </div>
@@ -799,6 +815,7 @@ export default function TableTemplateEditorPage() {
                         return (
                         <th
                           key={col.id}
+                          data-col-id={col.id}
                           className="relative px-4 py-3 text-xs font-semibold text-[var(--foreground)] border-r border-[var(--border)] last:border-r-0 whitespace-nowrap group/th select-none"
                           style={{
                             width: col.width || 'auto',

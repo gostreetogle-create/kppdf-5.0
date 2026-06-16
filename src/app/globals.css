@@ -46,40 +46,40 @@
 }
 
 [data-theme="dark"] {
-  --background: #1a1510;
-  --foreground: #e8dcc8;
-  --primary: #c8963e;
-  --primary-foreground: #1a1510;
-  --secondary: #2d2318;
-  --secondary-foreground: #e8dcc8;
-  --card: #231d15;
-  --card-foreground: #e8dcc8;
-  --border: #3d3020;
-  --input: #3d3020;
-  --ring: #c8963e;
-  --muted: #2d2318;
-  --muted-foreground: #a08c70;
-  --destructive: #e74c3c;
+  --background: #0d1a11;
+  --foreground: #d4e8d0;
+  --primary: #4ade80;
+  --primary-foreground: #0a1a0f;
+  --secondary: #162318;
+  --secondary-foreground: #d4e8d0;
+  --card: #122016;
+  --card-foreground: #d4e8d0;
+  --border: #1e3522;
+  --input: #1e3522;
+  --ring: #4ade80;
+  --muted: #162318;
+  --muted-foreground: #7a9e74;
+  --destructive: #ef4444;
   --destructive-foreground: #ffffff;
-  --success: #6b9e45;
-  --success-foreground: #ffffff;
-  --warning: #e6b422;
-  --warning-foreground: #1a1510;
+  --success: #4ade80;
+  --success-foreground: #0a1a0f;
+  --warning: #f59e0b;
+  --warning-foreground: #0a1a0f;
   --info: #6baed4;
-  --info-foreground: #1a1510;
-  --accent: #3d3020;
-  --accent-foreground: #e8dcc8;
-  --popover: #231d15;
-  --popover-foreground: #e8dcc8;
-  --sidebar: #120e08;
-  --sidebar-foreground: #e8dcc8;
-  --sidebar-accent: #2d2318;
+  --info-foreground: #0a1a0f;
+  --accent: #1e3522;
+  --accent-foreground: #d4e8d0;
+  --popover: #122016;
+  --popover-foreground: #d4e8d0;
+  --sidebar: #0a150d;
+  --sidebar-foreground: #b8d4b0;
+  --sidebar-accent: #162318;
 
-  --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.3);
-  --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.4), 0 1px 2px -1px rgb(0 0 0 / 0.4);
-  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.4), 0 2px 4px -2px rgb(0 0 0 / 0.4);
-  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.4), 0 4px 6px -4px rgb(0 0 0 / 0.4);
-  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.4), 0 8px 10px -6px rgb(0 0 0 / 0.4);
+  --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.25);
+  --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.35), 0 1px 2px -1px rgb(0 0 0 / 0.35);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.35), 0 2px 4px -2px rgb(0 0 0 / 0.35);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.35), 0 4px 6px -4px rgb(0 0 0 / 0.35);
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.35), 0 8px 10px -6px rgb(0 0 0 / 0.35);
 }
 
 @theme inline {
