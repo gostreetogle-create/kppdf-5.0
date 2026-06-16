@@ -24,7 +24,7 @@ export const A4Page = forwardRef<HTMLDivElement, A4PageProps>(
       >
         <div
           ref={ref}
-          className="relative bg-white shadow-lg overflow-hidden"
+          className="relative bg-[var(--card)] shadow-lg overflow-hidden border border-[var(--border)]"
           style={{
             width: '210mm',
             minHeight: '297mm',

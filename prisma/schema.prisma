@@ -8,6 +8,16 @@ datasource db {
 }
 
 // ========================================
+// COUNTER (автоинкремент номеров документов)
+// ========================================
+
+model Counter {
+  id    String @id @default(cuid())
+  name  String @unique  // 'proposal', 'contract', 'invoice', etc.
+  value Int    @default(0)
+}
+
+// ========================================
 // AUTH
 // ========================================
 
@@ -214,7 +224,10 @@ model Proposal {
   client       Client?  @relation(fields: [clientId], references: [id])
   organizationId String?
   organization Organization? @relation(fields: [organizationId], references: [id])
+  templateId   String?
   markupPercent Float    @default(0)
+  discountPercent Float @default(0)
+  vatRate      Float    @default(20)
   notes        String?
   validUntil   DateTime?
   createdAt    DateTime @default(now())

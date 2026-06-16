@@ -43,7 +43,7 @@ export function SortableBlock({
       style={style}
       className={`
         relative group
-        ${isSelected ? 'ring-2 ring-blue-500 ring-offset-2' : ''}
+        ${isSelected ? 'ring-2 ring-[var(--ring)] ring-offset-2 ring-offset-[var(--background)]' : ''}
         ${editable ? 'cursor-pointer' : ''}
       `}
       onClick={onSelect}
@@ -54,9 +54,9 @@ export function SortableBlock({
           <button
             {...attributes}
             {...listeners}
-            className="p-1 rounded hover:bg-gray-200 cursor-grab active:cursor-grabbing"
+            className="p-1 rounded hover:bg-[var(--muted)] transition-colors cursor-grab active:cursor-grabbing"
           >
-            <GripVertical size={14} className="text-gray-400" />
+            <GripVertical size={14} className="text-[var(--muted-foreground)]" />
           </button>
         </div>
       )}
@@ -65,17 +65,17 @@ export function SortableBlock({
         <div className="absolute -right-10 top-0 flex flex-col gap-1">
           <button
             onClick={(e) => { e.stopPropagation(); onEdit(); }}
-            className="p-1.5 rounded bg-white shadow hover:bg-gray-50"
+            className="p-1.5 rounded bg-[var(--card)] shadow border border-[var(--border)] hover:bg-[var(--muted)] transition-colors"
             title="Редактировать"
           >
-            <Pencil size={12} className="text-gray-600" />
+            <Pencil size={12} className="text-[var(--muted-foreground)]" />
           </button>
           <button
             onClick={(e) => { e.stopPropagation(); onRemove(); }}
-            className="p-1.5 rounded bg-white shadow hover:bg-red-50"
+            className="p-1.5 rounded bg-[var(--card)] shadow border border-[var(--border)] hover:bg-[var(--destructive)]/10 transition-colors"
             title="Удалить"
           >
-            <Trash2 size={12} className="text-red-500" />
+            <Trash2 size={12} className="text-[var(--destructive)]" />
           </button>
         </div>
       )}
@@ -146,27 +146,27 @@ function TableBlockContent({ block }: { block: DocBlock }) {
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-gray-100">
-              <th className="border border-gray-300 px-3 py-2 text-left text-xs font-medium">Наименование</th>
-              <th className="border border-gray-300 px-3 py-2 text-right text-xs font-medium">Кол-во</th>
-              <th className="border border-gray-300 px-3 py-2 text-center text-xs font-medium">Ед.</th>
-              <th className="border border-gray-300 px-3 py-2 text-right text-xs font-medium">Цена</th>
-              <th className="border border-gray-300 px-3 py-2 text-right text-xs font-medium">Сумма</th>
+              <th className="border border-[var(--border)] px-3 py-2 text-left text-xs font-medium text-[var(--muted-foreground)]">Наименование</th>
+              <th className="border border-[var(--border)] px-3 py-2 text-right text-xs font-medium text-[var(--muted-foreground)]">Кол-во</th>
+              <th className="border border-[var(--border)] px-3 py-2 text-center text-xs font-medium text-[var(--muted-foreground)]">Ед.</th>
+              <th className="border border-[var(--border)] px-3 py-2 text-right text-xs font-medium text-[var(--muted-foreground)]">Цена</th>
+              <th className="border border-[var(--border)] px-3 py-2 text-right text-xs font-medium text-[var(--muted-foreground)]">Сумма</th>
             </tr>
           </thead>
           <tbody>
             {(block._inlineRows && block._inlineRows.length > 0) ? (
               block._inlineRows.map((row: Record<string, unknown>, i: number) => (
                 <tr key={i}>
-                  <td className="border border-gray-300 px-3 py-2">{String(row.name || '')}</td>
-                  <td className="border border-gray-300 px-3 py-2 text-right">{String(row.quantity || '')}</td>
-                  <td className="border border-gray-300 px-3 py-2 text-center">{String(row.unit || 'шт')}</td>
-                  <td className="border border-gray-300 px-3 py-2 text-right">{String(row.price || '')}</td>
-                  <td className="border border-gray-300 px-3 py-2 text-right">{String(row.total || '')}</td>
+                  <td className="border border-[var(--border)] px-3 py-2 text-[var(--foreground)]">{String(row.name || '')}</td>
+                  <td className="border border-[var(--border)] px-3 py-2 text-right text-[var(--foreground)]">{String(row.quantity || '')}</td>
+                  <td className="border border-[var(--border)] px-3 py-2 text-center text-[var(--muted-foreground)]">{String(row.unit || 'шт')}</td>
+                  <td className="border border-[var(--border)] px-3 py-2 text-right text-[var(--foreground)]">{String(row.price || '')}</td>
+                  <td className="border border-[var(--border)] px-3 py-2 text-right text-[var(--foreground)]">{String(row.total || '')}</td>
                 </tr>
               ))
             ) : (
               <tr>
-                <td colSpan={5} className="border border-gray-300 px-3 py-4 text-center text-gray-400">
+                <td colSpan={5} className="border border-[var(--border)] px-3 py-4 text-center text-[var(--muted-foreground)]">
                   Данные будут подставлены из КП
                 </td>
               </tr>
@@ -176,10 +176,10 @@ function TableBlockContent({ block }: { block: DocBlock }) {
             <tfoot>
               {block._footerRows.map((row, i) => (
                 <tr key={i} className="font-medium">
-                  <td colSpan={4} className="border border-gray-300 px-3 py-2 text-right">
+                  <td colSpan={4} className="border border-[var(--border)] px-3 py-2 text-right font-medium">
                     {row.label}
                   </td>
-                  <td className="border border-gray-300 px-3 py-2 text-right">
+                  <td className="border border-[var(--border)] px-3 py-2 text-right font-semibold">
                     {row.value}
                   </td>
                 </tr>
@@ -196,7 +196,7 @@ function SeparatorBlockContent({ block }: { block: DocBlock }) {
   return (
     <div style={{ height: block.height ? `${block.height}px` : '20px' }}>
       {block.showLine !== false && (
-        <hr className="border-t border-gray-300 mt-2" />
+        <hr className="border-t border-[var(--border)] mt-2" />
       )}
     </div>
   );

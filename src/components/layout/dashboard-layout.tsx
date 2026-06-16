@@ -4,6 +4,7 @@ import { Sidebar } from './sidebar';
 import { Topbar } from './topbar';
 import { Breadcrumbs } from '@/components/ui/breadcrumbs';
 import { ErrorBoundary } from '@/components/ui/error-boundary';
+import { AppGuide } from '@/components/ui/app-guide';
 import { useState, useEffect } from 'react';
 import { useAuthStore } from '@/stores/auth-store';
 import { useThemeStore } from '@/stores/theme-store';
@@ -54,6 +55,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </ErrorBoundary>
         </main>
       </div>
+      <AppGuide />
     </div>
   );
 }

@@ -85,7 +85,7 @@ export default function WarehousePositionsPage() {
   return (
     <CrudPage<StoragePosition>
       title="Остатки на складе"
-      apiPath="/api/storage-positions"
+      apiPath="/api/storage-items"
       columns={[
         {
           key: 'warehouse',

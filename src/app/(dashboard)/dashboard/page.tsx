@@ -48,7 +48,7 @@ export default function DashboardPage() {
           { api: '/api/products', idx: 2 },
           { api: '/api/proposals', idx: 3 },
           { api: '/api/contracts', idx: 4 },
-          { api: '/api/production', idx: 5 },
+          { api: '/api/production-orders', idx: 5 },
         ];
         const results = await Promise.all(
           endpoints.map(async (ep) => {

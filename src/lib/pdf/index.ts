@@ -1,5 +1,14 @@
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
+/**
+ * pdf/index.ts — Генерация PDF документов
+ *
+ * Использует jsPDF + jspdf-autotable для создания
+ * профессиональных PDF с таблицами.
+ */
+
+import { jsPDF } from 'jspdf';
+import { autoTable } from 'jspdf-autotable';
+
+// ─── Types ───────────────────────────────────────────────────────────────────
 
 export interface ProposalPdfData {
   number: string;
@@ -41,6 +50,11 @@ export interface ProposalPdfData {
   notes?: string;
   validUntil?: string;
   createdAt: string;
+  discountPercent?: number;
+  discountAmount?: number;
+  vatRate?: number;
+  vatAmount?: number;
+  grandTotal?: number;
 }
 
 export interface ContractPdfData {
@@ -85,295 +99,6 @@ export interface ContractPdfData {
   createdAt: string;
 }
 
-const formatDate = (dateStr: string) => {
-  return new Date(dateStr).toLocaleDateString('ru-RU', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  });
-};
-
-const formatCurrency = (amount: number) => {
-  return amount.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-};
-
-export async function generateProposalPdf(data: ProposalPdfData): Promise<jsPDF> {
-  const doc = new jsPDF('p', 'mm', 'a4');
-  const pageWidth = doc.internal.pageSize.getWidth();
-  const margin = 20;
-  let y = margin;
-
-  doc.setFont('helvetica');
-
-  if (data.organization) {
-    doc.setFontSize(10);
-    doc.text(data.organization.name, margin, y);
-    y += 5;
-    if (data.organization.inn) {
-      doc.text(`ИНН: ${data.organization.inn}  КПП: ${data.organization.kpp || '—'}`, margin, y);
-      y += 5;
-    }
-    if (data.organization.legalAddress) {
-      doc.text(`Адрес: ${data.organization.legalAddress}`, margin, y);
-      y += 5;
-    }
-    if (data.organization.phone || data.organization.email) {
-      doc.text(`Тел: ${data.organization.phone || '—'}  Email: ${data.organization.email || '—'}`, margin, y);
-      y += 5;
-    }
-  }
-
-  y += 10;
-  doc.setFontSize(16);
-  doc.text('КОММЕРЧЕСКОЕ ПРЕДЛОЖЕНИЕ', pageWidth / 2, y, { align: 'center' });
-  y += 8;
-
-  doc.setFontSize(12);
-  doc.text(`№ ${data.number}`, pageWidth / 2, y, { align: 'center' });
-  y += 5;
-  doc.text(`от ${formatDate(data.createdAt)}`, pageWidth / 2, y, { align: 'center' });
-  y += 10;
-
-  if (data.client) {
-    doc.setFontSize(10);
-    doc.text('Клиент:', margin, y);
-    y += 5;
-    doc.text(`${data.client.lastName} ${data.client.firstName} ${data.client.patronymic || ''}`, margin, y);
-    y += 5;
-    if (data.client.phone) {
-      doc.text(`Тел: ${data.client.phone}`, margin, y);
-      y += 5;
-    }
-    if (data.client.email) {
-      doc.text(`Email: ${data.client.email}`, margin, y);
-      y += 5;
-    }
-  }
-
-  y += 5;
-  doc.setFontSize(10);
-  doc.text(`Наименование: ${data.title}`, margin, y);
-  y += 10;
-
-  if (data.items && data.items.length > 0) {
-    const tableStartY = y;
-    const colWidths = [80, 25, 20, 30, 35];
-    const headers = ['Наименование', 'Кол-во', 'Ед.', 'Цена', 'Сумма'];
-
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'bold');
-    let x = margin;
-    headers.forEach((header, i) => {
-      doc.text(header, x + 2, y + 4);
-      x += colWidths[i];
-    });
-    y += 6;
-
-    doc.setDrawColor(200);
-    doc.line(margin, y, margin + colWidths.reduce((a, b) => a + b, 0), y);
-    y += 2;
-
-    doc.setFont('helvetica', 'normal');
-    data.items.forEach((item) => {
-      if (y > 270) {
-        doc.addPage();
-        y = margin;
-      }
-      x = margin;
-      doc.text(item.name.substring(0, 40), x + 2, y + 4);
-      x += colWidths[0];
-      doc.text(String(item.quantity), x + 2, y + 4);
-      x += colWidths[1];
-      doc.text(item.unit || 'шт', x + 2, y + 4);
-      x += colWidths[2];
-      doc.text(formatCurrency(item.unitPrice), x + 2, y + 4);
-      x += colWidths[3];
-      doc.text(formatCurrency(item.total), x + 2, y + 4);
-      y += 6;
-    });
-
-    doc.setDrawColor(200);
-    doc.line(margin, y, margin + colWidths.reduce((a, b) => a + b, 0), y);
-    y += 5;
-
-    const total = data.items.reduce((sum, item) => sum + item.total, 0);
-    doc.setFont('helvetica', 'bold');
-    doc.text(`ИТОГО: ${formatCurrency(total)} руб.`, margin + colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3], y + 4);
-    y += 10;
-  }
-
-  if (data.markupPercent && data.markupPercent > 0) {
-    doc.setFontSize(10);
-    doc.text(`Наценка: ${data.markupPercent}%`, margin, y);
-    y += 8;
-  }
-
-  if (data.validUntil) {
-    doc.setFontSize(10);
-    doc.text(`Действительно до: ${formatDate(data.validUntil)}`, margin, y);
-    y += 8;
-  }
-
-  if (data.notes) {
-    doc.setFontSize(10);
-    doc.text('Примечания:', margin, y);
-    y += 5;
-    const splitNotes = doc.splitTextToSize(data.notes, pageWidth - margin * 2);
-    doc.text(splitNotes, margin, y);
-    y += splitNotes.length * 5;
-  }
-
-  y += 15;
-  if (y > 250) {
-    doc.addPage();
-    y = margin;
-  }
-
-  doc.setFontSize(10);
-  doc.text('Подпись: ___________________', margin, y);
-  y += 8;
-  if (data.organization?.signerName) {
-    doc.text(`${data.organization.signerPosition || ''} ${data.organization.signerName}`, margin, y);
-  }
-
-  return doc;
-}
-
-export async function generateContractPdf(data: ContractPdfData): Promise<jsPDF> {
-  const doc = new jsPDF('p', 'mm', 'a4');
-  const pageWidth = doc.internal.pageSize.getWidth();
-  const margin = 20;
-  let y = margin;
-
-  doc.setFont('helvetica');
-
-  if (data.organization) {
-    doc.setFontSize(10);
-    doc.text(data.organization.name, margin, y);
-    y += 5;
-    if (data.organization.inn) {
-      doc.text(`ИНН: ${data.organization.inn}  КПП: ${data.organization.kpp || '—'}`, margin, y);
-      y += 5;
-    }
-    if (data.organization.legalAddress) {
-      doc.text(`Адрес: ${data.organization.legalAddress}`, margin, y);
-      y += 5;
-    }
-  }
-
-  y += 10;
-  doc.setFontSize(16);
-  doc.text('ДОГОВОР', pageWidth / 2, y, { align: 'center' });
-  y += 8;
-
-  doc.setFontSize(12);
-  doc.text(`№ ${data.number}`, pageWidth / 2, y, { align: 'center' });
-  y += 5;
-  doc.text(`от ${formatDate(data.createdAt)}`, pageWidth / 2, y, { align: 'center' });
-  y += 10;
-
-  doc.setFontSize(10);
-  doc.text(`Наименование: ${data.title}`, margin, y);
-  y += 8;
-
-  if (data.client) {
-    doc.text('Заказчик:', margin, y);
-    y += 5;
-    doc.text(`${data.client.lastName} ${data.client.firstName} ${data.client.patronymic || ''}`, margin, y);
-    y += 5;
-    if (data.client.phone) {
-      doc.text(`Тел: ${data.client.phone}`, margin, y);
-      y += 5;
-    }
-  }
-
-  y += 5;
-
-  if (data.items && data.items.length > 0) {
-    const colWidths = [80, 25, 20, 35];
-    const headers = ['Наименование', 'Кол-во', 'Ед.', 'Сумма'];
-
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'bold');
-    let x = margin;
-    headers.forEach((header, i) => {
-      doc.text(header, x + 2, y + 4);
-      x += colWidths[i];
-    });
-    y += 6;
-
-    doc.setDrawColor(200);
-    doc.line(margin, y, margin + colWidths.reduce((a, b) => a + b, 0), y);
-    y += 2;
-
-    doc.setFont('helvetica', 'normal');
-    data.items.forEach((item) => {
-      if (y > 270) {
-        doc.addPage();
-        y = margin;
-      }
-      x = margin;
-      doc.text(item.name.substring(0, 40), x + 2, y + 4);
-      x += colWidths[0];
-      doc.text(String(item.quantity), x + 2, y + 4);
-      x += colWidths[1];
-      doc.text(item.unit || 'шт', x + 2, y + 4);
-      x += colWidths[2];
-      doc.text(formatCurrency(item.total), x + 2, y + 4);
-      y += 6;
-    });
-
-    doc.setDrawColor(200);
-    doc.line(margin, y, margin + colWidths.reduce((a, b) => a + b, 0), y);
-    y += 5;
-
-    doc.setFont('helvetica', 'bold');
-    doc.text(`ИТОГО: ${formatCurrency(data.totalAmount)} руб.`, margin + colWidths[0] + colWidths[1] + colWidths[2], y + 4);
-    y += 10;
-  }
-
-  if (data.signedAt) {
-    doc.setFontSize(10);
-    doc.text(`Дата подписания: ${formatDate(data.signedAt)}`, margin, y);
-    y += 8;
-  }
-
-  if (data.expiresAt) {
-    doc.text(`Действует до: ${formatDate(data.expiresAt)}`, margin, y);
-    y += 8;
-  }
-
-  if (data.notes) {
-    doc.text('Примечания:', margin, y);
-    y += 5;
-    const splitNotes = doc.splitTextToSize(data.notes, pageWidth - margin * 2);
-    doc.text(splitNotes, margin, y);
-    y += splitNotes.length * 5;
-  }
-
-  y += 15;
-  if (y > 250) {
-    doc.addPage();
-    y = margin;
-  }
-
-  doc.setFontSize(10);
-  doc.text('ЗАКАЗЧИК:', margin, y);
-  doc.text('ИСПОЛНИТЕЛЬ:', pageWidth / 2, y);
-  y += 8;
-  doc.text('___________________', margin, y);
-  doc.text('___________________', pageWidth / 2, y);
-  y += 5;
-  if (data.client) {
-    doc.text(`${data.client.lastName} ${data.client.firstName}`, margin, y);
-  }
-  if (data.organization?.signerName) {
-    doc.text(data.organization.signerName, pageWidth / 2, y);
-  }
-
-  return doc;
-}
-
 export interface InvoicePdfData {
   number: string;
   title: string;
@@ -410,149 +135,508 @@ export interface InvoicePdfData {
   createdAt: string;
 }
 
-export async function generateInvoicePdf(data: InvoicePdfData): Promise<jsPDF> {
+// ─── Utilities ───────────────────────────────────────────────────────────────
+
+export function formatPrice(amount: number): string {
+  return amount.toLocaleString('ru-RU', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }) + ' ₽';
+}
+
+export function formatDate(dateStr: string | Date): string {
+  return new Date(dateStr).toLocaleDateString('ru-RU', {
+    day: 'numeric', month: 'long', year: 'numeric',
+  });
+}
+
+export function formatDateShort(dateStr: string | Date): string {
+  return new Date(dateStr).toLocaleDateString('ru-RU', {
+    day: '2-digit', month: '2-digit', year: 'numeric',
+  });
+}
+
+// ─── PDF Generation ──────────────────────────────────────────────────────────
+
+const MARGIN = 20;
+const PAGE_W = 210;
+
+/** Сгенерировать PDF для КП */
+export function generateProposalPdf(data: ProposalPdfData): jsPDF {
   const doc = new jsPDF('p', 'mm', 'a4');
-  const pageWidth = doc.internal.pageSize.getWidth();
-  const margin = 20;
-  let y = margin;
+  const contentW = PAGE_W - MARGIN * 2;
+  let y = MARGIN;
 
-  doc.setFont('helvetica');
-
+  // Organisation info header
   if (data.organization) {
-    doc.setFontSize(10);
-    doc.text(data.organization.name, margin, y);
-    y += 5;
-    if (data.organization.inn) {
-      doc.text(`ИНН: ${data.organization.inn}  КПП: ${data.organization.kpp || '—'}`, margin, y);
-      y += 5;
-    }
-    if (data.organization.legalAddress) {
-      doc.text(`Адрес: ${data.organization.legalAddress}`, margin, y);
-      y += 5;
-    }
-    if (data.organization.phone || data.organization.email) {
-      doc.text(`Тел: ${data.organization.phone || '—'}  Email: ${data.organization.email || '—'}`, margin, y);
-      y += 5;
-    }
-  }
-
-  y += 10;
-  doc.setFontSize(16);
-  doc.text('СЧЁТ-ФАКТУРА', pageWidth / 2, y, { align: 'center' });
-  y += 8;
-
-  doc.setFontSize(12);
-  doc.text(`№ ${data.number}`, pageWidth / 2, y, { align: 'center' });
-  y += 5;
-  doc.text(`от ${formatDate(data.createdAt)}`, pageWidth / 2, y, { align: 'center' });
-  y += 10;
-
-  if (data.client) {
-    doc.setFontSize(10);
-    doc.text('Покупатель:', margin, y);
-    y += 5;
-    doc.text(`${data.client.lastName} ${data.client.firstName} ${data.client.patronymic || ''}`, margin, y);
-    y += 5;
-    if (data.client.phone) {
-      doc.text(`Тел: ${data.client.phone}`, margin, y);
-      y += 5;
-    }
-  }
-
-  y += 5;
-
-  if (data.items && data.items.length > 0) {
-    const colWidths = [80, 25, 20, 30, 35];
-    const headers = ['Наименование', 'Кол-во', 'Ед.', 'Цена', 'Сумма'];
-
-    doc.setFontSize(9);
+    const org = data.organization;
+    doc.setFontSize(14);
     doc.setFont('helvetica', 'bold');
-    let x = margin;
-    headers.forEach((header, i) => {
-      doc.text(header, x + 2, y + 4);
-      x += colWidths[i];
-    });
+    doc.text(org.name, MARGIN, y);
     y += 6;
 
-    doc.setDrawColor(200);
-    doc.line(margin, y, margin + colWidths.reduce((a, b) => a + b, 0), y);
-    y += 2;
-
+    doc.setFontSize(8);
     doc.setFont('helvetica', 'normal');
-    data.items.forEach((item) => {
-      if (y > 270) {
-        doc.addPage();
-        y = margin;
-      }
-      x = margin;
-      doc.text(item.name.substring(0, 40), x + 2, y + 4);
-      x += colWidths[0];
-      doc.text(String(item.quantity), x + 2, y + 4);
-      x += colWidths[1];
-      doc.text(item.unit || 'шт', x + 2, y + 4);
-      x += colWidths[2];
-      doc.text(formatCurrency(item.unitPrice), x + 2, y + 4);
-      x += colWidths[3];
-      doc.text(formatCurrency(item.total), x + 2, y + 4);
-      y += 6;
-    });
-
-    doc.setDrawColor(200);
-    doc.line(margin, y, margin + colWidths.reduce((a, b) => a + b, 0), y);
-    y += 5;
-
-    doc.setFont('helvetica', 'bold');
-    doc.text(`ИТОГО: ${formatCurrency(data.totalAmount)} руб.`, margin + colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3], y + 4);
-    y += 10;
+    doc.setTextColor(100, 100, 100);
+    if (org.inn) {
+      doc.text(`ИНН ${org.inn}${org.kpp ? ` ／ КПП ${org.kpp}` : ''}`, MARGIN, y);
+      y += 4;
+    }
+    if (org.legalAddress) {
+      const addrLines = doc.splitTextToSize(org.legalAddress, contentW);
+      doc.text(addrLines, MARGIN, y);
+      y += addrLines.length * 3.5;
+    }
+    if (org.phone || org.email) {
+      doc.text(`Тел: ${org.phone || '—'}  Email: ${org.email || '—'}`, MARGIN, y);
+      y += 4;
+    }
+    doc.setTextColor(0);
+    y += 3;
   }
 
-  if (data.organization?.bankName) {
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'bold');
-    doc.text('Реквизиты для оплаты:', margin, y);
-    y += 5;
-    doc.setFont('helvetica', 'normal');
-    doc.text(`Банк: ${data.organization.bankName}`, margin, y);
-    y += 5;
-    if (data.organization.bankBik) doc.text(`БИК: ${data.organization.bankBik}`, margin, y);
-    y += 5;
-    if (data.organization.bankAccount) doc.text(`Счёт: ${data.organization.bankAccount}`, margin, y);
-    y += 5;
-    if (data.organization.inn) doc.text(`ИНН: ${data.organization.inn}`, margin, y);
-    y += 8;
-  }
+  // Separator
+  doc.setDrawColor(200, 200, 200);
+  doc.setLineWidth(0.3);
+  doc.line(MARGIN, y, PAGE_W - MARGIN, y);
+  y += 5;
 
-  if (data.notes) {
-    doc.setFontSize(10);
-    doc.text('Примечания:', margin, y);
-    y += 5;
-    const splitNotes = doc.splitTextToSize(data.notes, pageWidth - margin * 2);
-    doc.text(splitNotes, margin, y);
-    y += splitNotes.length * 5;
-  }
-
-  y += 15;
-  if (y > 250) {
-    doc.addPage();
-    y = margin;
-  }
+  // Title
+  doc.setFontSize(16);
+  doc.setFont('helvetica', 'bold');
+  doc.text('КОММЕРЧЕСКОЕ ПРЕДЛОЖЕНИЕ', PAGE_W / 2, y, { align: 'center' });
+  y += 7;
 
   doc.setFontSize(10);
-  doc.text('Подпись: ___________________', margin, y);
-  y += 8;
+  doc.setFont('helvetica', 'normal');
+  doc.text(`№ ${data.number} от ${formatDateShort(data.createdAt)}`, PAGE_W / 2, y, { align: 'center' });
+  y += 4;
+
+  doc.setDrawColor(200, 200, 200);
+  doc.line(MARGIN, y, PAGE_W - MARGIN, y);
+  y += 5;
+
+  // Client info
+  if (data.client) {
+    const cl = data.client;
+    doc.setFontSize(9);
+    doc.text(`Клиент: ${cl.lastName} ${cl.firstName}${cl.patronymic ? ' ' + cl.patronymic : ''}`, MARGIN, y);
+    y += 4;
+    if (cl.phone) {
+      doc.text(`Тел: ${cl.phone}`, MARGIN, y);
+      y += 4;
+    }
+    if (cl.email) {
+      doc.text(`Email: ${cl.email}`, MARGIN, y);
+      y += 4;
+    }
+    y += 2;
+  }
+
+  // Title
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'bold');
+  doc.text(data.title, MARGIN, y);
+  y += 5;
+
+  // Items table
+  if (data.items && data.items.length > 0) {
+    const head = [['№', 'Наименование', 'Кол-во', 'Ед.', 'Цена', 'Сумма']];
+    const body = data.items.map((item, i) => [
+      String(i + 1),
+      item.name,
+      String(item.quantity),
+      item.unit || 'шт',
+      formatPrice(item.unitPrice),
+      formatPrice(item.total),
+    ]);
+
+    autoTable(doc, {
+      startY: y,
+      head,
+      body,
+      margin: { left: MARGIN, right: MARGIN },
+      styles: {
+        fontSize: 8,
+        cellPadding: 1.5,
+        lineColor: [200, 200, 200],
+        lineWidth: 0.3,
+      },
+      headStyles: {
+        fillColor: [41, 98, 255],
+        textColor: 255,
+        fontStyle: 'bold',
+        fontSize: 8,
+      },
+      columnStyles: {
+        0: { cellWidth: 8, halign: 'center' },
+        3: { halign: 'center' },
+        4: { halign: 'right' },
+        5: { halign: 'right' },
+      },
+      foot: [[
+        '',
+        'ИТОГО:',
+        '',
+        '',
+        '',
+        formatPrice(data.items.reduce((s, i) => s + i.total, 0)),
+      ]],
+      footStyles: {
+        fillColor: [240, 240, 240],
+        fontStyle: 'bold',
+        fontSize: 8,
+      },
+    });
+
+    const docAT = doc as jsPDF & { lastAutoTable: { finalY: number } };
+    y = docAT.lastAutoTable.finalY + 5;
+
+
+    // Financial summary
+    const total = data.items.reduce((s, i) => s + i.total, 0);
+    const discount = data.discountAmount || 0;
+    const vatRate = data.vatRate || 20;
+    const vat = data.vatAmount || Math.round((total - discount) * vatRate / (100 + vatRate));
+    const grandTotal = data.grandTotal || total - discount;
+
+    const finRows: { label: string; value: string; bold?: boolean }[] = [
+      { label: 'Сумма:', value: formatPrice(total) },
+    ];
+    if (discount > 0) {
+      finRows.push({ label: `Скидка (${data.discountPercent}%):`, value: `−${formatPrice(discount)}` });
+    }
+    finRows.push({ label: `НДС (${vatRate}%):`, value: formatPrice(vat) });
+    finRows.push({ label: 'Всего к оплате:', value: formatPrice(grandTotal), bold: true });
+
+    finRows.forEach((row) => {
+      doc.setFontSize(row.bold ? 11 : 9);
+      doc.setFont('helvetica', row.bold ? 'bold' : 'normal');
+      doc.text(`${row.label}  ${row.value}`, PAGE_W - MARGIN, y, { align: 'right' });
+      y += row.bold ? 5 : 4;
+    });
+  }
+
+  y += 3;
+
+  // Notes
+  if (data.notes) {
+    doc.setDrawColor(200, 200, 200);
+    doc.line(MARGIN, y, PAGE_W - MARGIN, y);
+    y += 4;
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Примечания:', MARGIN, y);
+    y += 4;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(80, 80, 80);
+    const noteLines = doc.splitTextToSize(data.notes, contentW);
+    doc.text(noteLines, MARGIN, y);
+    y += noteLines.length * 3.5 + 3;
+    doc.setTextColor(0);
+  }
+
+  // Valid until
+  if (data.validUntil) {
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(100, 100, 100);
+    doc.text(`Действительно до: ${formatDate(data.validUntil)}`, MARGIN, y);
+    y += 4;
+    doc.setTextColor(0);
+  }
+
+  // Markup
+  if (data.markupPercent && data.markupPercent > 0) {
+    doc.setFontSize(9);
+    doc.text(`Наценка: ${data.markupPercent}%`, MARGIN, y);
+    y += 4;
+  }
+
+  // Signature
+  y += 6;
+  doc.setDrawColor(200, 200, 200);
+  doc.line(MARGIN, y, PAGE_W - MARGIN, y);
+  y += 6;
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'normal');
+  doc.text('Подпись: ___________________', MARGIN, y);
+  y += 5;
   if (data.organization?.signerName) {
-    doc.text(`${data.organization.signerPosition || ''} ${data.organization.signerName}`, margin, y);
+    doc.setFontSize(9);
+    doc.text(
+      `${data.organization.signerPosition || ''} ${data.organization.signerName}`,
+      MARGIN, y,
+    );
   }
 
   return doc;
 }
 
+/** Сгенерировать PDF для договора */
+export function generateContractPdf(data: ContractPdfData): jsPDF {
+  const doc = new jsPDF('p', 'mm', 'a4');
+  let y = MARGIN;
+
+  if (data.organization) {
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text(data.organization.name, MARGIN, y);
+    y += 5;
+    if (data.organization.inn) {
+      doc.text(`ИНН: ${data.organization.inn}  КПП: ${data.organization.kpp || '—'}`, MARGIN, y);
+      y += 5;
+    }
+    if (data.organization.legalAddress) {
+      doc.text(`Адрес: ${data.organization.legalAddress}`, MARGIN, y);
+      y += 5;
+    }
+    y += 5;
+  }
+
+  doc.setFontSize(16);
+  doc.setFont('helvetica', 'bold');
+  doc.text('ДОГОВОР', PAGE_W / 2, y, { align: 'center' });
+  y += 8;
+
+  doc.setFontSize(12);
+  doc.setFont('helvetica', 'normal');
+  doc.text(`№ ${data.number}`, PAGE_W / 2, y, { align: 'center' });
+  y += 5;
+  doc.text(`от ${formatDateShort(data.createdAt)}`, PAGE_W / 2, y, { align: 'center' });
+  y += 10;
+
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'bold');
+  doc.text(`Наименование: ${data.title}`, MARGIN, y);
+  y += 8;
+
+  if (data.client) {
+    doc.setFont('helvetica', 'normal');
+    doc.text('Заказчик:', MARGIN, y);
+    y += 5;
+    doc.text(`${data.client.lastName} ${data.client.firstName} ${data.client.patronymic || ''}`, MARGIN, y);
+    y += 5;
+    if (data.client.phone) {
+      doc.text(`Тел: ${data.client.phone}`, MARGIN, y);
+      y += 5;
+    }
+    y += 3;
+  }
+
+  // Items table
+  if (data.items && data.items.length > 0) {
+    const head = [['№', 'Наименование', 'Кол-во', 'Ед.', 'Сумма']];
+    const body = data.items.map((item, i) => [
+      String(i + 1),
+      item.name,
+      String(item.quantity),
+      item.unit || 'шт',
+      formatPrice(item.total),
+    ]);
+
+    autoTable(doc, {
+      startY: y,
+      head,
+      body,
+      margin: { left: MARGIN, right: MARGIN },
+      styles: { fontSize: 8, cellPadding: 1.5, lineColor: [200, 200, 200], lineWidth: 0.3 },
+      headStyles: { fillColor: [41, 98, 255], textColor: 255, fontStyle: 'bold', fontSize: 8 },
+      columnStyles: {
+        0: { cellWidth: 8, halign: 'center' },
+        3: { halign: 'center' },
+        4: { halign: 'right' },
+      },
+      foot: [[
+        '', 'ИТОГО:', '', '',
+        formatPrice(data.totalAmount),
+      ]],
+      footStyles: { fillColor: [240, 240, 240], fontStyle: 'bold', fontSize: 8 },
+    });
+
+    const docAT = doc as jsPDF & { lastAutoTable: { finalY: number } };
+    y = docAT.lastAutoTable.finalY + 5;
+
+  }
+
+  if (data.signedAt) {
+    doc.setFontSize(10);
+    doc.text(`Дата подписания: ${formatDateShort(data.signedAt)}`, MARGIN, y);
+    y += 6;
+  }
+  if (data.expiresAt) {
+    doc.text(`Действует до: ${formatDateShort(data.expiresAt)}`, MARGIN, y);
+    y += 6;
+  }
+
+  if (data.notes) {
+    doc.text('Примечания:', MARGIN, y);
+    y += 4;
+    doc.setFontSize(8);
+    const noteLines = doc.splitTextToSize(data.notes, PAGE_W - MARGIN * 2);
+    doc.text(noteLines, MARGIN, y);
+    y += noteLines.length * 3.5 + 3;
+  }
+
+  y += 10;
+  doc.setFontSize(10);
+  doc.text('ЗАКАЗЧИК:', MARGIN, y);
+  doc.text('ИСПОЛНИТЕЛЬ:', PAGE_W / 2, y);
+  y += 8;
+  doc.text('___________________', MARGIN, y);
+  doc.text('___________________', PAGE_W / 2, y);
+  y += 5;
+  if (data.client) {
+    doc.text(`${data.client.lastName} ${data.client.firstName}`, MARGIN, y);
+  }
+  if (data.organization?.signerName) {
+    doc.text(data.organization.signerName, PAGE_W / 2, y);
+  }
+
+  return doc;
+}
+
+/** Сгенерировать PDF для счёта */
+export function generateInvoicePdf(data: InvoicePdfData): jsPDF {
+  const doc = new jsPDF('p', 'mm', 'a4');
+  let y = MARGIN;
+
+  if (data.organization) {
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text(data.organization.name, MARGIN, y);
+    y += 5;
+    if (data.organization.inn) {
+      doc.text(`ИНН: ${data.organization.inn}  КПП: ${data.organization.kpp || '—'}`, MARGIN, y);
+      y += 5;
+    }
+    if (data.organization.legalAddress) {
+      doc.text(`Адрес: ${data.organization.legalAddress}`, MARGIN, y);
+      y += 5;
+    }
+    if (data.organization.phone || data.organization.email) {
+      doc.text(`Тел: ${data.organization.phone || '—'}  Email: ${data.organization.email || '—'}`, MARGIN, y);
+      y += 5;
+    }
+    y += 5;
+  }
+
+  doc.setFontSize(16);
+  doc.setFont('helvetica', 'bold');
+  doc.text('СЧЁТ-ФАКТУРА', PAGE_W / 2, y, { align: 'center' });
+  y += 8;
+
+  doc.setFontSize(12);
+  doc.setFont('helvetica', 'normal');
+  doc.text(`№ ${data.number}`, PAGE_W / 2, y, { align: 'center' });
+  y += 5;
+  doc.text(`от ${formatDateShort(data.createdAt)}`, PAGE_W / 2, y, { align: 'center' });
+  y += 10;
+
+  if (data.client) {
+    doc.setFontSize(10);
+    doc.text('Покупатель:', MARGIN, y);
+    y += 5;
+    doc.text(`${data.client.lastName} ${data.client.firstName} ${data.client.patronymic || ''}`, MARGIN, y);
+    y += 5;
+    if (data.client.phone) {
+      doc.text(`Тел: ${data.client.phone}`, MARGIN, y);
+      y += 5;
+    }
+    y += 3;
+  }
+
+  if (data.items && data.items.length > 0) {
+    const head = [['№', 'Наименование', 'Кол-во', 'Ед.', 'Цена', 'Сумма']];
+    const body = data.items.map((item, i) => [
+      String(i + 1),
+      item.name,
+      String(item.quantity),
+      item.unit || 'шт',
+      formatPrice(item.unitPrice),
+      formatPrice(item.total),
+    ]);
+
+    autoTable(doc, {
+      startY: y,
+      head,
+      body,
+      margin: { left: MARGIN, right: MARGIN },
+      styles: { fontSize: 8, cellPadding: 1.5, lineColor: [200, 200, 200], lineWidth: 0.3 },
+      headStyles: { fillColor: [41, 98, 255], textColor: 255, fontStyle: 'bold', fontSize: 8 },
+      columnStyles: {
+        0: { cellWidth: 8, halign: 'center' },
+        3: { halign: 'center' },
+        4: { halign: 'right' },
+        5: { halign: 'right' },
+      },
+      foot: [[
+        '', 'ИТОГО:', '', '', '',
+        formatPrice(data.totalAmount),
+      ]],
+      footStyles: { fillColor: [240, 240, 240], fontStyle: 'bold', fontSize: 8 },
+    });
+
+    const docAT = doc as jsPDF & { lastAutoTable: { finalY: number } };
+    y = docAT.lastAutoTable.finalY + 5;
+
+  }
+
+  // Bank details
+  if (data.organization?.bankName) {
+    y += 3;
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Реквизиты для оплаты:', MARGIN, y);
+    y += 5;
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Банк: ${data.organization.bankName}`, MARGIN, y);
+    y += 5;
+    if (data.organization.bankBik) {
+      doc.text(`БИК: ${data.organization.bankBik}`, MARGIN, y);
+      y += 5;
+    }
+    if (data.organization.bankAccount) {
+      doc.text(`Счёт: ${data.organization.bankAccount}`, MARGIN, y);
+      y += 5;
+    }
+    if (data.organization.inn) {
+      doc.text(`ИНН: ${data.organization.inn}`, MARGIN, y);
+      y += 5;
+    }
+    y += 3;
+  }
+
+  if (data.notes) {
+    doc.setFontSize(10);
+    doc.text('Примечания:', MARGIN, y);
+    y += 4;
+    doc.setFontSize(8);
+    const noteLines = doc.splitTextToSize(data.notes, PAGE_W - MARGIN * 2);
+    doc.text(noteLines, MARGIN, y);
+    y += noteLines.length * 3.5 + 3;
+  }
+
+  y += 10;
+  doc.setFontSize(10);
+  doc.text('Подпись: ___________________', MARGIN, y);
+  y += 6;
+  if (data.organization?.signerName) {
+    doc.text(`${data.organization.signerPosition || ''} ${data.organization.signerName}`, MARGIN, y);
+  }
+
+  return doc;
+}
+
+/** Сгенерировать PDF из HTML элемента (через html2canvas) */
 export async function generatePdfFromHtml(elementId: string): Promise<jsPDF> {
   const element = document.getElementById(elementId);
   if (!element) {
     throw new Error(`Element with id "${elementId}" not found`);
   }
 
+  const html2canvas = (await import('html2canvas')).default;
   const canvas = await html2canvas(element, {
     scale: 2,
     useCORS: true,
@@ -582,6 +666,20 @@ export async function generatePdfFromHtml(elementId: string): Promise<jsPDF> {
   return pdf;
 }
 
-export function downloadPdf(doc: jsPDF, filename: string) {
+/** Скачать PDF */
+export function downloadPdf(doc: jsPDF, filename: string): void {
   doc.save(filename);
+}
+
+/** Открыть PDF в новой вкладке */
+export function openPdfInline(doc: jsPDF): void {
+  const blob = doc.output('blob');
+  const url = URL.createObjectURL(blob);
+  window.open(url, '_blank');
+  setTimeout(() => URL.revokeObjectURL(url), 10000);
+}
+
+/** Получить blob для отправки на сервер */
+export function getPdfBlob(doc: jsPDF): Blob {
+  return doc.output('blob');
 }

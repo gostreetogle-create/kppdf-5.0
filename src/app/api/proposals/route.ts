@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
 import { apiOk, apiError, apiPaginated, parseSearchParams } from '@/lib/api-response';
+import { nextProposalNumber } from '@/lib/counter';
 
 export async function GET(request: NextRequest) {
   try {
@@ -40,8 +41,9 @@ export async function POST(request: NextRequest) {
   try {
     await requireAuth();
     const body = await request.json();
+    const number = body.number || await nextProposalNumber();
     const item = await prisma.proposal.create({
-      data: body,
+      data: { ...body, number },
       include: { items: { include: { product: true } }, client: true, organization: true },
     });
     return apiOk(item);

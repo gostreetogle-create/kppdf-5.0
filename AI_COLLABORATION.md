@@ -507,6 +507,14 @@ POST   /api/document-templates/:id/clone  — клонировать
 | 20 | Empty states | ✅ ГОТОВО | MiMo |
 | 21 | Form select fix | 🔴 В РАБОТЕ | MiMo |
 | 22 | User view page | ⏳ ОЖИДАНИЕ | MiMo |
+| 23 | Toast интеграция | ✅ ГОТОВО | MiMo |
+| 24 | Skeleton загрузки | ✅ ГОТОВО | MiMo |
+| 25 | Форматирование дат/валют | ✅ ГОТОВО | MiMo |
+| 26 | App Guide | ✅ ГОТОВО | MiMo |
+| 27 | Finance API + UI | ✅ ГОТОВО | MiMo |
+| 28 | Warehouse API + UI | ✅ ГОТОВО | MiMo |
+| 29 | Исправление API путей | ✅ ГОТОВО | MiMo |
+| 30 | Toast Provider SSR fix | ✅ ГОТОВО | MiMo |
 
 ### [Buffy] - ПРОТОКОЛ НЕПРЕРЫВНОЙ РАБОТЫ
 

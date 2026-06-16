@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, Pencil, Trash2, FileText } from 'lucide-react';
+import { Plus, Pencil, Trash2, FileText, Copy } from 'lucide-react';
 
 interface Template {
   id: string;
@@ -47,6 +47,18 @@ export default function TemplatesPage() {
       setTrigger((t) => t + 1);
     } catch (err) {
       console.error('Delete error:', err);
+    }
+  };
+
+  const handleClone = async (id: string) => {
+    try {
+      const res = await fetch(`/api/document-templates/${id}/clone`, { method: 'POST' });
+      const data = await res.json();
+      if (data.success && data.data) {
+        router.push(`/admin/templates/${data.data.id}`);
+      }
+    } catch (err) {
+      console.error('Clone error:', err);
     }
   };
 
@@ -111,6 +123,13 @@ export default function TemplatesPage() {
                       title="Редактировать"
                     >
                       <Pencil className="h-4 w-4 text-[var(--muted-foreground)]" />
+                    </button>
+                    <button
+                      onClick={() => handleClone(item.id)}
+                      className="p-1.5 rounded hover:bg-[var(--muted)] transition-colors"
+                      title="Клонировать"
+                    >
+                      <Copy className="h-4 w-4 text-[var(--muted-foreground)]" />
                     </button>
                     <button
                       onClick={() => setDeleteConfirm(item.id)}

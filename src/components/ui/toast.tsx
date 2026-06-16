@@ -1,7 +1,6 @@
 'use client';
 
-import { useState, useCallback, createContext, useContext, type ReactNode } from 'react';
-import { createPortal } from 'react-dom';
+import { useState, useCallback, createContext, useContext, type ReactNode, useEffect } from 'react';
 import { X, CheckCircle2, AlertCircle, Info, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -38,6 +37,40 @@ const variantConfig: Record<ToastVariant, { icon: typeof CheckCircle2; styles: s
   },
 };
 
+function ToastContainer({ toasts, removeToast }: { toasts: Toast[]; removeToast: (id: string) => void }) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+  if (!mounted) return null;
+
+  return (
+    <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2">
+      {toasts.map((t) => {
+        const config = variantConfig[t.variant];
+        const Icon = config.icon;
+        return (
+          <div
+            key={t.id}
+            className={cn(
+              'flex items-center gap-3 rounded-lg border px-4 py-3 text-sm shadow-lg backdrop-blur-sm',
+              'animate-in slide-in-from-right-full fade-in',
+              config.styles,
+            )}
+          >
+            <Icon className="h-4 w-4 shrink-0" />
+            <span className="flex-1">{t.message}</span>
+            <button
+              onClick={() => removeToast(t.id)}
+              className="shrink-0 opacity-70 hover:opacity-100"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
 
@@ -57,34 +90,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={{ toast }}>
       {children}
-      {createPortal(
-        <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2">
-          {toasts.map((t) => {
-            const config = variantConfig[t.variant];
-            const Icon = config.icon;
-            return (
-              <div
-                key={t.id}
-                className={cn(
-                  'flex items-center gap-3 rounded-lg border px-4 py-3 text-sm shadow-lg backdrop-blur-sm',
-                  'animate-in slide-in-from-right-full fade-in',
-                  config.styles,
-                )}
-              >
-                <Icon className="h-4 w-4 shrink-0" />
-                <span className="flex-1">{t.message}</span>
-                <button
-                  onClick={() => removeToast(t.id)}
-                  className="shrink-0 opacity-70 hover:opacity-100"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-            );
-          })}
-        </div>,
-        document.body,
-      )}
+      <ToastContainer toasts={toasts} removeToast={removeToast} />
     </ToastContext.Provider>
   );
 }

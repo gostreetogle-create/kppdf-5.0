@@ -55,10 +55,10 @@ export function TextBlockDialog({ block, onSave, onClose }: TextBlockDialogProps
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
-        <div className="flex items-center justify-between p-4 border-b">
-          <h2 className="text-lg font-semibold">Редактирование текстового блока</h2>
-          <button onClick={onClose} className="p-1 rounded hover:bg-gray-100">
+      <div className="bg-[var(--card)] rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+        <div className="flex items-center justify-between p-4 border-b border-[var(--border)]">
+          <h2 className="text-lg font-semibold text-[var(--foreground)]">Редактирование текстового блока</h2>
+          <button onClick={onClose} className="p-1 rounded hover:bg-[var(--muted)] transition-colors">
             <X size={20} />
           </button>
         </div>
@@ -208,10 +208,10 @@ export function TextBlockDialog({ block, onSave, onClose }: TextBlockDialogProps
         </div>
 
         <div className="flex justify-end gap-2 p-4 border-t">
-          <button onClick={onClose} className="px-4 py-2 rounded-lg border text-sm hover:bg-gray-50">
+          <button            onClick={onClose} className="px-4 py-2 rounded-lg border border-[var(--border)] text-sm hover:bg-[var(--muted)] transition-colors">
             Отмена
           </button>
-          <button onClick={handleSave} className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm hover:bg-blue-700">
+          <button onClick={handleSave} className="px-4 py-2 rounded-lg bg-[var(--primary)] text-[var(--primary-foreground)] text-sm font-medium hover:opacity-90 transition-opacity">
             Сохранить
           </button>
         </div>
@@ -246,10 +246,10 @@ export function TableBlockDialog({ block, tableTemplates, onSave, onClose, onCre
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
-        <div className="flex items-center justify-between p-4 border-b">
-          <h2 className="text-lg font-semibold">Настройка таблицы</h2>
-          <button onClick={onClose} className="p-1 rounded hover:bg-gray-100">
+      <div className="bg-[var(--card)] rounded-xl shadow-xl w-full max-w-md">
+        <div className="flex items-center justify-between p-4 border-b border-[var(--border)]">
+          <h2 className="text-lg font-semibold text-[var(--foreground)]">Настройка таблицы</h2>
+          <button onClick={onClose} className="p-1 rounded hover:bg-[var(--muted)] transition-colors">
             <X size={20} />
           </button>
         </div>
@@ -314,10 +314,10 @@ export function TableBlockDialog({ block, tableTemplates, onSave, onClose, onCre
         </div>
 
         <div className="flex justify-end gap-2 p-4 border-t">
-          <button onClick={onClose} className="px-4 py-2 rounded-lg border text-sm hover:bg-gray-50">
+          <button            onClick={onClose} className="px-4 py-2 rounded-lg border border-[var(--border)] text-sm hover:bg-[var(--muted)] transition-colors">
             Отмена
           </button>
-          <button onClick={handleSave} className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm hover:bg-blue-700">
+          <button onClick={handleSave} className="px-4 py-2 rounded-lg bg-[var(--primary)] text-[var(--primary-foreground)] text-sm font-medium hover:opacity-90 transition-opacity">
             Сохранить
           </button>
         </div>
@@ -346,10 +346,10 @@ export function SeparatorBlockDialog({ block, onSave, onClose }: SeparatorBlockD
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-sm">
-        <div className="flex items-center justify-between p-4 border-b">
-          <h2 className="text-lg font-semibold">Настройка разделителя</h2>
-          <button onClick={onClose} className="p-1 rounded hover:bg-gray-100">
+      <div className="bg-[var(--card)] rounded-xl shadow-xl w-full max-w-sm">
+        <div className="flex items-center justify-between p-4 border-b border-[var(--border)]">
+          <h2 className="text-lg font-semibold text-[var(--foreground)]">Настройка разделителя</h2>
+          <button onClick={onClose} className="p-1 rounded hover:bg-[var(--muted)] transition-colors">
             <X size={20} />
           </button>
         </div>
@@ -379,10 +379,10 @@ export function SeparatorBlockDialog({ block, onSave, onClose }: SeparatorBlockD
         </div>
 
         <div className="flex justify-end gap-2 p-4 border-t">
-          <button onClick={onClose} className="px-4 py-2 rounded-lg border text-sm hover:bg-gray-50">
+          <button            onClick={onClose} className="px-4 py-2 rounded-lg border border-[var(--border)] text-sm hover:bg-[var(--muted)] transition-colors">
             Отмена
           </button>
-          <button onClick={handleSave} className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm hover:bg-blue-700">
+          <button onClick={handleSave} className="px-4 py-2 rounded-lg bg-[var(--primary)] text-[var(--primary-foreground)] text-sm font-medium hover:opacity-90 transition-opacity">
             Сохранить
           </button>
         </div>

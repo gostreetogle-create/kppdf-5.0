@@ -32,7 +32,7 @@ export default function AdminDashboardPage() {
           '/api/contracts?limit=1',
           '/api/organizations?limit=1',
           '/api/products?limit=1',
-          '/api/production/orders?limit=1',
+          '/api/production-orders?limit=1',
         ];
         const results = await Promise.all(endpoints.map((url) => fetch(url).then((r) => r.json()).catch(() => ({ success: false, data: { total: 0 } }))));
         setStats({

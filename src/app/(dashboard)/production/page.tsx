@@ -54,7 +54,7 @@ function ProductionOrderForm({ item, onClose }: { item: ProductionOrder | null; 
     setSaving(true);
     try {
       const method = item?.id ? 'PUT' : 'POST';
-      const url = item?.id ? `/api/production/${item.id}` : '/api/production';
+      const url = item?.id ? `/api/production-orders/${item.id}` : '/api/production-orders';
       await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
@@ -121,7 +121,7 @@ export default function ProductionPage() {
   return (
     <CrudPage<ProductionOrder>
       title="Производственные заказы"
-      apiPath="/api/production"
+      apiPath="/api/production-orders"
       columns={[
         { key: 'number', label: 'Номер' },
         { key: 'title', label: 'Название' },

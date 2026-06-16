@@ -46,7 +46,7 @@ export function DocPreview({ title, children, onDownload, downloadLabel = 'Ск�
 
       {isPreviewOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="relative w-full max-w-4xl max-h-[90vh] bg-white rounded-lg shadow-xl overflow-hidden">
+          <div className="relative w-full max-w-4xl max-h-[90vh] bg-[var(--card)] border border-[var(--border)] rounded-lg shadow-xl overflow-hidden">
             <div className="flex items-center justify-between p-4 border-b border-[var(--border)]">
               <h2 className="text-lg font-semibold text-[var(--foreground)]">{title}</h2>
               <button
@@ -57,7 +57,7 @@ export function DocPreview({ title, children, onDownload, downloadLabel = 'Ск�
               </button>
             </div>
             <div className="p-6 overflow-auto max-h-[calc(90vh-120px)]">
-              <div ref={previewRef} className="bg-white p-8 shadow-inner min-h-[500px]">
+              <div ref={previewRef} className="bg-[var(--background)] p-8 shadow-inner min-h-[500px] text-[var(--foreground)]">
                 {children}
               </div>
             </div>

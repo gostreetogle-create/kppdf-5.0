@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { CrudPage } from '@/components/crud-page';
 
 interface Contract {
@@ -15,6 +15,11 @@ interface Contract {
   clientId: string;
   organizationId: string;
   notes: string;
+}
+
+interface SelectItem {
+  id: string;
+  name: string;
 }
 
 const STATUS_MAP: Record<string, { label: string; className: string }> = {
@@ -51,6 +56,17 @@ function ContractForm({ item, onClose }: { item: Contract | null; onClose: () =>
     notes: item?.notes ?? '',
   });
   const [saving, setSaving] = useState(false);
+  const [clients, setClients] = useState<SelectItem[]>([]);
+  const [organizations, setOrganizations] = useState<SelectItem[]>([]);
+
+  useEffect(() => {
+    fetch('/api/clients?limit=100').then(r => r.json()).then(d => {
+      if (d.success) setClients(d.data.items.map((c: SelectItem) => ({ id: c.id, name: `${c.name || ''}`.trim() || c.id })));
+    }).catch(() => {});
+    fetch('/api/organizations?limit=100').then(r => r.json()).then(d => {
+      if (d.success) setOrganizations(d.data.items.map((o: SelectItem) => ({ id: o.id, name: o.name || o.id })));
+    }).catch(() => {});
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -86,12 +102,22 @@ function ContractForm({ item, onClose }: { item: Contract | null; onClose: () =>
           <input type="text" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-[var(--input)] bg-[var(--background)] text-[var(--foreground)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ring)]" required />
         </div>
         <div>
-          <label className="block text-sm font-medium text-[var(--foreground)] mb-1">ID клиента</label>
-          <input type="text" value={form.clientId} onChange={(e) => setForm({ ...form, clientId: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-[var(--input)] bg-[var(--background)] text-[var(--foreground)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ring)]" />
+          <label className="block text-sm font-medium text-[var(--foreground)] mb-1">Клиент</label>
+          <select value={form.clientId} onChange={(e) => setForm({ ...form, clientId: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-[var(--input)] bg-[var(--background)] text-[var(--foreground)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ring)] appearance-none">
+            <option value="">— Не выбран —</option>
+            {clients.map((c) => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+          </select>
         </div>
         <div>
-          <label className="block text-sm font-medium text-[var(--foreground)] mb-1">ID организации</label>
-          <input type="text" value={form.organizationId} onChange={(e) => setForm({ ...form, organizationId: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-[var(--input)] bg-[var(--background)] text-[var(--foreground)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ring)]" />
+          <label className="block text-sm font-medium text-[var(--foreground)] mb-1">Организация</label>
+          <select value={form.organizationId} onChange={(e) => setForm({ ...form, organizationId: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-[var(--input)] bg-[var(--background)] text-[var(--foreground)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ring)] appearance-none">
+            <option value="">— Не выбрана —</option>
+            {organizations.map((o) => (
+              <option key={o.id} value={o.id}>{o.name}</option>
+            ))}
+          </select>
         </div>
         <div>
           <label className="block text-sm font-medium text-[var(--foreground)] mb-1">Сумма</label>

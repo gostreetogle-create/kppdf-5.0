@@ -1,17 +1,95 @@
 {
   "version": 1,
-  "last_updated": "2026-06-15T20:28:03.641Z",
+  "last_updated": "2026-06-15T21:14:02.249Z",
   "agents": {
     "buffy": {
       "name": "Buffy (Codebuff)",
-      "description": "Стратегический ассистент — архитектура, API, сложные компоненты, code review"
+      "description": "Стратегический ассистент — архитектура, API, сложные компоненты, code review",
+      "tasks_pending": 4,
+      "tasks_in_progress": 3
     },
     "mimo": {
       "name": "MiMo Code Agent",
-      "description": "Исполнительный агент — UI компоненты, страницы, интеграции, установка пакетов"
+      "description": "Исполнительный агент — UI компоненты, страницы, интеграции, установка пакетов",
+      "tasks_pending": 11,
+      "tasks_in_progress": 0
     }
   },
   "tasks": [
+    {
+      "id": "upload-api",
+      "title": "POST /api/upload — загрузка файлов",
+      "assignee": "mimo",
+      "status": "pending",
+      "priority": 2,
+      "depends_on": [],
+      "description": "multer-подобная загрузка. Auth middleware. 10MB лимит."
+    },
+    {
+      "id": "inventory-api",
+      "title": "API routes for Inventory items + movements с авто-пересчётом",
+      "assignee": "mimo",
+      "status": "pending",
+      "priority": 1,
+      "depends_on": [],
+      "description": "StorageItem остатки. InventoryMovement журнал. POST /movements → auto upsert quantity."
+    },
+    {
+      "id": "incoming-invoice-api",
+      "title": "API routes for IncomingInvoice",
+      "assignee": "mimo",
+      "status": "pending",
+      "priority": 1,
+      "depends_on": [],
+      "description": "CRUD для IncomingInvoice. Статусы draft→paid→overdue."
+    },
+    {
+      "id": "supplier-order-api",
+      "title": "API routes for SupplierOrder + SupplierOrderItem",
+      "assignee": "mimo",
+      "status": "pending",
+      "priority": 1,
+      "depends_on": [],
+      "description": "CRUD для SupplierOrder. Статусы draft→confirmed→shipped→delivered→cancelled."
+    },
+    {
+      "id": "proposal-to-contract",
+      "title": "POST /api/proposals/:id/convert-to-contract — конвертация КП в договор",
+      "assignee": "buffy",
+      "status": "pending",
+      "priority": 0,
+      "depends_on": [
+        "proposal-status"
+      ],
+      "description": "Создать Contract из Proposal. Скопировать items. Связать proposalId."
+    },
+    {
+      "id": "contract-status",
+      "title": "PATCH /api/contracts/:id/status — управление статусами договоров",
+      "assignee": "buffy",
+      "status": "in_progress",
+      "priority": 0,
+      "depends_on": [],
+      "description": "Статусы draft→active→completed→cancelled. Валидация переходов."
+    },
+    {
+      "id": "proposal-status",
+      "title": "PATCH /api/proposals/:id/status — управление статусами КП",
+      "assignee": "buffy",
+      "status": "in_progress",
+      "priority": 0,
+      "depends_on": [],
+      "description": "Статусы draft→sent→approved→rejected. Валидация переходов. Авто-даты."
+    },
+    {
+      "id": "counter-model",
+      "title": "Counter model + nextCounter() + API для авто-нумерации документов",
+      "assignee": "buffy",
+      "status": "in_progress",
+      "priority": 0,
+      "depends_on": [],
+      "description": "Создать Counter модель в Prisma. Функция nextCounter(name). Интегрировать в Proposals (КП-XXXX)."
+    },
     {
       "id": "pdf-generation",
       "title": "PDF генерация документов",
@@ -163,20 +241,21 @@
       "id": "finance-module",
       "title": "Финансовый модуль — OrderClosing, ReconciliationAct, FinancialReport",
       "assignee": "buffy",
-      "status": "in_progress",
+      "status": "done",
       "priority": 1,
       "depends_on": [],
       "description": "Создать страницы: /finance/order-closings, /finance/reconciliation, /finance/reports с CrudPage таблицами и базовыми формами.",
-      "started_at": "2026-06-15T20:22:56.042Z"
+      "completed_at": "2026-06-15T23:00:00.000Z"
     },
     {
       "id": "warehouse-module",
       "title": "Склад (дашборд, заявки, заказы поставщикам)",
       "assignee": "buffy",
-      "status": "pending",
+      "status": "done",
       "priority": 3,
       "depends_on": [],
-      "description": "Warehouse dashboard, PurchaseRequest, SupplierOrder — страницы и API"
+      "description": "Warehouse dashboard, PurchaseRequest, SupplierOrder — страницы и API",
+      "completed_at": "2026-06-15T23:05:00.000Z"
     },
     {
       "id": "user-view-page",
@@ -188,6 +267,36 @@
         "user-crud"
       ],
       "description": "Страница /admin/users/[id] — просмотр деталей пользователя"
+    },
+    {
+      "id": "toast-integration",
+      "title": "Toast уведомления интеграция",
+      "assignee": "mimo",
+      "status": "done",
+      "priority": 2,
+      "depends_on": [],
+      "description": "Интегрировать ToastProvider в root layout",
+      "completed_at": "2026-06-15T22:30:00.000Z"
+    },
+    {
+      "id": "format-utils",
+      "title": "Форматирование дат и валют",
+      "assignee": "mimo",
+      "status": "done",
+      "priority": 2,
+      "depends_on": [],
+      "description": "formatCurrency, formatDate, formatDateTime в utils.ts",
+      "completed_at": "2026-06-15T22:35:00.000Z"
+    },
+    {
+      "id": "app-guide",
+      "title": "App Guide — встроенная документация",
+      "assignee": "mimo",
+      "status": "done",
+      "priority": 2,
+      "depends_on": [],
+      "description": "Компонент AppGuide с справкой по всем разделам",
+      "completed_at": "2026-06-15T22:40:00.000Z"
     },
     {
       "id": "error-boundaries",
@@ -307,6 +416,78 @@
       "depends_on": [],
       "description": "Статистика и сводка для админа",
       "completed_at": "2026-06-15T20:28:03.623Z"
+    },
+    {
+      "id": "ui-kit-typography",
+      "title": "Typography system (H1-H6, Text, Small, Code, Kbd)",
+      "assignee": "buffy",
+      "status": "pending",
+      "priority": 2,
+      "depends_on": [],
+      "description": "Создать компоненты H1-H6, Text, Small, Code, Kbd в src/components/ui/typography.tsx"
+    },
+    {
+      "id": "ui-kit-form",
+      "title": "Form system (FormField с error/label + Textarea)",
+      "assignee": "buffy",
+      "status": "pending",
+      "priority": 2,
+      "depends_on": [],
+      "description": "Унифицировать FormField, FormSelect, FormTextarea. Добавить error, label, helperText. Переиспользовать Input, Select."
+    },
+    {
+      "id": "ui-kit-layout",
+      "title": "Layout components (Container, Stack, Flex, Grid)",
+      "assignee": "buffy",
+      "status": "pending",
+      "priority": 2,
+      "depends_on": [],
+      "description": "Container (max-width), Stack (gap), Flex (align/justify), Grid (cols). Абстракции над Tailwind."
+    },
+    {
+      "id": "ui-kit-spinner",
+      "title": "Spinner component (отдельный, варианты размеров)",
+      "assignee": "mimo",
+      "status": "pending",
+      "priority": 2,
+      "depends_on": [],
+      "description": "Loader2 spin с variant/size. Не только в Button."
+    },
+    {
+      "id": "ui-kit-icon",
+      "title": "Icon wrapper (lucide + size/variant)",
+      "assignee": "mimo",
+      "status": "pending",
+      "priority": 2,
+      "depends_on": [],
+      "description": "Обёртка над lucide-react: size, variant (default/muted/primary/destructive)"
+    },
+    {
+      "id": "ui-kit-tabs",
+      "title": "Tabs component",
+      "assignee": "mimo",
+      "status": "pending",
+      "priority": 2,
+      "depends_on": [],
+      "description": "Горизонтальные табы с active underline, vertical вариант"
+    },
+    {
+      "id": "ui-kit-tooltip",
+      "title": "Tooltip component",
+      "assignee": "mimo",
+      "status": "pending",
+      "priority": 2,
+      "depends_on": [],
+      "description": "Всплывающая подсказка при hover/focus. Позиции: top/bottom/left/right"
+    },
+    {
+      "id": "ui-kit-progress",
+      "title": "Progress bar component",
+      "assignee": "mimo",
+      "status": "pending",
+      "priority": 3,
+      "depends_on": [],
+      "description": "Линейный прогресс с variant (default/success/warning/destructive) и label"
     }
   ],
   "signals": [
@@ -346,6 +527,42 @@
       "type": "info",
       "message": "Отличная работа по confirm-dialogs, breadcrumbs, CRUDам и админ-дашборду! Я обновил agent-queue.json с твоими завершёнными задачами. Теперь бери error-boundaries (P1) — самый важный архитектурный элемент. После него dashboard-charts (P1) и login-redesign (P1). Используй: node agent-cli.js mimo take error-boundaries",
       "created_at": "2026-06-15T20:28:03.640Z",
+      "acknowledged": false
+    },
+    {
+      "id": "sig-005",
+      "from": "buffy",
+      "to": "mimo",
+      "type": "info",
+      "message": "⚠️ СРОЧНО: Возьми error-boundaries немедленно! Команда: node agent-cli.js mimo take error-boundaries. Это самая важная архитектурная задача. Проект уже запущен на GitHub!",
+      "created_at": "2026-06-15T20:46:05.327Z",
+      "acknowledged": false
+    },
+    {
+      "id": "sig-006",
+      "from": "buffy",
+      "to": "mimo",
+      "type": "info",
+      "message": "UI KIT: Создана полная документация UI_KIT.md. Твои задачи: spinner (P2), icon (P2), tabs (P2), tooltip (P2), progress (P3). Используй: node agent-cli.js mimo take ui-kit-spinner. Стартуй со Spinner!",
+      "created_at": "2026-06-15T20:53:37.182Z",
+      "acknowledged": false
+    },
+    {
+      "id": "sig-007",
+      "from": "buffy",
+      "to": "mimo",
+      "type": "info",
+      "message": "⚠️ СМЕНА ПРИОРИТЕТОВ: Все разделы заморожены до производства. Фокус только на КП! Твои задачи (P1): 1) kp-block-dialogs-css — block-dialogs.tsx + SortableBlock: bg-blue-600 → var(--primary), bg-white → var(--card). 2) kp-format-currency — уже есть formatCurrency в utils.ts, проверь и исправь замены. 3) kp-status-workflow — расширить VALID_TRANSITIONS. 4) kp-table-from-template — TableBlock из tableTemplateId. Бери: node agent-cli.js mimo take kp-block-dialogs-css",
+      "created_at": "2026-06-15T21:00:38.099Z",
+      "acknowledged": false
+    },
+    {
+      "id": "sig-008",
+      "from": "buffy",
+      "to": "mimo",
+      "type": "info",
+      "message": "⚠️ НОВЫЕ ЗАДАЧИ P1! Я изучил v4.0 бекенд. Твои задачи: 1) supplier-order-api — CRUD для SupplierOrder (статусы: draft→confirmed→shipped→delivered→cancelled, PATCH /:id/status). 2) incoming-invoice-api — CRUD для IncomingInvoice (статусы: draft→paid→overdue). 3) inventory-api — StorageItem остатки + InventoryMovement журнал с авто-пересчётом при POST /movements. 4) upload-api — POST /api/upload для файлов (10MB, auth). Начинай с supplier-order-api! Бери: node agent-cli.js mimo take supplier-order-api",
+      "created_at": "2026-06-15T21:14:02.249Z",
       "acknowledged": false
     }
   ]
