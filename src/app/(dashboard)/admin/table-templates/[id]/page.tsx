@@ -136,13 +136,6 @@ function SortableColumnChip({
           {DATA_SOURCES[col.tableName]?.label?.slice(0, 8) || col.tableName.slice(0, 8)}
         </span>
 
-        {/* Width hint */}
-        {col.width && (
-          <span className="text-[10px] text-[var(--muted-foreground)] opacity-50 font-mono hidden sm:inline flex-shrink-0">
-            {col.width}
-          </span>
-        )}
-
         {/* Visibility icon */}
         {!isVisible && (
           <EyeOff size={12} className="text-[var(--muted-foreground)] flex-shrink-0" />
@@ -375,9 +368,9 @@ export default function TableTemplateEditorPage() {
     if (!resizeRef.current) return;
     const { colIndex, startX, startWidth, nextColIndex, nextStartWidth } = resizeRef.current;
     const delta = e.clientX - startX;
-    const newWidth = Math.max(50, startWidth + delta);
+    const newWidth = Math.max(50, Math.round(startWidth + delta));
     if (nextColIndex !== null) {
-      const nextNewWidth = Math.max(50, nextStartWidth - delta);
+      const nextNewWidth = Math.max(50, Math.round(nextStartWidth - delta));
       setColumns(prev => {
         const next = [...prev];
         next[colIndex] = { ...next[colIndex], width: `${newWidth}px` };
@@ -515,6 +508,10 @@ export default function TableTemplateEditorPage() {
 
   const addColumn = () => {
     const lastSource = columns.length > 0 ? columns[columns.length - 1].tableName : 'products';
+    // Авто-заполнение названия при первой колонке (если ещё не задано)
+    if (isNew && !template.name) {
+      setTemplate(prev => ({ ...prev, name: DATA_SOURCES[lastSource]?.label || '' }));
+    }
     const fields = getFieldOptions(lastSource);
     const first = fields[0];
     const newCol: TableTemplateColumnV4 = {
@@ -600,33 +597,18 @@ export default function TableTemplateEditorPage() {
         </button>
       </div>
 
-      {/* Template name + Description + Source row */}
+      {/* Source → Name → Description row */}
       <div className="flex gap-4">
-        <div className="flex-1">
-          <label className="block text-[10px] font-semibold text-[var(--muted-foreground)] uppercase tracking-wider mb-1">Название *</label>
-          <input
-            type="text"
-            value={template.name}
-            onChange={(e) => setTemplate({ ...template, name: e.target.value })}
-            className="w-full h-10 px-4 rounded-xl border border-[var(--input)] bg-[var(--card)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ring)] placeholder:text-[var(--muted-foreground)]"
-            placeholder="Название шаблона..."
-          />
-        </div>
-        <div className="flex-1">
-          <label className="block text-[10px] font-semibold text-[var(--muted-foreground)] uppercase tracking-wider mb-1">Описание</label>
-          <input
-            type="text"
-            value={template.description || ''}
-            onChange={(e) => setTemplate({ ...template, description: e.target.value })}
-            className="w-full h-10 px-4 rounded-xl border border-[var(--input)] bg-[var(--card)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ring)] placeholder:text-[var(--muted-foreground)]"
-            placeholder="Описание (необязательно)"
-          />
-        </div>
         <div className="w-48">
           <label className="block text-[10px] font-semibold text-[var(--muted-foreground)] uppercase tracking-wider mb-1">Источник данных</label>
           <select
             onChange={(e) => {
               const src = e.target.value;
+              const srcLabel = DATA_SOURCES[src]?.label || src;
+              // Авто-заполнение названия шаблона из источника (если название пустое)
+              if (!template.name || template.name === DATA_SOURCES[columns[0]?.tableName]?.label) {
+                setTemplate(prev => ({ ...prev, name: srcLabel }));
+              }
               if (columns.length > 0) {
                 const fields = getFieldOptions(src);
                 const first = fields[0];
@@ -647,6 +629,26 @@ export default function TableTemplateEditorPage() {
               <option key={s.value} value={s.value}>{s.label}</option>
             ))}
           </select>
+        </div>
+        <div className="flex-1">
+          <label className="block text-[10px] font-semibold text-[var(--muted-foreground)] uppercase tracking-wider mb-1">Название *</label>
+          <input
+            type="text"
+            value={template.name}
+            onChange={(e) => setTemplate({ ...template, name: e.target.value })}
+            className="w-full h-10 px-4 rounded-xl border border-[var(--input)] bg-[var(--card)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ring)] placeholder:text-[var(--muted-foreground)]"
+            placeholder="Название шаблона..."
+          />
+        </div>
+        <div className="flex-1">
+          <label className="block text-[10px] font-semibold text-[var(--muted-foreground)] uppercase tracking-wider mb-1">Описание</label>
+          <input
+            type="text"
+            value={template.description || ''}
+            onChange={(e) => setTemplate({ ...template, description: e.target.value })}
+            className="w-full h-10 px-4 rounded-xl border border-[var(--input)] bg-[var(--card)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ring)] placeholder:text-[var(--muted-foreground)]"
+            placeholder="Описание (необязательно)"
+          />
         </div>
       </div>
 
@@ -758,7 +760,7 @@ export default function TableTemplateEditorPage() {
                       ? 'bg-[var(--primary)] text-[var(--primary-foreground)] shadow-sm'
                       : 'bg-[var(--muted)] text-[var(--muted-foreground)] hover:bg-[var(--border)]'
                   }`}
-                  title={tableLocked ? 'Ширина зафиксирована' : 'Зафиксировать ширину'}
+                  title={tableLocked ? 'Ширина зафиксирована — колонки не растягиваются' : 'Авто-ширина — колонки заполняют доступное пространство'}
                 >
                   {tableLocked ? <Lock size={11} /> : <Unlock size={11} />}
                   {tableLocked ? 'Фикс.' : 'Авто'}

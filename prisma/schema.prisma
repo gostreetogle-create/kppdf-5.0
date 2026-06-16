@@ -155,6 +155,7 @@ model Product {
 
   photos                ProductPhoto[]
   components            ProductComponent[]
+  modules               ProductModule[]
   cartItems             CartItem[]
   proposalItems         ProposalItem[]
   storageItems          StorageItem[]
@@ -190,6 +191,59 @@ model ProductComponent {
   product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@index([productId])
+}
+
+// ========================================
+// PRODUCT MODULES
+// ========================================
+
+model ProductModule {
+  id          String   @id @default(cuid())
+  name        String
+  article     String?
+  width       Float?
+  height      Float?
+  depth       Float?
+  weight      Float?
+  image       String?
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  productId   String
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  workTypes   ModuleWorkType[]
+  materials   ModuleMaterial[]
+
+  @@index([productId])
+}
+
+model ModuleWorkType {
+  id              String  @id @default(cuid())
+  estimatedHours  Float
+  sortOrder       Int     @default(0)
+
+  moduleId        String
+  module          ProductModule @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  workTypeId      String
+  workType        WorkType     @relation(fields: [workTypeId], references: [id])
+
+  @@index([moduleId])
+  @@index([workTypeId])
+}
+
+model ModuleMaterial {
+  id            String   @id @default(cuid())
+  name          String
+  quantity      Float    @default(1)
+  unit          String   @default("шт")
+  isPurchased   Boolean  @default(true)
+
+  moduleId      String
+  module        ProductModule @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+
+  @@index([moduleId])
 }
 
 // ========================================
@@ -317,6 +371,7 @@ model WorkType {
 
   orders      ProductionOrder[]
   tasks       OrderTask[]
+  moduleWorkTypes ModuleWorkType[]
 }
 
 model WorkCenter {

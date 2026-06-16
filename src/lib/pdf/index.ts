@@ -8,6 +8,38 @@
 import { jsPDF } from 'jspdf';
 import { autoTable } from 'jspdf-autotable';
 
+// ─── Cyrillic font loader ────────────────────────────────────────────────────
+
+const ROBOTO_FONT_URL = 'https://fonts.gstatic.com/s/roboto/v30/KFOmCnqEu92Fr1Mu4mxP.ttf';
+
+let fontBase64: string | null = null;
+let fontRetries = 0;
+
+async function ensureCyrillicFont(doc: jsPDF): Promise<void> {
+  // Fetch once, retry up to 3 times on failure, register on every new doc
+  if (!fontBase64 && fontRetries < 3) {
+    try {
+      const res = await fetch(ROBOTO_FONT_URL);
+      if (!res.ok) throw new Error(`Font fetch failed: ${res.status}`);
+      const fontData = await res.arrayBuffer();
+      const bytes = new Uint8Array(fontData);
+      let binary = '';
+      for (let i = 0; i < bytes.length; i++) {
+        binary += String.fromCharCode(bytes[i]);
+      }
+      fontBase64 = btoa(binary);
+    } catch {
+      fontRetries++;
+      console.warn(`Failed to load Cyrillic PDF font (attempt ${fontRetries}/3)`);
+    }
+  }
+  if (fontBase64) {
+    doc.addFileToVFS('Roboto-Regular.ttf', fontBase64);
+    doc.addFont('Roboto-Regular.ttf', 'Roboto', 'normal');
+    doc.addFont('Roboto-Regular.ttf', 'Roboto', 'bold');
+  }
+}
+
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 export interface ProposalPdfData {
@@ -162,8 +194,9 @@ const MARGIN = 4;
 const PAGE_W = 210;
 
 /** Сгенерировать PDF для КП */
-export function generateProposalPdf(data: ProposalPdfData): jsPDF {
+export async function generateProposalPdf(data: ProposalPdfData): Promise<jsPDF> {
   const doc = new jsPDF('p', 'mm', 'a4');
+  await ensureCyrillicFont(doc);
   const contentW = PAGE_W - MARGIN * 2;
   let y = MARGIN;
 
@@ -171,12 +204,12 @@ export function generateProposalPdf(data: ProposalPdfData): jsPDF {
   if (data.organization) {
     const org = data.organization;
     doc.setFontSize(14);
-    doc.setFont('helvetica', 'bold');
+    doc.setFont('Roboto', 'bold');
     doc.text(org.name, MARGIN, y);
     y += 6;
 
     doc.setFontSize(8);
-    doc.setFont('helvetica', 'normal');
+    doc.setFont('Roboto', 'normal');
     doc.setTextColor(100, 100, 100);
     if (org.inn) {
       doc.text(`ИНН ${org.inn}${org.kpp ? ` ／ КПП ${org.kpp}` : ''}`, MARGIN, y);
@@ -203,12 +236,12 @@ export function generateProposalPdf(data: ProposalPdfData): jsPDF {
 
   // Title
   doc.setFontSize(16);
-  doc.setFont('helvetica', 'bold');
+  doc.setFont('Roboto', 'bold');
   doc.text('КОММЕРЧЕСКОЕ ПРЕДЛОЖЕНИЕ', PAGE_W / 2, y, { align: 'center' });
   y += 7;
 
   doc.setFontSize(10);
-  doc.setFont('helvetica', 'normal');
+  doc.setFont('Roboto', 'normal');
   doc.text(`№ ${data.number} от ${formatDateShort(data.createdAt)}`, PAGE_W / 2, y, { align: 'center' });
   y += 4;
 
@@ -235,7 +268,7 @@ export function generateProposalPdf(data: ProposalPdfData): jsPDF {
 
   // Title
   doc.setFontSize(11);
-  doc.setFont('helvetica', 'bold');
+  doc.setFont('Roboto', 'bold');
   doc.text(data.title, MARGIN, y);
   y += 5;
 
@@ -311,7 +344,7 @@ export function generateProposalPdf(data: ProposalPdfData): jsPDF {
 
     finRows.forEach((row) => {
       doc.setFontSize(row.bold ? 11 : 9);
-      doc.setFont('helvetica', row.bold ? 'bold' : 'normal');
+      doc.setFont('Roboto', row.bold ? 'bold' : 'normal');
       doc.text(`${row.label}  ${row.value}`, PAGE_W - MARGIN, y, { align: 'right' });
       y += row.bold ? 5 : 4;
     });
@@ -325,10 +358,10 @@ export function generateProposalPdf(data: ProposalPdfData): jsPDF {
     doc.line(MARGIN, y, PAGE_W - MARGIN, y);
     y += 4;
     doc.setFontSize(9);
-    doc.setFont('helvetica', 'bold');
+    doc.setFont('Roboto', 'bold');
     doc.text('Примечания:', MARGIN, y);
     y += 4;
-    doc.setFont('helvetica', 'normal');
+    doc.setFont('Roboto', 'normal');
     doc.setFontSize(8);
     doc.setTextColor(80, 80, 80);
     const noteLines = doc.splitTextToSize(data.notes, contentW);
@@ -340,7 +373,7 @@ export function generateProposalPdf(data: ProposalPdfData): jsPDF {
   // Valid until
   if (data.validUntil) {
     doc.setFontSize(9);
-    doc.setFont('helvetica', 'normal');
+    doc.setFont('Roboto', 'normal');
     doc.setTextColor(100, 100, 100);
     doc.text(`Действительно до: ${formatDate(data.validUntil)}`, MARGIN, y);
     y += 4;
@@ -360,7 +393,7 @@ export function generateProposalPdf(data: ProposalPdfData): jsPDF {
   doc.line(MARGIN, y, PAGE_W - MARGIN, y);
   y += 6;
   doc.setFontSize(10);
-  doc.setFont('helvetica', 'normal');
+  doc.setFont('Roboto', 'normal');
   doc.text('Подпись: ___________________', MARGIN, y);
   y += 5;
   if (data.organization?.signerName) {
@@ -375,13 +408,14 @@ export function generateProposalPdf(data: ProposalPdfData): jsPDF {
 }
 
 /** Сгенерировать PDF для договора */
-export function generateContractPdf(data: ContractPdfData): jsPDF {
+export async function generateContractPdf(data: ContractPdfData): Promise<jsPDF> {
   const doc = new jsPDF('p', 'mm', 'a4');
+  await ensureCyrillicFont(doc);
   let y = MARGIN;
 
   if (data.organization) {
     doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
+    doc.setFont('Roboto', 'normal');
     doc.text(data.organization.name, MARGIN, y);
     y += 5;
     if (data.organization.inn) {
@@ -396,24 +430,24 @@ export function generateContractPdf(data: ContractPdfData): jsPDF {
   }
 
   doc.setFontSize(16);
-  doc.setFont('helvetica', 'bold');
+  doc.setFont('Roboto', 'bold');
   doc.text('ДОГОВОР', PAGE_W / 2, y, { align: 'center' });
   y += 8;
 
   doc.setFontSize(12);
-  doc.setFont('helvetica', 'normal');
+  doc.setFont('Roboto', 'normal');
   doc.text(`№ ${data.number}`, PAGE_W / 2, y, { align: 'center' });
   y += 5;
   doc.text(`от ${formatDateShort(data.createdAt)}`, PAGE_W / 2, y, { align: 'center' });
   y += 10;
 
   doc.setFontSize(10);
-  doc.setFont('helvetica', 'bold');
+  doc.setFont('Roboto', 'bold');
   doc.text(`Наименование: ${data.title}`, MARGIN, y);
   y += 8;
 
   if (data.client) {
-    doc.setFont('helvetica', 'normal');
+    doc.setFont('Roboto', 'normal');
     doc.text('Заказчик:', MARGIN, y);
     y += 5;
     doc.text(`${data.client.lastName} ${data.client.firstName} ${data.client.patronymic || ''}`, MARGIN, y);
@@ -498,13 +532,14 @@ export function generateContractPdf(data: ContractPdfData): jsPDF {
 }
 
 /** Сгенерировать PDF для счёта */
-export function generateInvoicePdf(data: InvoicePdfData): jsPDF {
+export async function generateInvoicePdf(data: InvoicePdfData): Promise<jsPDF> {
   const doc = new jsPDF('p', 'mm', 'a4');
+  await ensureCyrillicFont(doc);
   let y = MARGIN;
 
   if (data.organization) {
     doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
+    doc.setFont('Roboto', 'normal');
     doc.text(data.organization.name, MARGIN, y);
     y += 5;
     if (data.organization.inn) {
@@ -523,12 +558,12 @@ export function generateInvoicePdf(data: InvoicePdfData): jsPDF {
   }
 
   doc.setFontSize(16);
-  doc.setFont('helvetica', 'bold');
+  doc.setFont('Roboto', 'bold');
   doc.text('СЧЁТ-ФАКТУРА', PAGE_W / 2, y, { align: 'center' });
   y += 8;
 
   doc.setFontSize(12);
-  doc.setFont('helvetica', 'normal');
+  doc.setFont('Roboto', 'normal');
   doc.text(`№ ${data.number}`, PAGE_W / 2, y, { align: 'center' });
   y += 5;
   doc.text(`от ${formatDateShort(data.createdAt)}`, PAGE_W / 2, y, { align: 'center' });
@@ -587,10 +622,10 @@ export function generateInvoicePdf(data: InvoicePdfData): jsPDF {
   if (data.organization?.bankName) {
     y += 3;
     doc.setFontSize(10);
-    doc.setFont('helvetica', 'bold');
+    doc.setFont('Roboto', 'bold');
     doc.text('Реквизиты для оплаты:', MARGIN, y);
     y += 5;
-    doc.setFont('helvetica', 'normal');
+    doc.setFont('Roboto', 'normal');
     doc.text(`Банк: ${data.organization.bankName}`, MARGIN, y);
     y += 5;
     if (data.organization.bankBik) {
