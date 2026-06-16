@@ -47,6 +47,7 @@ export interface DocBlock {
   id: string;
   type: DocBlockType;
   order: number;
+  page?: number;
   title?: string;
   content?: string;
   columns?: DocTextColumn[];

@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
 import { apiOk, apiError } from '@/lib/api-response';
+import { nextProposalNumber } from '@/lib/counter';
 
 // POST /api/cart/[id]/convert — конвертировать корзину в КП
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -18,10 +19,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     if (!session) return apiError('Корзина не найдена', 404);
     if (session.items.length === 0) return apiError('Корзина пуста', 400);
 
-    // Генерируем номер КП
-    const year = new Date().getFullYear();
-    const count = await prisma.proposal.count();
-    const number = `КП-${year}-${String(count + 1).padStart(3, '0')}`;
+    // Генерируем номер КП через counter
+    const number = body.number || await nextProposalNumber();
 
     // Рассчитываем общую сумму
     let totalAmount = 0;

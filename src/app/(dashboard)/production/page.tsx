@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { CrudPage } from '@/components/crud-page';
 
 interface ProductionOrder {
@@ -48,6 +48,17 @@ function ProductionOrderForm({ item, onClose }: { item: ProductionOrder | null; 
     notes: item?.notes ?? '',
   });
   const [saving, setSaving] = useState(false);
+  const [workTypes, setWorkTypes] = useState<{ id: string; name: string }[]>([]);
+  const [workCenters, setWorkCenters] = useState<{ id: string; name: string }[]>([]);
+
+  useEffect(() => {
+    fetch('/api/work-types?limit=100').then(r => r.json()).then(d => {
+      if (d.success) setWorkTypes(d.data.items);
+    }).catch(() => {});
+    fetch('/api/work-centers?limit=100').then(r => r.json()).then(d => {
+      if (d.success) setWorkCenters(d.data.items);
+    }).catch(() => {});
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -83,12 +94,22 @@ function ProductionOrderForm({ item, onClose }: { item: ProductionOrder | null; 
           <input type="text" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-[var(--input)] bg-[var(--background)] text-[var(--foreground)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ring)]" required />
         </div>
         <div>
-          <label className="block text-sm font-medium text-[var(--foreground)] mb-1">ID типа работы</label>
-          <input type="text" value={form.workTypeId} onChange={(e) => setForm({ ...form, workTypeId: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-[var(--input)] bg-[var(--background)] text-[var(--foreground)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ring)]" />
+          <label className="block text-sm font-medium text-[var(--foreground)] mb-1">Тип работы</label>
+          <select value={form.workTypeId} onChange={(e) => setForm({ ...form, workTypeId: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-[var(--input)] bg-[var(--background)] text-[var(--foreground)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ring)] appearance-none">
+            <option value="">— Не выбран —</option>
+            {workTypes.map((wt) => (
+              <option key={wt.id} value={wt.id}>{wt.name}</option>
+            ))}
+          </select>
         </div>
         <div>
-          <label className="block text-sm font-medium text-[var(--foreground)] mb-1">ID рабочего центра</label>
-          <input type="text" value={form.workCenterId} onChange={(e) => setForm({ ...form, workCenterId: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-[var(--input)] bg-[var(--background)] text-[var(--foreground)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ring)]" />
+          <label className="block text-sm font-medium text-[var(--foreground)] mb-1">Рабочий центр</label>
+          <select value={form.workCenterId} onChange={(e) => setForm({ ...form, workCenterId: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-[var(--input)] bg-[var(--background)] text-[var(--foreground)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ring)] appearance-none">
+            <option value="">— Не выбран —</option>
+            {workCenters.map((wc) => (
+              <option key={wc.id} value={wc.id}>{wc.name}</option>
+            ))}
+          </select>
         </div>
         <div>
           <label className="block text-sm font-medium text-[var(--foreground)] mb-1">Приоритет</label>

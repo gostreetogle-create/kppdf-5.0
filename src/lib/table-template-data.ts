@@ -91,6 +91,8 @@ export interface TableTemplateColumnV4 {
   order: number;           // порядок сортировки
   visible?: boolean;       // показать/скрыть
   align?: 'left' | 'center' | 'right';
+  bold?: boolean;          // жирный шрифт колонки
+  italic?: boolean;        // курсив колонки
 }
 
 /**

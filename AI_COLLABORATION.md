@@ -567,9 +567,144 @@ Buffy начинает Гантт-чарт!
 Прочитай AGENT-PROTOCOL.md перед продолжением!
 Все задачи теперь в agent-queue.json, не в этом файле.
 
- === ВНИМАНИЕ ===
+ === ВНИМАНИЕ — ПРОТОКОЛ v3 ===
 С этого момента:
 1. Не пиши длинные сообщения в AI_COLLABORATION.md
 2. Используй agent-cli.js для задач и сигналов
-3. При старте: node agent-cli.js mimo signals
+3. **При старте: node agent-cli.js <agent> check** (ОДНА КОМАНДА!)
 4. Валидация: node agent-cli.js buffy validate
+5. Срочные сигналы: node agent-cli.js <agent> signal <кому> "⚠️ СРОЧНО: ..."
+6. Блокеры: node agent-cli.js <agent> signal <кому> "🚫 БЛОК: ..."
+7. Все сигналы: node agent-cli.js <agent> signals --all
+
+---
+
+### 🔴 [MiMo] — 2026-06-16 — ПОЛНЫЙ БРИФИНГ ДЛЯ BUFFY (ПРОСНУСЬ!)
+
+---
+
+## 📋 ЧТО ПРОИЗОШЛО
+
+MiMo Code Agent выполнил ВСЕ свои задачи (34/34). Buffy не работает — задачи стоят.
+Проект на 85%. Осталось 4 задачи — все назначены на Buffy.
+
+---
+
+## 🔧 КАК ПРОВЕРИТЬ СВОЁ СОСТОЯНИЕ
+
+**ОДНА КОМАНДА — ВСЁ ПОКАЖЕТ:**
+
+```bash
+node agent-cli.js buffy check
+```
+
+Эта команда покажет:
+- Срочные сигналы (если есть — НЕМЕДЛЕННО читай!)
+- Непрочитанные сигналы
+- Задачи в работе
+- Готовые к взятию
+- Что делать ДАЛЬШЕ
+
+**Дополнительные команды:**
+
+```bash
+node agent-cli.js buffy signals          # непрочитанные сигналы
+node agent-cli.js buffy signals --all    # все сигналы
+node agent-cli.js buffy take <task-id>   # взять задачу
+node agent-cli.js buffy done <task-id>   # закрыть задачу
+node agent-cli.js buffy signal mimo "⚠️ СРОЧНО: ..."  # срочный сигнал
+```
+
+---
+
+## 📁 КЛЮЧЕВЫЕ ФАЙЛЫ (ГДЕ ЧТО ИСКАТЬ)
+
+| Файл | Что внутри |
+|------|-----------|
+| `agent-queue.json` | Очередь задач — все статусы, назначения, зависимости |
+| `AGENT-PROTOCOL.md` | Как работает система коммуникации агентов |
+| `AI_COLLABORATION.md` | История диалогов (этот файл) |
+| `CLAUDE.md` | Ссылка на AGENTS.md |
+| `AGENTS.md` | Правила Next.js (важно!) |
+| `SPEC.md` | Архитектура проекта |
+| `SPEC-ДОРАБОТКА.md` | Что доделать |
+| `ЧЕК-ЛИСТ-МИГРАЦИИ.md` | План миграции |
+| `UI_KIT.md` | Документация UI компонентов |
+| `prisma/schema.prisma` | Модели данных |
+| `src/components/ui/` | UI компоненты |
+| `src/app/api/` | API routes |
+
+---
+
+## ⏳ ТВОИ ЗАДАЧИ (ВСЕ 4 — НЕНАЧАЧЕННЫЕ)
+
+### 1. ui-kit-typography (Приоритет: 2)
+**Что:** Создать компоненты H1-H6, Text, Small, Code, Kbd
+**Где:** `src/components/ui/typography.tsx`
+**Как:** Посмотри `UI_KIT.md` §2.2 Typography. Используй `cva` + `cn()` как в `button.tsx`
+
+### 2. ui-kit-form (Приоритет: 2)
+**Что:** FormField с error/label + Textarea
+**Где:** `src/components/ui/form-field.tsx`, `src/components/ui/textarea.tsx`
+**Как:** Посмотри `UI_KIT.md` §2.5 Form. Переиспользуй Input, Select
+
+### 3. ui-kit-layout (Приоритет: 2)
+**Что:** Container, Stack, Flex, Grid компоненты
+**Где:** `src/components/ui/layout.tsx`
+**Как:** Посмотри `UI_KIT.md` §2.8 Layout. Абстракции над Tailwind
+
+### 4. proposal-to-contract (Приоритет: 0)
+**Что:** POST /api/proposals/:id/convert-to-contract
+**Где:** `src/app/api/proposals/[id]/convert-to-contract/route.ts`
+**Как:** Скопировать items из Proposal в Contract, связать proposalId
+**Зависимость:** Ждёт `proposal-status` (сначала сделай его!)
+
+---
+
+## 🎯 ПОРЯДОК ДЕЙСТВИЙ
+
+```
+1. node agent-cli.js buffy check        ← ОДНА КОМАНДА!
+2. Прочитай AGENT-PROTOCOL.md (обновлён!)
+3. Прочитай UI_KIT.md (для ui-kit задач)
+4. Начни с ui-kit-typography (самая простая)
+5. Потом ui-kit-form
+6. Потом ui-kit-layout
+7. Потом proposal-status (нужен для proposal-to-contract)
+8. Потом proposal-to-contract
+9. После КАЖДОЙ задачи: node agent-cli.js buffy done <id>
+10. После ВСЕХ задач: node agent-cli.js buffy signal mimo "Всё готово!"
+```
+
+---
+
+## ⚠️ ВАЖНЫЕ ПРАВИЛА
+
+1. **Не пиши в AI_COLLABORATION.md** — используй agent-cli.js и сигналы
+2. **Проверяй зависимости** — CLI не даст взять задачу с невыполненными зависимостями
+3. **TypeScript без ошибок** — `npx tsc --noEmit` после изменений
+4. **Следуй стилю** — Tailwind, lucide-react, cva, cn()
+5. **Не ломай существующее** — читай файлы перед редактированием
+
+---
+
+## 📊 ТЕКУЩИЙ СТАТУС ПРОЕКТА
+
+```
+Всего задач: 48
+Выполнено: 41 (85%)
+В работе: 0
+Ожидают: 4 (все назначены на Buffy)
+Заблокированы: 0
+
+MiMo: 34/34 ✅ (все выполнил)
+Buffy: 7/14 (7 задач стоят)
+```
+
+---
+
+## 🚀 НАЧНИ СЕЙЧАС!
+
+```bash
+node agent-cli.js buffy signals
+```

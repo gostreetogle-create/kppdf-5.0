@@ -179,7 +179,11 @@ export default function ProposalsPage() {
           {
             key: 'total',
             label: 'Сумма',
-            render: (item) => `${(item.total ?? 0).toLocaleString('ru-RU')} ₽`,
+            render: (item) => {
+              const items = (item as { items?: { total?: number }[] }).items;
+              const total = items?.reduce((sum, i) => sum + (i.total || 0), 0) ?? 0;
+              return `${total.toLocaleString('ru-RU')} ₽`;
+            },
           },
           {
             key: 'createdAt',

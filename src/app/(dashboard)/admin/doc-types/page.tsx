@@ -6,7 +6,7 @@ import { Plus, Pencil, Trash2 } from 'lucide-react';
 interface DocType {
   id: string;
   name: string;
-  code: string;
+  slug: string;
   description: string;
   createdAt: string;
 }
@@ -16,7 +16,7 @@ export default function DocTypesPage() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editItem, setEditItem] = useState<DocType | null>(null);
-  const [form, setForm] = useState({ name: '', code: '', description: '' });
+  const [form, setForm] = useState({ name: '', slug: '', description: '' });
   const [saving, setSaving] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [trigger, setTrigger] = useState(0);
@@ -26,7 +26,7 @@ export default function DocTypesPage() {
     async function load() {
       setLoading(true);
       try {
-        const res = await fetch('/api/document-templates');
+        const res = await fetch('/api/doc-types');
         const data = await res.json();
         if (!cancelled) setItems(data?.data?.items ?? data?.data ?? []);
       } catch {
@@ -52,7 +52,7 @@ export default function DocTypesPage() {
       });
       setShowForm(false);
       setEditItem(null);
-      setForm({ name: '', code: '', description: '' });
+      setForm({ name: '', slug: '', description: '' });
       setTrigger((t) => t + 1);
     } catch (err) {
       console.error('Save error:', err);
@@ -73,7 +73,7 @@ export default function DocTypesPage() {
 
   const openEdit = (item: DocType) => {
     setEditItem(item);
-    setForm({ name: item.name, code: item.code, description: item.description });
+    setForm({ name: item.name, slug: item.slug, description: item.description });
     setShowForm(true);
   };
 
@@ -82,7 +82,7 @@ export default function DocTypesPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-[var(--foreground)]">Типы документов</h1>
         <button
-          onClick={() => { setEditItem(null); setForm({ name: '', code: '', description: '' }); setShowForm(true); }}
+          onClick={() => { setEditItem(null); setForm({ name: '', slug: '', description: '' }); setShowForm(true); }}
           className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--primary)] text-[var(--primary-foreground)] text-sm font-medium hover:opacity-90 transition-opacity"
         >
           <Plus className="h-4 w-4" />
@@ -108,7 +108,7 @@ export default function DocTypesPage() {
             ) : items.map((item) => (
               <tr key={item.id} className="hover:bg-[var(--muted)]/50 transition-colors">
                 <td className="px-4 py-3 font-medium text-[var(--foreground)]">{item.name}</td>
-                <td className="px-4 py-3 text-[var(--muted-foreground)]">{item.code}</td>
+                <td className="px-4 py-3 text-[var(--muted-foreground)]">{item.slug}</td>
                 <td className="px-4 py-3 text-[var(--muted-foreground)]">{item.description || '—'}</td>
                 <td className="px-4 py-3 text-right">
                   <div className="flex items-center justify-end gap-1">
@@ -139,7 +139,7 @@ export default function DocTypesPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-[var(--foreground)] mb-1">Код</label>
-                <input type="text" value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-[var(--input)] bg-[var(--background)] text-[var(--foreground)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ring)]" required />
+                <input type="text" value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-[var(--input)] bg-[var(--background)] text-[var(--foreground)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ring)]" required />
               </div>
               <div>
                 <label className="block text-sm font-medium text-[var(--foreground)] mb-1">Описание</label>

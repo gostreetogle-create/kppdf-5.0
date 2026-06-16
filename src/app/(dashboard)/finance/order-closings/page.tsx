@@ -7,18 +7,22 @@ interface OrderClosing {
   [key: string]: unknown;
   id: string;
   number: string;
-  title: string;
-  status: string;
+  orderId: string;
+  closingType: string;
   totalAmount: number;
+  status: string;
+  notes: string;
   createdAt: string;
 }
 
 function OrderClosingForm({ item, onClose }: { item: OrderClosing | null; onClose: () => void }) {
   const [form, setForm] = useState({
     number: item?.number ?? '',
-    title: item?.title ?? '',
+    orderId: item?.orderId ?? '',
+    closingType: item?.closingType ?? 'full',
     totalAmount: item?.totalAmount ?? 0,
     status: item?.status ?? 'draft',
+    notes: item?.notes ?? '',
   });
   const [saving, setSaving] = useState(false);
 
@@ -43,8 +47,15 @@ function OrderClosingForm({ item, onClose }: { item: OrderClosing | null; onClos
           <input type="text" value={form.number} onChange={(e) => setForm({ ...form, number: e.target.value })} className="w-full px-3 py-2 rounded-lg border text-sm" required />
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">Название</label>
-          <input type="text" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} className="w-full px-3 py-2 rounded-lg border text-sm" required />
+          <label className="block text-sm font-medium mb-1">ID заказа</label>
+          <input type="text" value={form.orderId} onChange={(e) => setForm({ ...form, orderId: e.target.value })} className="w-full px-3 py-2 rounded-lg border text-sm" />
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-1">Тип закрытия</label>
+          <select value={form.closingType} onChange={(e) => setForm({ ...form, closingType: e.target.value })} className="w-full px-3 py-2 rounded-lg border text-sm">
+            <option value="full">Полное</option>
+            <option value="partial">Частичное</option>
+          </select>
         </div>
         <div>
           <label className="block text-sm font-medium mb-1">Сумма</label>
@@ -54,8 +65,13 @@ function OrderClosingForm({ item, onClose }: { item: OrderClosing | null; onClos
           <label className="block text-sm font-medium mb-1">Статус</label>
           <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })} className="w-full px-3 py-2 rounded-lg border text-sm">
             <option value="draft">Черновик</option>
+            <option value="approved">Согласовано</option>
             <option value="completed">Завершено</option>
           </select>
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-1">Примечания</label>
+          <input type="text" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} className="w-full px-3 py-2 rounded-lg border text-sm" />
         </div>
       </div>
       <div className="flex justify-end gap-2 pt-4 border-t">
@@ -73,9 +89,10 @@ export default function OrderClosingsPage() {
       apiPath="/api/order-closings"
       columns={[
         { key: 'number', label: 'Номер' },
-        { key: 'title', label: 'Название' },
-        { key: 'status', label: 'Статус' },
+        { key: 'orderId', label: 'Заказ' },
+        { key: 'closingType', label: 'Тип', render: (item) => item.closingType === 'full' ? 'Полное' : 'Частичное' },
         { key: 'totalAmount', label: 'Сумма', render: (item) => `${(item.totalAmount || 0).toLocaleString('ru-RU')} ₽` },
+        { key: 'status', label: 'Статус' },
         { key: 'createdAt', label: 'Дата', render: (item) => new Date(item.createdAt).toLocaleDateString('ru-RU') },
       ]}
       renderForm={(item, onClose) => <OrderClosingForm item={item} onClose={onClose} />}

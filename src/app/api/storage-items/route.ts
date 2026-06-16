@@ -11,7 +11,9 @@ export async function GET(request: NextRequest) {
 
     const where: Record<string, unknown> = {};
     if (search) {
-      where.OR = ['name'].map((f) => ({ [f]: { contains: search } }));
+      where.OR = [
+        { product: { name: { contains: search } } },
+      ];
     }
 
     const orderBy: Record<string, string> = {};

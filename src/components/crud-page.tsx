@@ -1,9 +1,15 @@
 'use client';
 
-import { useState, useEffect, ReactNode } from 'react';
+import { useState, useEffect, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { Plus, Search, ChevronLeft, ChevronRight, Pencil, Trash2, Eye, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Spinner } from '@/components/ui/spinner';
+import { Typography } from '@/components/ui/typography';
+import { Flex } from '@/components/ui/layout';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 
 interface Column<T> {
   key: string;
@@ -96,108 +102,89 @@ export function CrudPage<T extends Record<string, unknown>>({
     }
   };
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    setPage(1);
-  };
-
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <h1 className="text-2xl font-bold text-[var(--foreground)]">{title}</h1>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setTrigger((t) => t + 1)}
-            className="p-2 rounded-lg border border-[var(--border)] hover:bg-[var(--muted)] transition-colors"
-            title="Обновить"
-          >
+      <Flex direction="col" className="sm:flex-row sm:items-center sm:justify-between" gap="md">
+        <Typography variant="h2">{title}</Typography>
+        <Flex gap="sm">
+          <Button variant="ghost" size="icon" onClick={() => setTrigger((t) => t + 1)} title="Обновить">
             <RefreshCw className="h-4 w-4" />
-          </button>
+          </Button>
           {createHref && (
-            <button
-              onClick={() => router.push(createHref)}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--primary)] text-[var(--primary-foreground)] text-sm font-medium hover:opacity-90 transition-opacity"
-            >
+            <Button onClick={() => router.push(createHref)}>
               <Plus className="h-4 w-4" />
               Создать
-            </button>
+            </Button>
           )}
           {renderForm && !createHref && (
-            <button
-              onClick={() => { setEditItem(null); setShowForm(true); }}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--primary)] text-[var(--primary-foreground)] text-sm font-medium hover:opacity-90 transition-opacity"
-            >
+            <Button onClick={() => { setEditItem(null); setShowForm(true); }}>
               <Plus className="h-4 w-4" />
               Создать
-            </button>
+            </Button>
           )}
-        </div>
-      </div>
+        </Flex>
+      </Flex>
 
       {/* Search */}
-      <form onSubmit={handleSearch} className="flex gap-2">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--muted-foreground)]" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-            placeholder="Поиск..."
-            className="w-full pl-10 pr-4 py-2 rounded-lg border border-[var(--input)] bg-[var(--background)] text-[var(--foreground)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ring)]"
-          />
-        </div>
-      </form>
+      <div className="max-w-md">
+        <Input
+          prefix={<Search className="h-4 w-4" />}
+          value={search}
+          onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+          placeholder="Поиск..."
+        />
+      </div>
 
       {/* Table */}
-      <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl overflow-hidden">
+      <div className="rounded-xl border border-border bg-card overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-[var(--border)]">
+              <tr className="border-b border-border">
                 {columns.map((col) => (
                   <th
                     key={col.key}
                     onClick={() => handleSort(col.key)}
                     className={cn(
-                      'px-4 py-3 text-left text-xs font-medium text-[var(--muted-foreground)] uppercase tracking-wider cursor-pointer hover:bg-[var(--muted)] transition-colors',
+                      'px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider cursor-pointer hover:bg-muted transition-colors',
                       col.className,
                     )}
                   >
                     <span className="flex items-center gap-1">
                       {col.label}
                       {sortField === col.key && (
-                        <span className="text-[var(--primary)]">
+                        <span className="text-primary">
                           {sortOrder === 'asc' ? '↑' : '↓'}
                         </span>
                       )}
                     </span>
                   </th>
                 ))}
-                <th className="px-4 py-3 text-right text-xs font-medium text-[var(--muted-foreground)] uppercase tracking-wider">
+                <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   Действия
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[var(--border)]">
+            <tbody className="divide-y divide-border">
               {loading ? (
                 <tr>
-                  <td colSpan={columns.length + 1} className="px-4 py-12 text-center text-[var(--muted-foreground)]">
-                    <div className="flex items-center justify-center gap-2">
-                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-[var(--primary)] border-t-transparent" />
+                  <td colSpan={columns.length + 1} className="px-4 py-12 text-center text-muted-foreground">
+                    <Flex justify="center" gap="sm">
+                      <Spinner size="sm" />
                       Загрузка...
-                    </div>
+                    </Flex>
                   </td>
                 </tr>
               ) : items.length === 0 ? (
                 <tr>
-                  <td colSpan={columns.length + 1} className="px-4 py-12 text-center text-[var(--muted-foreground)]">
+                  <td colSpan={columns.length + 1} className="px-4 py-12 text-center text-muted-foreground">
                     Ничего не найдено
                   </td>
                 </tr>
               ) : (
                 items.map((item, idx) => (
-                  <tr key={(item.id as string) || idx} className="hover:bg-[var(--muted)]/50 transition-colors">
+                  <tr key={(item.id as string) || idx} className="hover:bg-muted/50 transition-colors">
                     {columns.map((col) => (
                       <td key={col.key} className={cn('px-4 py-3', col.className)}>
                         {col.render
@@ -209,30 +196,34 @@ export function CrudPage<T extends Record<string, unknown>>({
                       <div className="flex items-center justify-end gap-1">
                         {extraActions?.(item)}
                         {detailHref && (
-                          <button
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
                             onClick={() => router.push(detailHref(item))}
-                            className="p-1.5 rounded hover:bg-[var(--muted)] transition-colors"
                             title="Просмотр"
                           >
-                            <Eye className="h-4 w-4 text-[var(--muted-foreground)]" />
-                          </button>
+                            <Eye className="h-4 w-4" />
+                          </Button>
                         )}
                         {renderForm && (
-                          <button
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
                             onClick={() => { setEditItem(item); setShowForm(true); }}
-                            className="p-1.5 rounded hover:bg-[var(--muted)] transition-colors"
                             title="Редактировать"
                           >
-                            <Pencil className="h-4 w-4 text-[var(--muted-foreground)]" />
-                          </button>
+                            <Pencil className="h-4 w-4" />
+                          </Button>
                         )}
-                        <button
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
                           onClick={() => setDeleteConfirm(item.id as string)}
-                          className="p-1.5 rounded hover:bg-[var(--destructive)]/10 transition-colors"
                           title="Удалить"
+                          className="text-destructive hover:bg-destructive/10"
                         >
-                          <Trash2 className="h-4 w-4 text-[var(--destructive)]" />
-                        </button>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </div>
                     </td>
                   </tr>
@@ -244,15 +235,15 @@ export function CrudPage<T extends Record<string, unknown>>({
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="flex items-center justify-between px-4 py-3 border-t border-[var(--border)]">
-            <p className="text-sm text-[var(--muted-foreground)]">
+          <div className="flex items-center justify-between px-4 py-3 border-t border-border">
+            <p className="text-sm text-muted-foreground">
               {total} записей, стр. {page} из {totalPages}
             </p>
             <div className="flex items-center gap-1">
               <button
                 onClick={() => setPage(Math.max(1, page - 1))}
                 disabled={page === 1}
-                className="p-1.5 rounded hover:bg-[var(--muted)] disabled:opacity-30 transition-colors"
+                className="p-1.5 rounded hover:bg-muted disabled:opacity-30 transition-colors"
               >
                 <ChevronLeft className="h-4 w-4" />
               </button>
@@ -267,8 +258,8 @@ export function CrudPage<T extends Record<string, unknown>>({
                     className={cn(
                       'px-3 py-1 rounded text-sm transition-colors',
                       p === page
-                        ? 'bg-[var(--primary)] text-[var(--primary-foreground)]'
-                        : 'hover:bg-[var(--muted)]',
+                        ? 'bg-primary text-primary-foreground'
+                        : 'hover:bg-muted',
                     )}
                   >
                     {p}
@@ -278,7 +269,7 @@ export function CrudPage<T extends Record<string, unknown>>({
               <button
                 onClick={() => setPage(Math.min(totalPages, page + 1))}
                 disabled={page === totalPages}
-                className="p-1.5 rounded hover:bg-[var(--muted)] disabled:opacity-30 transition-colors"
+                className="p-1.5 rounded hover:bg-muted disabled:opacity-30 transition-colors"
               >
                 <ChevronRight className="h-4 w-4" />
               </button>
@@ -289,8 +280,8 @@ export function CrudPage<T extends Record<string, unknown>>({
 
       {/* Inline Form Dialog */}
       {showForm && renderForm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl shadow-xl w-full max-w-2xl max-h-[85vh] overflow-y-auto mx-4">
+        <div className="fixed inset-0 z-[--z-modal] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-card border border-border rounded-xl shadow-xl w-full max-w-2xl max-h-[85vh] overflow-y-auto mx-4">
             <div className="p-6">
               {renderForm(editItem, () => { setShowForm(false); setEditItem(null); setTrigger((t) => t + 1); })}
             </div>
@@ -299,30 +290,15 @@ export function CrudPage<T extends Record<string, unknown>>({
       )}
 
       {/* Delete Confirmation */}
-      {deleteConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl shadow-xl p-6 w-full max-w-sm mx-4">
-            <h3 className="text-lg font-semibold mb-2">Удалить запись?</h3>
-            <p className="text-sm text-[var(--muted-foreground)] mb-6">
-              Это действие нельзя отменить.
-            </p>
-            <div className="flex justify-end gap-2">
-              <button
-                onClick={() => setDeleteConfirm(null)}
-                className="px-4 py-2 rounded-lg border border-[var(--border)] text-sm hover:bg-[var(--muted)] transition-colors"
-              >
-                Отмена
-              </button>
-              <button
-                onClick={() => handleDelete(deleteConfirm)}
-                className="px-4 py-2 rounded-lg bg-[var(--destructive)] text-white text-sm hover:opacity-90 transition-opacity"
-              >
-                Удалить
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmDialog
+        open={!!deleteConfirm}
+        title="Удалить запись?"
+        message="Это действие нельзя отменить."
+        confirmLabel="Удалить"
+        danger
+        onConfirm={() => handleDelete(deleteConfirm!)}
+        onCancel={() => setDeleteConfirm(null)}
+      />
     </div>
   );
 }

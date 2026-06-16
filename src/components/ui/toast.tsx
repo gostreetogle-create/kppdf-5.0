@@ -1,40 +1,34 @@
 'use client';
 
-import { useState, useCallback, createContext, useContext, type ReactNode, useEffect } from 'react';
-import { X, CheckCircle2, AlertCircle, Info, AlertTriangle } from 'lucide-react';
+import { useState, useCallback, createContext, useContext, useEffect, type ReactNode } from 'react';
+import { X, CheckCircle2, AlertCircle, Info, AlertTriangle, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-type ToastVariant = 'success' | 'error' | 'info' | 'warning';
+type ToastVariant = 'success' | 'error' | 'info' | 'warning' | 'loading';
 
 interface Toast {
   id: string;
   variant: ToastVariant;
-  message: string;
+  title: string;
+  description?: string;
+  action?: { label: string; onClick: () => void };
+  duration?: number;
 }
 
 interface ToastContextValue {
-  toast: (variant: ToastVariant, message: string) => void;
+  toast: (variant: ToastVariant, title: string, opts?: { description?: string; action?: { label: string; onClick: () => void }; duration?: number }) => string;
+  dismiss: (id: string) => void;
+  promise: <T>(promise: Promise<T>, msgs: { loading: string; success: string; error: string }) => Promise<T>;
 }
 
 const ToastContext = createContext<ToastContextValue | null>(null);
 
 const variantConfig: Record<ToastVariant, { icon: typeof CheckCircle2; styles: string }> = {
-  success: {
-    icon: CheckCircle2,
-    styles: 'border-success bg-success/10 text-success',
-  },
-  error: {
-    icon: AlertCircle,
-    styles: 'border-destructive bg-destructive/10 text-destructive',
-  },
-  info: {
-    icon: Info,
-    styles: 'border-info bg-info/10 text-info',
-  },
-  warning: {
-    icon: AlertTriangle,
-    styles: 'border-warning bg-warning/10 text-warning',
-  },
+  success: { icon: CheckCircle2, styles: 'border-success/50 bg-success/10 text-success' },
+  error: { icon: AlertCircle, styles: 'border-destructive/50 bg-destructive/10 text-destructive' },
+  info: { icon: Info, styles: 'border-info/50 bg-info/10 text-info' },
+  warning: { icon: AlertTriangle, styles: 'border-warning/50 bg-warning/10 text-warning' },
+  loading: { icon: Loader2, styles: 'border-border bg-background text-foreground' },
 };
 
 function ToastContainer({ toasts, removeToast }: { toasts: Toast[]; removeToast: (id: string) => void }) {
@@ -43,7 +37,7 @@ function ToastContainer({ toasts, removeToast }: { toasts: Toast[]; removeToast:
   if (!mounted) return null;
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2">
+    <div className="fixed bottom-4 right-4 z-[--z-toast] flex flex-col gap-2 pointer-events-none">
       {toasts.map((t) => {
         const config = variantConfig[t.variant];
         const Icon = config.icon;
@@ -51,16 +45,26 @@ function ToastContainer({ toasts, removeToast }: { toasts: Toast[]; removeToast:
           <div
             key={t.id}
             className={cn(
-              'flex items-center gap-3 rounded-lg border px-4 py-3 text-sm shadow-lg backdrop-blur-sm',
-              'animate-in slide-in-from-right-full fade-in',
+              'pointer-events-auto flex items-start gap-3 rounded-lg border px-4 py-3 shadow-lg backdrop-blur-sm animate-slide-in-right',
               config.styles,
             )}
           >
-            <Icon className="h-4 w-4 shrink-0" />
-            <span className="flex-1">{t.message}</span>
+            <Icon className={cn('h-4 w-4 shrink-0 mt-0.5', t.variant === 'loading' && 'animate-spin')} />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium">{t.title}</p>
+              {t.description && <p className="text-sm opacity-80 mt-0.5">{t.description}</p>}
+              {t.action && (
+                <button
+                  onClick={t.action.onClick}
+                  className="mt-1.5 text-xs font-medium underline underline-offset-2 hover:opacity-80"
+                >
+                  {t.action.label}
+                </button>
+              )}
+            </div>
             <button
               onClick={() => removeToast(t.id)}
-              className="shrink-0 opacity-70 hover:opacity-100"
+              className="shrink-0 opacity-70 hover:opacity-100 transition-opacity"
             >
               <X className="h-4 w-4" />
             </button>
@@ -79,16 +83,40 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const toast = useCallback(
-    (variant: ToastVariant, message: string) => {
+    (variant: ToastVariant, title: string, opts?: { description?: string; action?: { label: string; onClick: () => void }; duration?: number }) => {
       const id = crypto.randomUUID();
-      setToasts((prev) => [...prev, { id, variant, message }]);
-      setTimeout(() => removeToast(id), 5000);
+      const duration = opts?.duration ?? (variant === 'loading' ? 0 : 5000);
+      setToasts((prev) => [...prev, { id, variant, title, description: opts?.description, action: opts?.action, duration }]);
+      if (duration > 0) setTimeout(() => removeToast(id), duration);
+      return id;
     },
     [removeToast],
   );
 
+  const dismiss = useCallback(
+    (id: string) => removeToast(id),
+    [removeToast],
+  );
+
+  const promise = useCallback(
+    async <T,>(promise: Promise<T>, msgs: { loading: string; success: string; error: string }): Promise<T> => {
+      const id = toast('loading', msgs.loading);
+      try {
+        const result = await promise;
+        removeToast(id);
+        toast('success', msgs.success);
+        return result;
+      } catch {
+        removeToast(id);
+        toast('error', msgs.error);
+        throw new Error(msgs.error);
+      }
+    },
+    [toast, removeToast],
+  );
+
   return (
-    <ToastContext.Provider value={{ toast }}>
+    <ToastContext.Provider value={{ toast, dismiss, promise }}>
       {children}
       <ToastContainer toasts={toasts} removeToast={removeToast} />
     </ToastContext.Provider>

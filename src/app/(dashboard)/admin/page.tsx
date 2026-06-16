@@ -2,6 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { Users, FileText, Shield, Building2, Package, Factory } from 'lucide-react';
+import { Card } from '@/components/ui/card';
+import { Typography, H1, Muted } from '@/components/ui/typography';
+import { Grid, Flex, Stack } from '@/components/ui/layout';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface Stats {
   users: number;
@@ -10,13 +14,6 @@ interface Stats {
   organizations: number;
   products: number;
   productionOrders: number;
-}
-
-interface RecentActivity {
-  type: string;
-  label: string;
-  count: number;
-  trend?: string;
 }
 
 export default function AdminDashboardPage() {
@@ -53,102 +50,97 @@ export default function AdminDashboardPage() {
   }, []);
 
   const cards = [
-    { label: 'Пользователи', value: stats?.users ?? 0, icon: Users, color: 'bg-blue-500', href: '/admin/users' },
-    { label: 'КП', value: stats?.proposals ?? 0, icon: FileText, color: 'bg-green-500', href: '/proposals' },
-    { label: 'Договоры', value: stats?.contracts ?? 0, icon: Shield, color: 'bg-purple-500', href: '/contracts' },
-    { label: 'Контрагенты', value: stats?.organizations ?? 0, icon: Building2, color: 'bg-orange-500', href: '/organizations' },
-    { label: 'Товары', value: stats?.products ?? 0, icon: Package, color: 'bg-cyan-500', href: '/products' },
-    { label: 'Заказы производства', value: stats?.productionOrders ?? 0, icon: Factory, color: 'bg-red-500', href: '/production' },
+    { label: 'Пользователи', value: stats?.users ?? 0, icon: Users, bgClass: 'bg-blue-500/10', iconClass: 'text-blue-500', href: '/admin/users' },
+    { label: 'КП', value: stats?.proposals ?? 0, icon: FileText, bgClass: 'bg-green-500/10', iconClass: 'text-green-500', href: '/proposals' },
+    { label: 'Договоры', value: stats?.contracts ?? 0, icon: Shield, bgClass: 'bg-purple-500/10', iconClass: 'text-purple-500', href: '/contracts' },
+    { label: 'Контрагенты', value: stats?.organizations ?? 0, icon: Building2, bgClass: 'bg-orange-500/10', iconClass: 'text-orange-500', href: '/organizations' },
+    { label: 'Товары', value: stats?.products ?? 0, icon: Package, bgClass: 'bg-cyan-500/10', iconClass: 'text-cyan-500', href: '/products' },
+    { label: 'Заказы производства', value: stats?.productionOrders ?? 0, icon: Factory, bgClass: 'bg-red-500/10', iconClass: 'text-red-500', href: '/production' },
   ];
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-[var(--foreground)]">Администрирование</h1>
-        <p className="text-sm text-[var(--muted-foreground)] mt-1">Обзор системы и управление</p>
-      </div>
+    <Stack gap="lg">
+      <Stack gap="xs">
+        <H1>Администрирование</H1>
+        <Muted>Обзор системы и управление</Muted>
+      </Stack>
 
       {loading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <Grid cols="auto-md" gap="md">
           {[...Array(6)].map((_, i) => (
-            <div key={i} className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6 animate-pulse">
-              <div className="h-10 w-10 rounded-lg bg-[var(--muted)]" />
-              <div className="h-8 w-20 bg-[var(--muted)] rounded mt-4" />
-              <div className="h-4 w-32 bg-[var(--muted)] rounded mt-2" />
-            </div>
+            <Card key={i} className="p-6">
+              <Skeleton shape="circle" className="h-10 w-10 mb-4" />
+              <Skeleton shape="text-lg" className="w-20 mb-2" />
+              <Skeleton shape="text-sm" className="w-32" />
+            </Card>
           ))}
-        </div>
+        </Grid>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <Grid cols="auto-md" gap="md">
           {cards.map((card) => {
             const Icon = card.icon;
             return (
               <a
                 key={card.label}
                 href={card.href}
-                className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6 hover:shadow-md transition-all group"
+                className="group"
               >
-                <div className="flex items-start justify-between">
-                  <div className={`h-10 w-10 rounded-lg ${card.color}/10 flex items-center justify-center`}>
-                    <Icon className={`h-5 w-5 ${card.color.replace('bg-', 'text-')}`} />
-                  </div>
-                  <span className="text-2xl font-bold text-[var(--foreground)]">{card.value}</span>
-                </div>
-                <p className="text-sm text-[var(--muted-foreground)] mt-3 group-hover:text-[var(--foreground)] transition-colors">{card.label}</p>
+                <Card variant="interactive" className="p-6 h-full">
+                  <Flex justify="between" align="start">
+                    <div className={`h-10 w-10 rounded-lg ${card.bgClass} flex items-center justify-center`}>
+                      <Icon className={`h-5 w-5 ${card.iconClass}`} />
+                    </div>
+                    <Typography variant="h3">{card.value}</Typography>
+                  </Flex>
+                  <Muted className="mt-3 group-hover:text-foreground transition-colors">{card.label}</Muted>
+                </Card>
               </a>
             );
           })}
-        </div>
+        </Grid>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6">
-          <h2 className="text-lg font-semibold text-[var(--foreground)] mb-4">Быстрые ссылки</h2>
-          <div className="space-y-2">
-            <a href="/admin/users" className="flex items-center gap-3 p-2 rounded-lg hover:bg-[var(--muted)] transition-colors text-sm text-[var(--foreground)]">
-              <Users className="h-4 w-4 text-[var(--muted-foreground)]" /> Управление пользователями
-            </a>
-            <a href="/admin/status-workflows" className="flex items-center gap-3 p-2 rounded-lg hover:bg-[var(--muted)] transition-colors text-sm text-[var(--foreground)]">
-              <Shield className="h-4 w-4 text-[var(--muted-foreground)]" /> Мастер статусов
-            </a>
-            <a href="/admin/certificates" className="flex items-center gap-3 p-2 rounded-lg hover:bg-[var(--muted)] transition-colors text-sm text-[var(--foreground)]">
-              <Shield className="h-4 w-4 text-[var(--muted-foreground)]" /> Сертификаты
-            </a>
-            <a href="/admin/rpp-entries" className="flex items-center gap-3 p-2 rounded-lg hover:bg-[var(--muted)] transition-colors text-sm text-[var(--foreground)]">
-              <FileText className="h-4 w-4 text-[var(--muted-foreground)]" /> РПП записи
-            </a>
-            <a href="/admin/inventor-files" className="flex items-center gap-3 p-2 rounded-lg hover:bg-[var(--muted)] transition-colors text-sm text-[var(--foreground)]">
-              <Package className="h-4 w-4 text-[var(--muted-foreground)]" /> CAD-файлы
-            </a>
-          </div>
-        </div>
+      <Grid cols="auto-sm" gap="lg">
+        <Card className="p-6">
+          <Typography variant="h4" className="mb-4">Быстрые ссылки</Typography>
+          <Stack gap="sm">
+            {([
+              { icon: Users, label: 'Управление пользователями', href: '/admin/users' },
+              { icon: Shield, label: 'Мастер статусов', href: '/admin/status-workflows' },
+              { icon: Shield, label: 'Сертификаты', href: '/admin/certificates' },
+              { icon: FileText, label: 'РПП записи', href: '/admin/rpp-entries' },
+              { icon: Package, label: 'CAD-файлы', href: '/admin/inventor-files' },
+            ]).map((link) => (
+              <a
+                key={link.label}
+                href={link.href}
+                className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted transition-colors text-sm text-foreground"
+              >
+                <link.icon className="h-4 w-4 text-muted-foreground" />
+                {link.label}
+              </a>
+            ))}
+          </Stack>
+        </Card>
 
-        <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6">
-          <h2 className="text-lg font-semibold text-[var(--foreground)] mb-4">Информация о системе</h2>
-          <div className="space-y-3 text-sm">
-            <div className="flex justify-between">
-              <span className="text-[var(--muted-foreground)]">Версия</span>
-              <span className="font-medium text-[var(--foreground)]">5.0.0</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-[var(--muted-foreground)]">Framework</span>
-              <span className="font-medium text-[var(--foreground)]">Next.js</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-[var(--muted-foreground)]">База данных</span>
-              <span className="font-medium text-[var(--foreground)]">SQLite</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-[var(--muted-foreground)]">ORM</span>
-              <span className="font-medium text-[var(--foreground)]">Prisma</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-[var(--muted-foreground)]">UI</span>
-              <span className="font-medium text-[var(--foreground)]">Tailwind CSS</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+        <Card className="p-6">
+          <Typography variant="h4" className="mb-4">Информация о системе</Typography>
+          <Stack gap="sm">
+            {([
+              ['Версия', '5.0.0'],
+              ['Framework', 'Next.js'],
+              ['База данных', 'SQLite'],
+              ['ORM', 'Prisma'],
+              ['UI', 'Tailwind CSS'],
+            ] as const).map(([label, value]) => (
+              <Flex key={label} justify="between">
+                <Muted>{label}</Muted>
+                <span className="text-sm font-medium text-foreground">{value}</span>
+              </Flex>
+            ))}
+          </Stack>
+        </Card>
+      </Grid>
+    </Stack>
   );
 }

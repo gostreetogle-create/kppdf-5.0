@@ -1,74 +1,109 @@
 'use client';
 
-import React from 'react';
+import { forwardRef, type InputHTMLAttributes, type SelectHTMLAttributes, type TextareaHTMLAttributes } from 'react';
+import { cn } from '@/lib/utils';
+import { Label } from './label';
 
-interface FormFieldProps extends React.InputHTMLAttributes<HTMLInputElement> {
+// ─── FormField ──────────────────────────────────────────────
+interface FormFieldBaseProps {
   label: string;
   name: string;
+  error?: string;
+  required?: boolean;
+}
+
+export interface FormFieldProps extends FormFieldBaseProps, Omit<InputHTMLAttributes<HTMLInputElement>, 'name'> {
   type?: string;
 }
 
-export function FormField({ label, name, type = 'text', ...props }: FormFieldProps) {
-  return (
-    <div>
-      <label htmlFor={name} className="block text-sm font-medium text-[var(--foreground)] mb-1">
-        {label}
-      </label>
-      <input
-        id={name}
-        name={name}
-        type={type}
-        className="w-full px-3 py-2 rounded-lg border border-[var(--input)] bg-[var(--background)] text-[var(--foreground)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ring)] transition-colors"
-        {...props}
-      />
-    </div>
-  );
-}
+export const FormField = forwardRef<HTMLInputElement, FormFieldProps>(
+  ({ label, name, type = 'text', error, required, className, id, ...props }, ref) => {
+    const inputId = id || name;
+    return (
+      <div className={cn('space-y-1.5', className)}>
+        <Label htmlFor={inputId} required={required}>{label}</Label>
+        <input
+          ref={ref}
+          id={inputId}
+          name={name}
+          type={type}
+          className={cn(
+            'flex h-10 w-full rounded-md border bg-transparent px-3 py-2 text-sm shadow-sm',
+            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1',
+            'disabled:cursor-not-allowed disabled:opacity-50',
+            error ? 'border-destructive focus-visible:ring-destructive' : 'border-input',
+          )}
+          {...props}
+        />
+        {error && <p className="text-xs text-destructive">{error}</p>}
+      </div>
+    );
+  },
+);
+FormField.displayName = 'FormField';
 
-interface FormSelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
-  label: string;
-  name: string;
+// ─── FormSelect ─────────────────────────────────────────────
+export interface FormSelectProps extends FormFieldBaseProps, Omit<SelectHTMLAttributes<HTMLSelectElement>, 'name'> {
   options: { value: string; label: string }[];
+  placeholder?: string;
 }
 
-export function FormSelect({ label, name, options, ...props }: FormSelectProps) {
-  return (
-    <div>
-      <label htmlFor={name} className="block text-sm font-medium text-[var(--foreground)] mb-1">
-        {label}
-      </label>
-      <select
-        id={name}
-        name={name}
-        className="w-full px-3 py-2 rounded-lg border border-[var(--input)] bg-[var(--background)] text-[var(--foreground)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ring)] transition-colors"
-        {...props}
-      >
-        <option value="">Выберите...</option>
-        {options.map((opt) => (
-          <option key={opt.value} value={opt.value}>{opt.label}</option>
-        ))}
-      </select>
-    </div>
-  );
-}
+export const FormSelect = forwardRef<HTMLSelectElement, FormSelectProps>(
+  ({ label, name, options, placeholder, error, required, className, id, ...props }, ref) => {
+    const inputId = id || name;
+    return (
+      <div className={cn('space-y-1.5', className)}>
+        <Label htmlFor={inputId} required={required}>{label}</Label>
+        <select
+          ref={ref}
+          id={inputId}
+          name={name}
+          className={cn(
+            'flex h-10 w-full rounded-md border bg-transparent px-3 py-2 text-sm shadow-sm',
+            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1',
+            'disabled:cursor-not-allowed disabled:opacity-50',
+            error ? 'border-destructive focus-visible:ring-destructive' : 'border-input',
+          )}
+          {...props}
+        >
+          {placeholder && <option value="">{placeholder}</option>}
+          {options.map((opt) => (
+            <option key={opt.value} value={opt.value}>{opt.label}</option>
+          ))}
+        </select>
+        {error && <p className="text-xs text-destructive">{error}</p>}
+      </div>
+    );
+  },
+);
+FormSelect.displayName = 'FormSelect';
 
-interface FormTextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
-  label: string;
-  name: string;
-}
+// ─── FormTextarea ───────────────────────────────────────────
+export interface FormTextareaProps extends FormFieldBaseProps, Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, 'name'> {}
 
-export function FormTextarea({ label, name, ...props }: FormTextareaProps) {
-  return (
-    <div>
-      <label htmlFor={name} className="block text-sm font-medium text-[var(--foreground)] mb-1">
-        {label}
-      </label>
-      <textarea
-        id={name}
-        name={name}
-        className="w-full px-3 py-2 rounded-lg border border-[var(--input)] bg-[var(--background)] text-[var(--foreground)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ring)] transition-colors min-h-[80px] resize-y"
-        {...props}
-      />
-    </div>
-  );
-}
+export const FormTextarea = forwardRef<HTMLTextAreaElement, FormTextareaProps>(
+  ({ label, name, error, required, className, id, ...props }, ref) => {
+    const inputId = id || name;
+    return (
+      <div className={cn('space-y-1.5', className)}>
+        <Label htmlFor={inputId} required={required}>{label}</Label>
+        <textarea
+          ref={ref}
+          id={inputId}
+          name={name}
+          className={cn(
+            'flex min-h-[80px] w-full rounded-md border bg-transparent px-3 py-2 text-sm shadow-sm',
+            'placeholder:text-muted-foreground',
+            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1',
+            'disabled:cursor-not-allowed disabled:opacity-50',
+            'resize-y',
+            error ? 'border-destructive focus-visible:ring-destructive' : 'border-input',
+          )}
+          {...props}
+        />
+        {error && <p className="text-xs text-destructive">{error}</p>}
+      </div>
+    );
+  },
+);
+FormTextarea.displayName = 'FormTextarea';

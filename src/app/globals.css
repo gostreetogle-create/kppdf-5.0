@@ -1,51 +1,85 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #0f172a;
-  --primary: #2563eb;
+  --background: #fefaf2;
+  --foreground: #2d2318;
+  --primary: #b8860b;
   --primary-foreground: #ffffff;
-  --secondary: #f1f5f9;
-  --secondary-foreground: #0f172a;
-  --card: #ffffff;
-  --card-foreground: #0f172a;
-  --border: #e2e8f0;
-  --input: #e2e8f0;
-  --ring: #2563eb;
-  --muted: #f1f5f9;
-  --muted-foreground: #64748b;
-  --destructive: #dc2626;
+  --secondary: #f5ede0;
+  --secondary-foreground: #2d2318;
+  --card: #fffdf8;
+  --card-foreground: #2d2318;
+  --border: #e8dcc8;
+  --input: #e8dcc8;
+  --ring: #c8882a;
+  --muted: #f8f2e8;
+  --muted-foreground: #8b7355;
+  --destructive: #c0392b;
   --destructive-foreground: #ffffff;
-  --success: #16a34a;
+  --success: #5b8c3e;
   --success-foreground: #ffffff;
-  --warning: #d97706;
+  --warning: #d4a017;
   --warning-foreground: #ffffff;
-  --info: #2563eb;
+  --info: #5b9ec4;
   --info-foreground: #ffffff;
-  --sidebar: #0f172a;
+  --accent: #f0e0c8;
+  --accent-foreground: #2d2318;
+  --popover: #fffdf8;
+  --popover-foreground: #2d2318;
+  --sidebar: #1a1510;
+  --sidebar-foreground: #e8dcc8;
+  --sidebar-accent: #2d2318;
   --radius: 0.5rem;
+
+  --shadow-xs: 0 1px 2px 0 rgb(139 115 85 / 0.06);
+  --shadow-sm: 0 1px 3px 0 rgb(139 115 85 / 0.08), 0 1px 2px -1px rgb(139 115 85 / 0.08);
+  --shadow-md: 0 4px 6px -1px rgb(139 115 85 / 0.08), 0 2px 4px -2px rgb(139 115 85 / 0.08);
+  --shadow-lg: 0 10px 15px -3px rgb(139 115 85 / 0.08), 0 4px 6px -4px rgb(139 115 85 / 0.08);
+  --shadow-xl: 0 20px 25px -5px rgb(139 115 85 / 0.08), 0 8px 10px -6px rgb(139 115 85 / 0.08);
+
+  --z-dropdown: 100;
+  --z-sticky: 200;
+  --z-popover: 300;
+  --z-modal: 400;
+  --z-toast: 500;
+  --z-tooltip: 600;
 }
 
 [data-theme="dark"] {
-  --background: #0b0f1a;
-  --foreground: #e2e8f0;
-  --primary: #3b82f6;
-  --primary-foreground: #ffffff;
-  --secondary: #1e293b;
-  --secondary-foreground: #e2e8f0;
-  --card: #111827;
-  --card-foreground: #e2e8f0;
-  --border: #1e293b;
-  --input: #1e293b;
-  --ring: #3b82f6;
-  --muted: #1e293b;
-  --muted-foreground: #94a3b8;
-  --destructive: #ef4444;
+  --background: #1a1510;
+  --foreground: #e8dcc8;
+  --primary: #daa520;
+  --primary-foreground: #1a1510;
+  --secondary: #2d2318;
+  --secondary-foreground: #e8dcc8;
+  --card: #231d15;
+  --card-foreground: #e8dcc8;
+  --border: #3d3020;
+  --input: #3d3020;
+  --ring: #daa520;
+  --muted: #2d2318;
+  --muted-foreground: #a08c70;
+  --destructive: #e74c3c;
   --destructive-foreground: #ffffff;
-  --success: #22c55e;
-  --warning: #f59e0b;
-  --info: #3b82f6;
-  --sidebar: #0b0f1a;
+  --success: #6b9e45;
+  --success-foreground: #ffffff;
+  --warning: #e6b422;
+  --warning-foreground: #1a1510;
+  --info: #6baed4;
+  --info-foreground: #1a1510;
+  --accent: #3d3020;
+  --accent-foreground: #e8dcc8;
+  --popover: #231d15;
+  --popover-foreground: #e8dcc8;
+  --sidebar: #120e08;
+  --sidebar-foreground: #e8dcc8;
+  --sidebar-accent: #2d2318;
+
+  --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.3);
+  --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.4), 0 1px 2px -1px rgb(0 0 0 / 0.4);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.4), 0 2px 4px -2px rgb(0 0 0 / 0.4);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.4), 0 4px 6px -4px rgb(0 0 0 / 0.4);
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.4), 0 8px 10px -6px rgb(0 0 0 / 0.4);
 }
 
 @theme inline {
@@ -70,9 +104,21 @@
   --color-warning-foreground: var(--warning-foreground);
   --color-info: var(--info);
   --color-info-foreground: var(--info-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
   --radius-lg: var(--radius);
+  --shadow-xs: var(--shadow-xs);
+  --shadow-sm: var(--shadow-sm);
+  --shadow-md: var(--shadow-md);
+  --shadow-lg: var(--shadow-lg);
+  --shadow-xl: var(--shadow-xl);
 }
 
 * {
@@ -118,15 +164,114 @@ input, select, textarea {
   to { transform: rotate(360deg); }
 }
 
-.animate-spin {
-  animation: spin 1s linear infinite;
-}
-
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(4px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
-.animate-fadeIn {
+@keyframes fadeOut {
+  from { opacity: 1; transform: translateY(0); }
+  to { opacity: 0; transform: translateY(4px); }
+}
+
+@keyframes slideInFromRight {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+@keyframes slideOutToRight {
+  from { transform: translateX(0); }
+  to { transform: translateX(100%); }
+}
+
+@keyframes slideInFromLeft {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+
+@keyframes slideInFromTop {
+  from { transform: translateY(-100%); }
+  to { transform: translateY(0); }
+}
+
+@keyframes slideInFromBottom {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+@keyframes accordionDown {
+  from { height: 0; opacity: 0; }
+  to { height: var(--radix-accordion-content-height); opacity: 1; }
+}
+
+@keyframes accordionUp {
+  from { height: var(--radix-accordion-content-height); opacity: 1; }
+  to { height: 0; opacity: 0; }
+}
+
+@keyframes scaleIn {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+@keyframes scaleOut {
+  from { transform: scale(1); opacity: 1; }
+  to { transform: scale(0.95); opacity: 0; }
+}
+
+@keyframes progress {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(400%); }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+.animate-fade-in {
   animation: fadeIn 0.2s ease-out;
+}
+
+.animate-fade-out {
+  animation: fadeOut 0.2s ease-in;
+}
+
+.animate-slide-in-right {
+  animation: slideInFromRight 0.3s ease-out;
+}
+
+.animate-slide-out-right {
+  animation: slideOutToRight 0.3s ease-in;
+}
+
+.animate-slide-in-left {
+  animation: slideInFromLeft 0.3s ease-out;
+}
+
+.animate-slide-in-top {
+  animation: slideInFromTop 0.3s ease-out;
+}
+
+.animate-slide-in-bottom {
+  animation: slideInFromBottom 0.3s ease-out;
+}
+
+.animate-scale-in {
+  animation: scaleIn 0.2s ease-out;
+}
+
+.animate-scale-out {
+  animation: scaleOut 0.2s ease-in;
+}
+
+.animate-accordion-down {
+  animation: accordionDown 0.2s ease-out;
+}
+
+.animate-accordion-up {
+  animation: accordionUp 0.2s ease-out;
+}
+
+.animate-indeterminate {
+  animation: progress 1.5s ease-in-out infinite;
 }

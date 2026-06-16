@@ -8,10 +8,12 @@ interface A4PageProps {
   backgroundOpacity?: number;
   scale?: number;
   editable?: boolean;
+  pageNumber?: number;
+  totalPages?: number;
 }
 
 export const A4Page = forwardRef<HTMLDivElement, A4PageProps>(
-  ({ children, backgroundImage, backgroundOpacity = 1, scale = 1, editable = false }, ref) => {
+  ({ children, backgroundImage, backgroundOpacity = 1, scale = 1, editable = false, pageNumber, totalPages }, ref) => {
     return (
       <div
         className="relative mx-auto"
@@ -46,8 +48,11 @@ export const A4Page = forwardRef<HTMLDivElement, A4PageProps>(
           </div>
 
           {editable && (
-            <div className="absolute bottom-2 right-2 text-xs text-gray-400 select-none">
-              A4 · 210×297 мм
+            <div className="absolute bottom-2 right-2 text-xs text-[var(--muted-foreground)] select-none flex items-center gap-2">
+              <span>A4 · 210×297 мм</span>
+              {pageNumber && totalPages ? (
+                <span className="font-semibold text-[var(--foreground)]">{pageNumber}/{totalPages}</span>
+              ) : null}
             </div>
           )}
         </div>

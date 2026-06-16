@@ -101,21 +101,26 @@ function BlockContent({ block }: { block: DocBlock }) {
 function TextBlockContent({ block }: { block: DocBlock }) {
   if (block.columns && block.columns.length > 0) {
     return (
-      <div className="flex gap-2">
+      <div className="flex gap-2 overflow-x-auto pb-1">
         {block.columns.map((col) => (
           <div
             key={col.id}
             style={{
+              minWidth: '200px',
               width: col.width || 'auto',
+              flex: '1 1 auto',
               textAlign: col.textAlign || 'left',
               fontWeight: col.fontWeight || 'normal',
               fontStyle: col.fontStyle || 'normal',
               textDecoration: col.textDecoration || 'none',
               color: col.color || undefined,
             }}
-            className="text-sm whitespace-pre-wrap"
+            className="text-sm"
           >
-            {col.content || 'Текст'}
+            <div
+              className="whitespace-pre-wrap break-words"
+              dangerouslySetInnerHTML={{ __html: col.content || 'Текст' }}
+            />
           </div>
         ))}
       </div>
@@ -124,14 +129,17 @@ function TextBlockContent({ block }: { block: DocBlock }) {
 
   return (
     <div
-      className="text-sm whitespace-pre-wrap"
+      className="text-sm"
       style={{
         textAlign: block.settings?.align || 'left',
         fontSize: block.settings?.fontSize || '14px',
         padding: block.settings?.padding || '0',
       }}
     >
-      {block.content || 'Текстовый блок'}
+      <div
+        className="whitespace-pre-wrap break-words"
+        dangerouslySetInnerHTML={{ __html: block.content || 'Текстовый блок' }}
+      />
     </div>
   );
 }

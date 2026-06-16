@@ -85,7 +85,9 @@ function printSignal(signal, queue) {
   const fromAgent = queue.agents[signal.from]?.name || signal.from;
   const toAgent = queue.agents[signal.to]?.name || signal.to;
   const ackStatus = signal.acknowledged ? '✅ Прочитано' : '🆕 НОВОЕ';
-  console.log(`  [${signal.id}] ${ackStatus}`);
+  const typeIcon = { info: '📨', urgent: '⚠️', blocker: '🚫' }[signal.type] || '📨';
+  const typeLabel = signal.type === 'urgent' ? ' [СРОЧНЫЙ]' : signal.type === 'blocker' ? ' [БЛОКЕР]' : '';
+  console.log(`  [${signal.id}] ${typeIcon} ${ackStatus}${typeLabel}`);
   console.log(`     От: ${fromAgent} → Кому: ${toAgent}`);
   console.log(`     ${signal.message}`);
   console.log(`     ${new Date(signal.created_at).toLocaleString('ru-RU')}`);
@@ -327,11 +329,16 @@ function cmdSignal(queue, fromAgent, toAgent, message) {
     process.exit(1);
   }
 
+  // Auto-detect priority from message
+  let type = 'info';
+  if (message.includes('⚠️') || message.includes('СРОЧНО') || message.includes('URGENT')) type = 'urgent';
+  if (message.includes('🚫') || message.includes('BLOCKER') || message.includes('БЛОК')) type = 'blocker';
+
   const signal = {
     id: `sig-${String(queue.signals.length + 1).padStart(3, '0')}`,
     from: fromAgent,
     to: toAgent,
-    type: 'info',
+    type: type,
     message: message,
     created_at: new Date().toISOString(),
     acknowledged: false,
@@ -339,11 +346,24 @@ function cmdSignal(queue, fromAgent, toAgent, message) {
 
   queue.signals.push(signal);
   writeQueue(queue);
-  console.log(`📨 Сигнал отправлен ${queue.agents[toAgent].name}: ${message}`);
+  
+  const typeIcon = { info: '📨', urgent: '⚠️', blocker: '🚫' }[type] || '📨';
+  console.log(`${typeIcon} Сигнал отправлен ${queue.agents[toAgent].name}: ${message}`);
+  
+  // Highlight urgent signals
+  if (type === 'urgent' || type === 'blocker') {
+    console.log(`\n⚠️  ВНИМАНИЕ: Сигнал помечен как ${type === 'urgent' ? 'СРОЧНЫЙ' : 'БЛОКИРУЮЩИЙ'}!`);
+    console.log(`   Агент ${toAgent} ОБЯЗАН проверить сигнал немедленно!\n`);
+  }
 }
 
-function cmdSignals(queue, agentName) {
-  const mySignals = queue.signals.filter(s => s.to === agentName && !s.acknowledged);
+function cmdSignals(queue, agentName, showAll = false) {
+  let mySignals;
+  if (showAll) {
+    mySignals = queue.signals.filter(s => s.to === agentName || s.from === agentName);
+  } else {
+    mySignals = queue.signals.filter(s => s.to === agentName && !s.acknowledged);
+  }
 
   if (mySignals.length === 0) {
     console.log(`\n✅ Нет новых сигналов для ${queue.agents[agentName].name}\n`);
@@ -353,7 +373,86 @@ function cmdSignals(queue, agentName) {
   console.log(`\n📨 Сигналы для ${queue.agents[agentName].name} (${mySignals.length}):\n`);
   mySignals.forEach(s => printSignal(s, queue));
 
-  console.log(`   Чтобы подтвердить: node agent-cli.js ${agentName} ack <id>\n`);
+  if (!showAll) {
+    console.log(`   Чтобы подтвердить: node agent-cli.js ${agentName} ack <id>`);
+    console.log(`   Чтобы показать все: node agent-cli.js ${agentName} signals --all\n`);
+  }
+}
+
+function cmdCheck(queue, agentName) {
+  console.log(`\n${'='.repeat(60)}`);
+  console.log(`🔍 ПРОВЕРКА СОСТОЯНИЯ: ${queue.agents[agentName].name}`);
+  console.log(`${'='.repeat(60)}\n`);
+
+  // 1. Check signals
+  const mySignals = queue.signals.filter(s => s.to === agentName && !s.acknowledged);
+  const urgentSignals = mySignals.filter(s => s.type === 'urgent' || s.type === 'blocker');
+  
+  if (urgentSignals.length > 0) {
+    console.log(`🚨 СРОЧНЫХ СИГНАЛОВ: ${urgentSignals.length}`);
+    urgentSignals.forEach(s => {
+      const icon = s.type === 'urgent' ? '⚠️' : '🚫';
+      console.log(`   ${icon} [${s.id}] от ${s.from}: ${s.message.substring(0, 80)}`);
+    });
+    console.log('');
+  }
+  
+  if (mySignals.length > 0) {
+    console.log(`📨 Непрочитанных сигналов: ${mySignals.length}`);
+    mySignals.slice(0, 3).forEach(s => {
+      const icon = { info: '📨', urgent: '⚠️', blocker: '🚫' }[s.type] || '📨';
+      console.log(`   ${icon} [${s.id}] от ${s.from}: ${s.message.substring(0, 60)}...`);
+    });
+    if (mySignals.length > 3) console.log(`   ... и ещё ${mySignals.length - 3}`);
+    console.log('');
+  } else {
+    console.log(`✅ Сигналов нет\n`);
+  }
+
+  // 2. Check tasks
+  const myTasks = queue.tasks.filter(t => t.assignee === agentName);
+  const inProgress = myTasks.filter(t => t.status === 'in_progress');
+  const pending = myTasks.filter(t => t.status === 'pending');
+  const ready = pending.filter(t => {
+    if (!t.depends_on?.length) return true;
+    return t.depends_on.every(depId => {
+      const dep = queue.tasks.find(d => d.id === depId);
+      return dep && dep.status === 'done';
+    });
+  });
+
+  if (inProgress.length > 0) {
+    console.log(`🔴 В РАБОТЕ (${inProgress.length}):`);
+    inProgress.forEach(t => console.log(`   → ${t.id}: ${t.title}`));
+    console.log('');
+  }
+
+  if (ready.length > 0) {
+    console.log(`🎯 ГОТОВЫ К ВЗЯТИЮ (${ready.length}):`);
+    ready.sort((a, b) => (a.priority || 99) - (b.priority || 99));
+    ready.slice(0, 3).forEach(t => {
+      console.log(`   ⏳ ${t.id} (P${t.priority || 99}): ${t.title}`);
+    });
+    if (ready.length > 3) console.log(`   ... и ещё ${ready.length - 3}`);
+    console.log('');
+  }
+
+  // 3. Show next action
+  console.log(`${'─'.repeat(60)}`);
+  if (urgentSignals.length > 0) {
+    console.log(`🚨 ПРИОРИТЕТ: ПРОЧИТАЙ СРОЧНЫЕ СИГНАЛЫ!`);
+    console.log(`   node agent-cli.js ${agentName} signals`);
+  } else if (inProgress.length > 0) {
+    console.log(`🔴 ПРИОРИТЕТ: ПРОДОЛЖАЙ ТЕКУЩУЮ ЗАДАЧУ`);
+    console.log(`   ${inProgress[0].id}: ${inProgress[0].title}`);
+  } else if (ready.length > 0) {
+    console.log(`🎯 ПРИОРИТЕТ: ВОЗЬМИ ЗАДАЧУ`);
+    console.log(`   node agent-cli.js ${agentName} take ${ready[0].id}`);
+  } else {
+    console.log(`✅ ВСЁ ГОТОВО. ЖДИ НОВЫХ ЗАДАЧ.`);
+    console.log(`   Проверяй: node agent-cli.js ${agentName} check`);
+  }
+  console.log(`${'─'.repeat(60)}\n`);
 }
 
 function cmdAck(queue, agentName, signalId) {
@@ -489,6 +588,7 @@ function cmdHelp() {
   mimo      — исполнительный агент
 
 Команды:
+  check                 — 🔍 ПРОВЕРИТЬ ВСЁ (сигналы + задачи + что делать)
   list                  — все задачи
   pending               — ожидающие задачи
   my-tasks              — мои задачи
@@ -499,16 +599,23 @@ function cmdHelp() {
   next                  — следующая задача
   signal <кому> <сообщ> — отправить сигнал
   signals               — непрочитанные сигналы
+  signals --all         — все сигналы (включая прочитанные)
   ack <id>              — подтвердить сигнал
   status                — статус проекта
   validate              — проверить целостность
   help                  — эта справка
 
+ПРИОРИТЕТЫ СИГНАЛОВ:
+  Обычный:  signal buffy "Текст"
+  Срочный:  signal buffy "⚠️ СРОЧНО: ..."
+  Блокер:   signal buffy "🚫 БЛОК: ..."
+
 Примеры:
+  node agent-cli.js mimo check          ← НАЧНИ С ЭТОГО!
   node agent-cli.js buffy next
   node agent-cli.js mimo take confirm-dialogs
   node agent-cli.js buffy done gantt-chart
-  node agent-cli.js buffy status
+  node agent-cli.js buffy signal mimo "⚠️ СРОЧНО: ..."
 `);
 }
 
@@ -565,7 +672,10 @@ function main() {
       cmdSignal(queue, agentName, args[2], args.slice(3).join(' '));
       break;
     case 'signals':
-      cmdSignals(queue, agentName);
+      cmdSignals(queue, agentName, args.includes('--all'));
+      break;
+    case 'check':
+      cmdCheck(queue, agentName);
       break;
     case 'ack':
       cmdAck(queue, agentName, args[2]);

@@ -28,7 +28,7 @@ function ProductForm({ item, onClose }: { item: Product | null; onClose: () => v
   const [form, setForm] = useState({
     sku: item?.sku ?? '',
     name: item?.name ?? '',
-    categoryId: '',
+    categoryId: (item as unknown as { categoryId?: string })?.categoryId ?? '',
     productType: item?.productType ?? 'purchased',
     description: item?.description ?? '',
     basePrice: item?.basePrice ?? 0,

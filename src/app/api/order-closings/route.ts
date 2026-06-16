@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const { page, limit, search, sortField, sortOrder } = parseSearchParams(searchParams);
     const where: Record<string, unknown> = {};
-    if (search) where.OR = ['number', 'title'].map((f) => ({ [f]: { contains: search } }));
+    if (search) where.OR = ['number', 'notes'].map((f) => ({ [f]: { contains: search } }));
     const orderBy: Record<string, string> = {};
     if (sortField) orderBy[sortField] = sortOrder;
     else orderBy.createdAt = 'desc';

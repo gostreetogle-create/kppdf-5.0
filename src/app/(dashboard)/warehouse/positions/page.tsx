@@ -30,7 +30,7 @@ function PositionForm({ item, onClose }: { item: StoragePosition | null; onClose
     setSaving(true);
     try {
       const method = item?.id ? 'PUT' : 'POST';
-      const url = item?.id ? `/api/storage-positions/${item.id}` : '/api/storage-positions';
+      const url = item?.id ? `/api/storage-items/${item.id}` : '/api/storage-items';
       await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },

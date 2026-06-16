@@ -1,39 +1,50 @@
 'use client';
 
-import { Package, Plus } from 'lucide-react';
+import { Package, Plus, Search, type LucideIcon } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { Button } from './button';
 
-interface EmptyStateProps {
-  icon?: React.ElementType;
+export interface EmptyStateProps {
+  icon?: LucideIcon;
   title: string;
   description?: string;
   actionLabel?: string;
   onAction?: () => void;
+  variant?: 'default' | 'search' | 'error';
+  className?: string;
 }
 
+const variantIcons: Record<string, LucideIcon> = {
+  default: Package,
+  search: Search,
+  error: Package,
+};
+
 export function EmptyState({
-  icon: Icon = Package,
+  icon,
   title,
   description,
   actionLabel,
   onAction,
+  variant = 'default',
+  className,
 }: EmptyStateProps) {
+  const Icon = icon || variantIcons[variant];
+
   return (
-    <div className="flex flex-col items-center justify-center py-16 px-4">
-      <div className="h-20 w-20 rounded-2xl bg-[var(--muted)] flex items-center justify-center mb-4">
-        <Icon className="h-10 w-10 text-[var(--muted-foreground)]" />
+    <div className={cn('flex flex-col items-center justify-center py-16 px-4 text-center', className)}>
+      <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-muted mb-4 ring-1 ring-border/50">
+        <Icon className="h-10 w-10 text-muted-foreground" />
       </div>
-      <h3 className="text-lg font-semibold text-[var(--foreground)] mb-1">{title}</h3>
+      <h3 className="text-lg font-semibold text-foreground mb-1.5">{title}</h3>
       {description && (
-        <p className="text-sm text-[var(--muted-foreground)] text-center max-w-sm">{description}</p>
+        <p className="text-sm text-muted-foreground max-w-sm">{description}</p>
       )}
       {actionLabel && onAction && (
-        <button
-          onClick={onAction}
-          className="mt-6 inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-[var(--primary)] text-[var(--primary-foreground)] text-sm font-medium hover:opacity-90 transition-all shadow-sm"
-        >
+        <Button onClick={onAction} className="mt-6">
           <Plus className="h-4 w-4" />
           {actionLabel}
-        </button>
+        </Button>
       )}
     </div>
   );

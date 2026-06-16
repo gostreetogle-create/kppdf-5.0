@@ -39,6 +39,25 @@ export function BlockEditor({
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
   const [editingBlock, setEditingBlock] = useState<DocBlock | null>(null);
 
+  // Adaptive scale for A4 canvas
+  const canvasContainerRef = useRef<HTMLDivElement>(null);
+  const [a4Scale, setA4Scale] = useState(0.6);
+
+  useEffect(() => {
+    const el = canvasContainerRef.current;
+    if (!el) return;
+    const observer = new ResizeObserver(entries => {
+      for (const entry of entries) {
+        const w = entry.contentRect.width;
+        // 210mm ≈ 794px at 96dpi, 32px padding
+        const s = Math.max(0.3, Math.min(1.2, (w - 32) / 794));
+        setA4Scale(s);
+      }
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
   const onChangeRef = useRef(onChange);
   const prevBlocksRef = useRef(editorBlocks);
   useEffect(() => {
@@ -81,17 +100,17 @@ export function BlockEditor({
         }
       }
     };
-
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [undo, redo]);
 
   const addBlock = useCallback(
-    (type: DocBlock['type']) => {
+    (type: DocBlock['type'], pageNum?: number) => {
       const newBlock: DocBlock = {
         id: `block-${Date.now()}`,
         type,
         order: editorBlocks.length,
+        page: pageNum || 1,
         title: '',
         content: type === 'text' ? '' : undefined,
         showLine: type === 'table' || type === 'separator' ? true : undefined,
@@ -104,23 +123,23 @@ export function BlockEditor({
     [editorBlocks, setEditorBlocks]
   );
 
+  const handleAddPage = useCallback(() => {
+    const maxPage = editorBlocks.reduce((max, b) => Math.max(max, b.page || 1), 1);
+    addBlock('text', maxPage + 1);
+  }, [editorBlocks, addBlock]);
+
   const handleBlockSelect = useCallback((id: string) => {
     setSelectedBlockId(id);
   }, []);
 
-  const handleBlockEdit = useCallback(
-    (block: DocBlock) => {
-      setEditingBlock(block);
-    },
-    []
-  );
+  const handleBlockEdit = useCallback((block: DocBlock) => {
+    setEditingBlock(block);
+  }, []);
 
   const handleBlockRemove = useCallback(
     (id: string) => {
       setEditorBlocks(editorBlocks.filter((b) => b.id !== id));
-      if (selectedBlockId === id) {
-        setSelectedBlockId(null);
-      }
+      if (selectedBlockId === id) setSelectedBlockId(null);
     },
     [editorBlocks, setEditorBlocks, selectedBlockId]
   );
@@ -134,9 +153,7 @@ export function BlockEditor({
 
   const handleBlockSave = useCallback(
     (updatedBlock: DocBlock) => {
-      setEditorBlocks(
-        editorBlocks.map((b) => (b.id === updatedBlock.id ? updatedBlock : b))
-      );
+      setEditorBlocks(editorBlocks.map((b) => (b.id === updatedBlock.id ? updatedBlock : b)));
       setEditingBlock(null);
     },
     [editorBlocks, setEditorBlocks]
@@ -148,73 +165,83 @@ export function BlockEditor({
   }, [clearDraft, blocks, setEditorBlocks]);
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-gray-500">Добавить блок:</span>
-          <button
-            onClick={() => addBlock('text')}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-sm hover:bg-gray-50"
-          >
-            <Type size={14} />
-            Текст
-          </button>
-          <button
-            onClick={() => addBlock('table')}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-sm hover:bg-gray-50"
-          >
-            <Table size={14} />
-            Таблица
-          </button>
-          <button
-            onClick={() => addBlock('separator')}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-sm hover:bg-gray-50"
-          >
-            <Minus size={14} />
-            Разделитель
-          </button>
+    <div className="flex gap-4">
+      {/* LEFT SIDEBAR — Add blocks */}
+      <div className="w-14 shrink-0 flex flex-col items-center gap-2 pt-2">
+        <div className="text-[10px] font-semibold text-[var(--muted-foreground)] uppercase tracking-wider mb-1">
+          Блоки
         </div>
+        <button
+          onClick={() => addBlock('text')}
+          className="flex flex-col items-center gap-1 w-12 h-12 rounded-xl border border-[var(--border)] bg-[var(--card)] hover:bg-[var(--muted)] hover:border-[var(--primary)]/30 transition-all group"
+          title="Текст"
+        >
+          <Type size={16} className="text-[var(--muted-foreground)] group-hover:text-[var(--primary)] transition-colors" />
+          <span className="text-[9px] font-medium text-[var(--muted-foreground)] group-hover:text-[var(--foreground)]">Текст</span>
+        </button>
+        <button
+          onClick={() => addBlock('table')}
+          className="flex flex-col items-center gap-1 w-12 h-12 rounded-xl border border-[var(--border)] bg-[var(--card)] hover:bg-[var(--muted)] hover:border-[var(--primary)]/30 transition-all group"
+          title="Таблица"
+        >
+          <Table size={16} className="text-[var(--muted-foreground)] group-hover:text-[var(--primary)] transition-colors" />
+          <span className="text-[9px] font-medium text-[var(--muted-foreground)] group-hover:text-[var(--foreground)]">Табл.</span>
+        </button>
+        <button
+          onClick={() => addBlock('separator')}
+          className="flex flex-col items-center gap-1 w-12 h-12 rounded-xl border border-[var(--border)] bg-[var(--card)] hover:bg-[var(--muted)] hover:border-[var(--primary)]/30 transition-all group"
+          title="Разделитель"
+        >
+          <Minus size={16} className="text-[var(--muted-foreground)] group-hover:text-[var(--primary)] transition-colors" />
+          <span className="text-[9px] font-medium text-[var(--muted-foreground)] group-hover:text-[var(--foreground)]">Разд.</span>
+        </button>
 
-        <div className="flex items-center gap-1">
+        <div className="border-t border-[var(--border)] w-8 mt-2 pt-2" />
+
+        <button
+          onClick={undo}
+          disabled={!canUndo}
+          className="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-[var(--muted)] disabled:opacity-25 transition-all"
+          title="Отменить (Ctrl+Z)"
+        >
+          <Undo2 size={16} className="text-[var(--muted-foreground)]" />
+        </button>
+        <button
+          onClick={redo}
+          disabled={!canRedo}
+          className="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-[var(--muted)] disabled:opacity-25 transition-all"
+          title="Повторить (Ctrl+Shift+Z)"
+        >
+          <Redo2 size={16} className="text-[var(--muted-foreground)]" />
+        </button>
+
+        {templateId && (
           <button
-            onClick={undo}
-            disabled={!canUndo}
-            className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-30"
-            title="Отменить (Ctrl+Z)"
+            onClick={handleClearDraft}
+            className="mt-1 text-[9px] text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors"
           >
-            <Undo2 size={16} />
+            Сброс
           </button>
-          <button
-            onClick={redo}
-            disabled={!canRedo}
-            className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-30"
-            title="Повторить (Ctrl+Shift+Z)"
-          >
-            <Redo2 size={16} />
-          </button>
-          {templateId && (
-            <button
-              onClick={handleClearDraft}
-              className="ml-2 text-xs text-gray-400 hover:text-gray-600"
-            >
-              Сбросить черновик
-            </button>
-          )}
-        </div>
+        )}
       </div>
 
-      <div className="border rounded-xl overflow-hidden bg-gray-50 p-4">
+      {/* RIGHT — A4 Canvas */}
+      <div
+        ref={canvasContainerRef}
+        className="flex-1 border rounded-xl overflow-hidden bg-[var(--muted)]/30 p-4 min-h-[500px] flex items-start justify-center"
+      >
         <A4Canvas
           blocks={editorBlocks}
           selectedBlockId={selectedBlockId}
           backgroundImage={backgroundImage}
           backgroundOpacity={backgroundOpacity}
           editable={true}
-          scale={0.5}
+          scale={a4Scale}
           onBlockSelect={handleBlockSelect}
           onBlocksReorder={handleBlocksReorder}
           onBlockEdit={handleBlockEdit}
           onBlockRemove={handleBlockRemove}
+          onAddPage={handleAddPage}
         />
       </div>
 

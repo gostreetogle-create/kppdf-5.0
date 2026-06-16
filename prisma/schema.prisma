@@ -425,7 +425,20 @@ model StorageItem {
   productId String?
   product   Product? @relation(fields: [productId], references: [id])
 
+  inventoryMovements InventoryMovement[]
+
   @@unique([warehouseId, productId])
+}
+
+model InventoryMovement {
+  id              String   @id @default(cuid())
+  type            String   // in | out | transfer
+  quantity        Int
+  notes           String?
+  createdAt       DateTime @default(now())
+
+  storageItemId String
+  storageItem   StorageItem @relation(fields: [storageItemId], references: [id])
 }
 
 model PurchaseRequest {

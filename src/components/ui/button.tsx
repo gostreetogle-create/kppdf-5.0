@@ -1,86 +1,69 @@
 'use client';
 
 import { forwardRef, type ButtonHTMLAttributes } from 'react';
-import { Loader2 } from 'lucide-react';
+import { Slot } from '@radix-ui/react-slot';
+import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/lib/utils';
+import { Spinner } from './spinner';
 
-type ButtonVariant = 'default' | 'secondary' | 'destructive' | 'outline' | 'ghost' | 'link';
-type ButtonSize = 'sm' | 'md' | 'lg';
-
-interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: ButtonVariant;
-  size?: ButtonSize;
-  loading?: boolean;
-  icon?: React.ReactNode;
-  iconPosition?: 'left' | 'right';
-}
-
-const variantStyles: Record<ButtonVariant, string> = {
-  default:
-    'bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm',
-  secondary:
-    'bg-secondary text-secondary-foreground hover:bg-secondary/80',
-  destructive:
-    'bg-destructive text-destructive-foreground hover:bg-destructive/90 shadow-sm',
-  outline:
-    'border border-border bg-transparent hover:bg-muted text-foreground',
-  ghost:
-    'hover:bg-muted text-foreground',
-  link:
-    'text-foreground underline-offset-4 hover:underline',
-};
-
-const sizeStyles: Record<ButtonSize, string> = {
-  sm: 'h-8 px-3 text-sm rounded-md gap-1.5',
-  md: 'h-10 px-4 text-sm rounded-md gap-2',
-  lg: 'h-12 px-6 text-base rounded-lg gap-2.5',
-};
-
-export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
-  (
-    {
-      variant = 'default',
-      size = 'md',
-      loading = false,
-      icon,
-      iconPosition = 'left',
-      className,
-      disabled,
-      children,
-      ...props
+const buttonVariants = cva(
+  'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0',
+  {
+    variants: {
+      variant: {
+        default: 'bg-primary text-primary-foreground shadow-sm hover:bg-primary/90 active:bg-primary/80',
+        secondary: 'bg-secondary text-secondary-foreground shadow-sm hover:bg-secondary/80 active:bg-secondary/70',
+        destructive: 'bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90 active:bg-destructive/80',
+        outline: 'border border-input bg-transparent shadow-sm hover:bg-accent hover:text-accent-foreground active:bg-accent/80',
+        ghost: 'hover:bg-accent hover:text-accent-foreground active:bg-accent/80',
+        link: 'text-primary underline-offset-4 hover:underline',
+      },
+      size: {
+        xs: 'h-7 px-2.5 text-xs rounded-sm gap-1',
+        sm: 'h-8 px-3 text-xs rounded-md gap-1.5',
+        md: 'h-10 px-4 text-sm rounded-md gap-2',
+        lg: 'h-11 px-6 text-base rounded-md gap-2.5',
+        xl: 'h-12 px-8 text-base rounded-lg gap-3',
+        icon: 'h-10 w-10',
+        'icon-sm': 'h-8 w-8',
+        'icon-xs': 'h-7 w-7',
+      },
     },
-    ref,
-  ) => {
-    const isDisabled = disabled || loading;
-
-    return (
-      <button
-        ref={ref}
-        disabled={isDisabled}
-        className={cn(
-          'inline-flex items-center justify-center font-medium transition-colors',
-          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
-          'disabled:pointer-events-none disabled:opacity-50',
-          variantStyles[variant],
-          sizeStyles[size],
-          className,
-        )}
-        {...props}
-      >
-        {loading ? (
-          <Loader2 className="h-4 w-4 animate-spin" />
-        ) : (
-          icon && iconPosition === 'left' && (
-            <span className="shrink-0">{icon}</span>
-          )
-        )}
-        {children && <span>{children}</span>}
-        {!loading && icon && iconPosition === 'right' && (
-          <span className="shrink-0">{icon}</span>
-        )}
-      </button>
-    );
+    defaultVariants: {
+      variant: 'default',
+      size: 'md',
+    },
   },
 );
 
+export interface ButtonProps
+  extends ButtonHTMLAttributes<HTMLButtonElement>,
+    VariantProps<typeof buttonVariants> {
+  asChild?: boolean;
+  loading?: boolean;
+}
+
+export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
+  ({ className, variant, size, asChild = false, loading = false, disabled, children, ...props }, ref) => {
+    const Comp = asChild ? Slot : 'button';
+    const isDisabled = disabled || loading;
+
+    return (
+      <Comp
+        ref={ref as never}
+        disabled={isDisabled}
+        className={cn(buttonVariants({ variant, size }), className)}
+        {...props}
+      >
+        {loading && (
+          <Spinner
+            size={size === 'xs' || size === 'sm' || size === 'icon-xs' || size === 'icon-sm' ? 'sm' : 'md'}
+            variant="default"
+          />
+        )}
+        {children}
+      </Comp>
+    );
+  },
+);
 Button.displayName = 'Button';

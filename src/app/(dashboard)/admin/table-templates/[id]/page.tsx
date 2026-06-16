@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Save, Plus, Trash2, ChevronUp, ChevronDown, EyeOff, Eye, Settings2 } from 'lucide-react';
+import { ArrowLeft, Save, Plus, Trash2, ChevronUp, ChevronDown, EyeOff, Eye, Settings2, Lock, Unlock, Bold, Italic } from 'lucide-react';
 import {
   DATA_SOURCES,
   getDataSourceOptions,
@@ -79,6 +79,93 @@ export default function TableTemplateEditorPage() {
 
   // Popover state
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
+
+  // Table width & lock
+  const [tableWidth, setTableWidth] = useState('100%');
+  const [tableLocked, setTableLocked] = useState(false);
+
+  // Drag-resize state
+  const resizeRef = useRef<{
+    colIndex: number;
+    startX: number;
+    startWidth: number;
+    nextColIndex: number | null;
+    nextStartWidth: number;
+  } | null>(null);
+  const tableRef = useRef<HTMLTableElement>(null);
+  const columnsRef = useRef(columns);
+  columnsRef.current = columns;
+  const tableLockedRef = useRef(tableLocked);
+  tableLockedRef.current = tableLocked;
+
+  const handleResizeMove = useCallback((e: MouseEvent) => {
+    if (!resizeRef.current) return;
+    const { colIndex, startX, startWidth, nextColIndex, nextStartWidth } = resizeRef.current;
+    const delta = e.clientX - startX;
+    const newWidth = Math.max(40, startWidth + delta);
+    if (tableLockedRef.current && nextColIndex !== null) {
+      const nextNewWidth = Math.max(40, nextStartWidth - delta);
+      setColumns(prev => {
+        const next = [...prev];
+        next[colIndex] = { ...next[colIndex], width: `${newWidth}px` };
+        next[nextColIndex] = { ...next[nextColIndex], width: `${nextNewWidth}px` };
+        return next;
+      });
+    } else {
+      setColumns(prev => {
+        const next = [...prev];
+        next[colIndex] = { ...next[colIndex], width: `${newWidth}px` };
+        return next;
+      });
+    }
+  }, []);
+
+  const handleResizeEnd = useCallback(() => {
+    resizeRef.current = null;
+    document.removeEventListener('mousemove', handleResizeMove);
+    document.removeEventListener('mouseup', handleResizeEnd);
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+  }, [handleResizeMove]);
+
+  // Cleanup on unmount during drag
+  useEffect(() => {
+    return () => {
+      if (resizeRef.current) {
+        document.removeEventListener('mousemove', handleResizeMove);
+        document.removeEventListener('mouseup', handleResizeEnd);
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+      }
+    };
+  }, [handleResizeMove, handleResizeEnd]);
+
+  const handleResizeStart = useCallback((e: React.MouseEvent, colIndex: number) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const cols = columnsRef.current;
+    const visibleSorted = cols
+      .map((c, i) => ({ col: c, origIndex: i }))
+      .filter(({ col }) => col.visible !== false)
+      .sort((a, b) => a.col.order - b.col.order);
+    const currentVisibleIndex = visibleSorted.findIndex(({ origIndex }) => origIndex === colIndex);
+    if (currentVisibleIndex === -1) return;
+    const next = currentVisibleIndex < visibleSorted.length - 1 ? visibleSorted[currentVisibleIndex + 1] : null;
+    const col = cols[colIndex];
+    const currentWidth = col.width ? parseInt(col.width, 10) : 150;
+    const nextWidth = next?.col.width ? parseInt(next.col.width, 10) : 150;
+    resizeRef.current = {
+      colIndex,
+      startX: e.clientX,
+      startWidth: currentWidth,
+      nextColIndex: next?.origIndex ?? null,
+      nextStartWidth: nextWidth,
+    };
+    document.addEventListener('mousemove', handleResizeMove);
+    document.addEventListener('mouseup', handleResizeEnd);
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+  }, [handleResizeMove, handleResizeEnd]);
 
   useEffect(() => {
     if (isNew && columns.length === 0) {
@@ -234,9 +321,10 @@ export default function TableTemplateEditorPage() {
         </button>
       </div>
 
-      {/* Template name + Description row */}
+      {/* Template name + Description + Source row */}
       <div className="flex gap-4">
         <div className="flex-1">
+          <label className="block text-[10px] font-semibold text-[var(--muted-foreground)] uppercase tracking-wider mb-1">Название *</label>
           <input
             type="text"
             value={template.name}
@@ -246,6 +334,7 @@ export default function TableTemplateEditorPage() {
           />
         </div>
         <div className="flex-1">
+          <label className="block text-[10px] font-semibold text-[var(--muted-foreground)] uppercase tracking-wider mb-1">Описание</label>
           <input
             type="text"
             value={template.description || ''}
@@ -253,6 +342,32 @@ export default function TableTemplateEditorPage() {
             className="w-full h-10 px-4 rounded-xl border border-[var(--input)] bg-[var(--card)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ring)] placeholder:text-[var(--muted-foreground)]"
             placeholder="Описание (необязательно)"
           />
+        </div>
+        <div className="w-48">
+          <label className="block text-[10px] font-semibold text-[var(--muted-foreground)] uppercase tracking-wider mb-1">Источник данных</label>
+          <select
+            onChange={(e) => {
+              const src = e.target.value;
+              if (columns.length > 0) {
+                const fields = getFieldOptions(src);
+                const first = fields[0];
+                setColumns(columns.map(c => ({
+                  ...c,
+                  tableName: src,
+                  fieldName: first?.value || 'name',
+                  label: first?.label || '',
+                  type: (first?.type || 'text') as 'text' | 'number' | 'date' | 'currency',
+                  align: (first?.align || 'left') as 'left' | 'center' | 'right',
+                })));
+              }
+            }}
+            value={columns.length > 0 ? columns[0].tableName : 'products'}
+            className="w-full h-10 px-3 rounded-xl border border-[var(--input)] bg-[var(--card)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ring)] appearance-none cursor-pointer"
+          >
+            {getDataSourceOptions().map(s => (
+              <option key={s.value} value={s.value}>{s.label}</option>
+            ))}
+          </select>
         </div>
       </div>
 
@@ -307,14 +422,13 @@ export default function TableTemplateEditorPage() {
                     {/* Column chip */}
                     <button
                       onClick={() => setEditingIndex(isEditing ? null : index)}
-                      className={`relative flex items-center gap-2 h-10 px-3 rounded-xl border-2 transition-all duration-150 ${
+                      className={`relative flex items-center gap-2 h-12 px-4 rounded-xl border-2 transition-all duration-150 ${
                         isEditing
                           ? 'border-[var(--primary)] bg-[var(--primary)]/5 shadow-md'
                           : isVisible
                             ? 'border-[var(--border)] bg-[var(--card)] hover:border-[var(--muted-foreground)]/30 hover:shadow-sm'
                             : 'border-dashed border-[var(--border)] bg-[var(--muted)]/30 opacity-60'
-                      }`}
-                    >
+                      }`}>
                       {/* Order badge */}
                       <span className="flex items-center justify-center w-5 h-5 rounded-md bg-[var(--muted)] text-[10px] font-bold text-[var(--muted-foreground)]">
                         {index + 1}
@@ -349,32 +463,32 @@ export default function TableTemplateEditorPage() {
 
                       {/* Edit indicator */}
                       {isEditing && (
-                        <span className="absolute -top-1.5 -right-1.5 w-3 h-3 rounded-full bg-[var(--primary)] border-2 border-[var(--card)]" />
+                        <span className="absolute -top-1.5 -right-1.5 w-3 h-3 rounded-full bg-[var(--primary)] border-2 border-[var(--card)] animate-scale-in" />
                       )}
                     </button>
 
                     {/* Quick actions (appear on hover) */}
-                    <div className="absolute -top-2 right-2 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="absolute -top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button
                         onClick={(e) => { e.stopPropagation(); moveColumn(index, index - 1); }}
-                        className="w-5 h-5 flex items-center justify-center rounded-md bg-[var(--card)] border border-[var(--border)] shadow-sm hover:bg-[var(--muted)] transition-colors"
+                        className="w-8 h-8 flex items-center justify-center rounded-lg bg-[var(--card)] border border-[var(--border)] shadow-sm hover:bg-[var(--muted)] transition-colors"
                         title="Переместить влево"
                       >
-                        <ChevronUp size={10} className="text-[var(--muted-foreground)]" />
+                        <ChevronUp size={16} className="text-[var(--muted-foreground)]" />
                       </button>
                       <button
                         onClick={(e) => { e.stopPropagation(); moveColumn(index, index + 1); }}
-                        className="w-5 h-5 flex items-center justify-center rounded-md bg-[var(--card)] border border-[var(--border)] shadow-sm hover:bg-[var(--muted)] transition-colors"
+                        className="w-8 h-8 flex items-center justify-center rounded-lg bg-[var(--card)] border border-[var(--border)] shadow-sm hover:bg-[var(--muted)] transition-colors"
                         title="Переместить вправо"
                       >
-                        <ChevronDown size={10} className="text-[var(--muted-foreground)]" />
+                        <ChevronDown size={16} className="text-[var(--muted-foreground)]" />
                       </button>
                       <button
                         onClick={(e) => { e.stopPropagation(); deleteColumn(index); }}
-                        className="w-5 h-5 flex items-center justify-center rounded-md bg-[var(--card)] border border-[var(--border)] shadow-sm hover:bg-red-50 hover:border-red-200 transition-colors"
+                        className="w-8 h-8 flex items-center justify-center rounded-lg bg-[var(--card)] border border-[var(--border)] shadow-sm hover:bg-red-50 hover:border-red-200 transition-colors"
                         title="Удалить"
                       >
-                        <Trash2 size={10} className="text-[var(--muted-foreground)] hover:text-red-500" />
+                        <Trash2 size={16} className="text-[var(--muted-foreground)] hover:text-red-500" />
                       </button>
                     </div>
 
@@ -504,6 +618,35 @@ export default function TableTemplateEditorPage() {
                                 </div>
                               </div>
                             </div>
+
+                            {/* Bold / Italic toggles */}
+                            <div>
+                              <label className="block text-[10px] font-semibold text-[var(--muted-foreground)] uppercase tracking-wider mb-1">Начертание</label>
+                              <div className="flex gap-1">
+                                <button
+                                  onClick={() => updateCol(index, { bold: !col.bold })}
+                                  className={`flex items-center gap-1 h-8 px-3 rounded-lg text-xs font-medium transition-all ${
+                                    col.bold
+                                      ? 'bg-[var(--primary)] text-[var(--primary-foreground)] shadow-sm'
+                                      : 'bg-[var(--muted)] text-[var(--muted-foreground)] hover:bg-[var(--border)]'
+                                  }`}
+                                  title="Жирный"
+                                >
+                                  <Bold size={13} />
+                                </button>
+                                <button
+                                  onClick={() => updateCol(index, { italic: !col.italic })}
+                                  className={`flex items-center gap-1 h-8 px-3 rounded-lg text-xs font-medium transition-all ${
+                                    col.italic
+                                      ? 'bg-[var(--primary)] text-[var(--primary-foreground)] shadow-sm'
+                                      : 'bg-[var(--muted)] text-[var(--muted-foreground)] hover:bg-[var(--border)]'
+                                  }`}
+                                  title="Курсив"
+                                >
+                                  <Italic size={13} />
+                                </button>
+                              </div>
+                            </div>
                           </div>
 
                           {/* Preview in popover */}
@@ -536,35 +679,80 @@ export default function TableTemplateEditorPage() {
         {/* Preview table */}
         {visibleColumns.length > 0 && (
           <div className="border-t border-[var(--border)]">
-            <div className="px-5 py-3 bg-[var(--muted)]/10 border-b border-[var(--border)]">
+            <div className="px-5 py-3 bg-[var(--muted)]/10 border-b border-[var(--border)] flex items-center justify-between gap-4">
               <h3 className="text-xs font-semibold text-[var(--muted-foreground)] uppercase tracking-wider flex items-center gap-2">
                 Предпросмотр таблицы
                 <span className="text-[10px] font-normal normal-case tracking-normal text-[var(--muted-foreground)] opacity-60">
                   ({visibleColumns.length} {visibleColumns.length === 1 ? 'колонка' : 'колонок'})
                 </span>
               </h3>
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5">
+                  <label className="text-[10px] font-semibold text-[var(--muted-foreground)] uppercase tracking-wider">Ширина</label>
+                  <input
+                    type="text"
+                    value={tableWidth}
+                    onChange={(e) => setTableWidth(e.target.value)}
+                    className="w-20 h-7 px-2 rounded-lg border border-[var(--input)] bg-[var(--background)] text-xs text-center focus:outline-none focus:ring-2 focus:ring-[var(--ring)]"
+                    placeholder="100%"
+                  />
+                </div>
+                <button
+                  onClick={() => setTableLocked(!tableLocked)}
+                  className={`flex items-center gap-1 h-7 px-2.5 rounded-lg text-[10px] font-semibold transition-all ${
+                    tableLocked
+                      ? 'bg-[var(--primary)] text-[var(--primary-foreground)] shadow-sm'
+                      : 'bg-[var(--muted)] text-[var(--muted-foreground)] hover:bg-[var(--border)]'
+                  }`}
+                  title={tableLocked ? 'Ширина зафиксирована' : 'Зафиксировать ширину'}
+                >
+                  {tableLocked ? <Lock size={11} /> : <Unlock size={11} />}
+                  {tableLocked ? 'Фикс.' : 'Авто'}
+                </button>
+              </div>
             </div>
             <div className="overflow-x-auto">
-              <table className="w-full text-sm border-collapse">
+              <table ref={tableRef} className="text-sm border-collapse" style={{ width: tableWidth, ...(tableLocked ? { tableLayout: 'fixed' as const } : {}) }}>
                 <thead>
                   <tr className="bg-[var(--muted)]/50">
                     {columns
                       .filter(c => c.visible !== false)
                       .sort((a, b) => a.order - b.order)
-                      .map(col => (
+                      .map((col, _vi, arr) => {
+                        const origIndex = columns.findIndex(c => c.id === col.id);
+                        const isLast = _vi === arr.length - 1;
+                        return (
                         <th
                           key={col.id}
-                          className="px-4 py-3 text-left text-xs font-semibold text-[var(--foreground)] border-r border-[var(--border)] last:border-r-0 whitespace-nowrap"
-                          style={{ width: col.width || 'auto', textAlign: col.align || 'left' }}
+                          className="relative px-4 py-3 text-xs font-semibold text-[var(--foreground)] border-r border-[var(--border)] last:border-r-0 whitespace-nowrap group/th select-none"
+                          style={{
+                            width: col.width || 'auto',
+                            textAlign: col.align || 'left',
+                            fontWeight: col.bold ? 700 : 600,
+                            fontStyle: col.italic ? 'italic' : 'normal',
+                          }}
                         >
                           <div className="flex items-center gap-2">
-                            <span className="text-[10px] font-mono text-[var(--primary)] opacity-50 font-normal">
+                            <span className="text-[10px] font-mono text-[var(--primary)] opacity-50" style={{ fontWeight: 400, fontStyle: 'normal' }}>
                               {col.tableName}.{col.fieldName}
                             </span>
-                            {col.label}
+                            <span style={{ fontWeight: col.bold ? 700 : 600, fontStyle: col.italic ? 'italic' : 'normal' }}>
+                              {col.label}
+                            </span>
                           </div>
+                          {/* Resize handle */}
+                          {!isLast && (
+                            <div
+                              onMouseDown={(e) => handleResizeStart(e, origIndex)}
+                              className="absolute right-0 top-0 bottom-0 w-2 cursor-col-resize hover:bg-[var(--primary)]/20 transition-colors z-10 flex items-center justify-center"
+                              style={{ marginRight: '-4px' }}
+                            >
+                              <div className="w-0.5 h-5 rounded-full bg-[var(--border)] group-hover/th:bg-[var(--primary)]/40 transition-colors" />
+                            </div>
+                          )}
                         </th>
-                      ))}
+                        );
+                      })}
                   </tr>
                 </thead>
                 <tbody>
@@ -576,7 +764,7 @@ export default function TableTemplateEditorPage() {
                         <td
                           key={col.id}
                           className="px-4 py-3 border-t border-[var(--border)] border-r border-[var(--border)] last:border-r-0"
-                          style={{ textAlign: col.align || 'left' }}
+                          style={{ textAlign: col.align || 'left', fontWeight: col.bold ? 700 : 400, fontStyle: col.italic ? 'italic' : 'normal' }}
                         >
                           <span className={
                             col.type === 'currency' ? 'text-emerald-600 dark:text-emerald-400 font-semibold' :
@@ -599,8 +787,8 @@ export default function TableTemplateEditorPage() {
                       .map(col => (
                         <td
                           key={col.id}
-                          className="px-4 py-3 border-t border-[var(--border)] border-r border-[var(--border)] last:border-r-0 font-semibold"
-                          style={{ textAlign: col.align || 'left' }}
+                          className="px-4 py-3 border-t border-[var(--border)] border-r border-[var(--border)] last:border-r-0"
+                          style={{ textAlign: col.align || 'left', fontWeight: col.bold ? 700 : 600, fontStyle: col.italic ? 'italic' : 'normal' }}
                         >
                           <span className={
                             col.type === 'currency' ? 'text-emerald-600 dark:text-emerald-400' :
