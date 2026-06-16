@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Save, Plus, Trash2, ChevronLeft, ChevronRight, EyeOff, Eye, Settings2, Lock, Unlock, Bold, Italic } from 'lucide-react';
+import { ArrowLeft, Save, Plus, Trash2, EyeOff, Eye, Settings2, Lock, Unlock, Bold, Italic } from 'lucide-react';
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragOverlay, type DragStartEvent, type DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, useSortable, horizontalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -74,21 +74,15 @@ function migrateV5toV4(cols: any[]): TableTemplateColumnV4[] {
 function SortableColumnChip({
   col,
   index,
-  columns,
   isEditing,
   onToggleEdit,
-  onMoveLeft,
-  onMoveRight,
   onDelete,
   onUpdate,
 }: {
   col: TableTemplateColumnV4;
   index: number;
-  columns: TableTemplateColumnV4[];
   isEditing: boolean;
   onToggleEdit: () => void;
-  onMoveLeft: () => void;
-  onMoveRight: () => void;
   onDelete: () => void;
   onUpdate: (patch: Partial<TableTemplateColumnV4>) => void;
 }) {
@@ -158,26 +152,6 @@ function SortableColumnChip({
         {isEditing && (
           <span className="absolute -top-1.5 -right-1.5 w-3 h-3 rounded-full bg-[var(--primary)] border-2 border-[var(--card)] animate-scale-in" />
         )}
-
-        {/* Quick move arrows (hover, inline at right) — keep as fallback */}
-        <div className="hidden group-hover:flex items-center gap-0.5 ml-1">
-          <button
-            onClick={(e) => { e.stopPropagation(); onMoveLeft(); }}
-            className="w-6 h-6 flex items-center justify-center rounded-md hover:bg-[var(--muted)] transition-colors"
-            title="Переместить влево"
-            disabled={index === 0}
-          >
-            <ChevronLeft size={14} className="text-[var(--muted-foreground)]" />
-          </button>
-          <button
-            onClick={(e) => { e.stopPropagation(); onMoveRight(); }}
-            className="w-6 h-6 flex items-center justify-center rounded-md hover:bg-[var(--muted)] transition-colors"
-            title="Переместить вправо"
-            disabled={index === columns.length - 1}
-          >
-            <ChevronRight size={14} className="text-[var(--muted-foreground)]" />
-          </button>
-        </div>
       </div>
 
       {/* Editing popover */}
@@ -569,14 +543,6 @@ export default function TableTemplateEditorPage() {
     setColumns(reindexColumns(columns.filter((_, i) => i !== index)));
   };
 
-  const moveColumn = (from: number, to: number) => {
-    if (to < 0 || to >= columns.length) return;
-    const next = [...columns];
-    const [moved] = next.splice(from, 1);
-    next.splice(to, 0, moved);
-    setColumns(reindexColumns(next));
-  };
-
   // DnD handlers
   const handleDragStart = useCallback((event: DragStartEvent) => {
     setActiveId(String(event.active.id));
@@ -731,11 +697,8 @@ export default function TableTemplateEditorPage() {
                       key={col.id}
                       col={col}
                       index={index}
-                      columns={columns}
                       isEditing={editingIndex === index}
                       onToggleEdit={() => setEditingIndex(editingIndex === index ? null : index)}
-                      onMoveLeft={() => moveColumn(index, index - 1)}
-                      onMoveRight={() => moveColumn(index, index + 1)}
                       onDelete={() => deleteColumn(index)}
                       onUpdate={(patch) => updateCol(index, patch)}
                     />

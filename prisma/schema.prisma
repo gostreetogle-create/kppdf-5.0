@@ -329,6 +329,9 @@ model WorkCenter {
   updatedAt   DateTime @updatedAt
 
   orders      ProductionOrder[]
+  tasks       OrderTask[]
+
+  @@index([name])
 }
 
 model Worker {
@@ -398,12 +401,16 @@ model OrderTask {
   workTypeId  String?
   workType    WorkType? @relation(fields: [workTypeId], references: [id])
 
+  workCenterId String?
+  workCenter   WorkCenter? @relation(fields: [workCenterId], references: [id])
+
   workerId    String?
   worker      Worker? @relation(fields: [workerId], references: [id])
 
   @@index([orderId])
   @@index([status])
   @@index([workerId])
+  @@index([workCenterId])
 }
 
 // ========================================
