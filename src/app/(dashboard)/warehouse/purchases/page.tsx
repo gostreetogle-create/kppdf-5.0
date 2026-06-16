@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { CrudPage } from '@/components/crud-page';
+import { nextSupplierOrderNumber } from '@/lib/counter';
 
 interface PurchaseRequest {
   [key: string]: unknown;
@@ -40,12 +41,11 @@ function PurchaseRequestForm({ item, onClose }: { item: PurchaseRequest | null; 
   });
   const [saving, setSaving] = useState(false);
 
-  // Авто-генерация номера при создании
   useEffect(() => {
     if (!item && !form.number) {
-      const year = new Date().getFullYear();
-      const num = String(Math.floor(Math.random() * 9999) + 1).padStart(4, '0');
-      setForm(f => f.number ? f : { ...f, number: `ЗАК-${year}-${num}` });
+      nextSupplierOrderNumber().then(number => {
+        setForm(f => f.number ? f : { ...f, number });
+      });
     }
   }, [item]);
 

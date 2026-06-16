@@ -39,6 +39,7 @@ const navigation: NavItem[] = [
     children: [
       { label: 'Заказы', href: '/production' },
       { label: 'Гантт-чарт', href: '/production/gantt' },
+      { label: 'Модули', href: '/production/modules' },
       { label: 'Типы работ', href: '/production/work-types' },
       { label: 'Центры', href: '/production/work-centers' },
       { label: 'Работники', href: '/production/workers' },

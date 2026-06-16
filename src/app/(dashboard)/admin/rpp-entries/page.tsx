@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Plus, Search, Edit, Trash2 } from 'lucide-react';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { EmptyState } from '@/components/ui/empty-state';
+import { nextRppNumber } from '@/lib/counter';
 
 interface RppEntry {
   id: string;
@@ -48,13 +49,12 @@ export default function RppEntriesPage() {
 
   useEffect(() => { load(); }, [search]);
 
-  const openCreate = () => {
+  const openCreate = async () => {
+    const number = await nextRppNumber();
     setEditItem(null);
     setError('');
+    setForm({ number, title: '', status: 'draft', notes: '' });
     setShowDialog(true);
-    const year = new Date().getFullYear();
-    const num = String(Math.floor(Math.random() * 9999) + 1).padStart(4, '0');
-    setForm({ number: `РПП-${year}-${num}`, title: '', status: 'draft', notes: '' });
   };
 
   const openEdit = (item: RppEntry) => {

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { CrudPage } from '@/components/crud-page';
+import { nextProductionOrderNumber } from '@/lib/counter';
 
 interface ProductionOrder {
   [key: string]: unknown;
@@ -53,9 +54,9 @@ function ProductionOrderForm({ item, onClose }: { item: ProductionOrder | null; 
 
   useEffect(() => {
     if (!item && !form.number) {
-      const year = new Date().getFullYear();
-      const num = String(Math.floor(Math.random() * 9999) + 1).padStart(4, '0');
-      setForm(f => f.number ? f : { ...f, number: `ПЗ-${year}-${num}` });
+      nextProductionOrderNumber().then(number => {
+        setForm(f => f.number ? f : { ...f, number });
+      });
     }
   }, [item]);
 

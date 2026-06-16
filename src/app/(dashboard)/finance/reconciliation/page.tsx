@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { CrudPage } from '@/components/crud-page';
+import { nextReconciliationNumber } from '@/lib/counter';
 
 interface ReconciliationAct {
   [key: string]: unknown;
@@ -27,6 +28,14 @@ function ReconciliationForm({ item, onClose }: { item: ReconciliationAct | null;
     status: item?.status ?? 'draft',
   });
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!item && !form.number) {
+      nextReconciliationNumber().then(number => {
+        setForm(f => f.number ? f : { ...f, number });
+      });
+    }
+  }, [item]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

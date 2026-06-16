@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { CrudPage } from '@/components/crud-page';
+import { nextOrderClosingNumber } from '@/lib/counter';
 
 interface OrderClosing {
   [key: string]: unknown;
@@ -28,9 +29,9 @@ function OrderClosingForm({ item, onClose }: { item: OrderClosing | null; onClos
 
   useEffect(() => {
     if (!item && !form.number) {
-      const year = new Date().getFullYear();
-      const num = String(Math.floor(Math.random() * 9999) + 1).padStart(4, '0');
-      setForm(f => f.number ? f : { ...f, number: `ЗАК-${year}-${num}` });
+      nextOrderClosingNumber().then(number => {
+        setForm(f => f.number ? f : { ...f, number });
+      });
     }
   }, [item]);
 
