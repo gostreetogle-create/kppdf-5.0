@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
         orderBy,
         skip: (page - 1) * limit,
         take: limit,
-        include: { order: true, workType: true, worker: true },
+        include: { order: true, workType: true, worker: true, workCenter: true },
       }),
       prisma.orderTask.count({ where }),
     ]);
@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const item = await prisma.orderTask.create({
       data: body,
-      include: { order: true, workType: true, worker: true },
+      include: { order: true, workType: true, worker: true, workCenter: true },
     });
     return apiOk(item);
   } catch (error) {

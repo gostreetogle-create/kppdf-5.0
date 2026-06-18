@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
   try {
     await requireAuth();
     const body = await request.json();
-    const { name, description, docTypeId, pageSize, backgroundOpacity, isDefault, organizationId, blocks } = body;
+    const { name, description, docTypeId, pageSize, backgroundImage, backgroundOpacity, isDefault, organizationId, blocks } = body;
 
     if (!name?.trim()) return apiError('Название обязательно', 400);
 
@@ -44,6 +44,7 @@ export async function POST(request: NextRequest) {
         description: description || null,
         docTypeId: docTypeId || null,
         pageSize: pageSize || 'A4',
+        backgroundImage: backgroundImage || null,
         backgroundOpacity: typeof backgroundOpacity === 'number' ? backgroundOpacity : 1,
         isDefault: !!isDefault,
         organizationId: organizationId || null,

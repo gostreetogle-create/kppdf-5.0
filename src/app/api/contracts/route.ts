@@ -3,6 +3,8 @@ import { prisma } from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
 import { apiOk, apiError, apiPaginated, parseSearchParams } from '@/lib/api-response';
 import { nextContractNumber } from '@/lib/counter';
+import { CreateContractSchema } from '@/lib/validations/contract';
+import { validateBody } from '@/lib/validations';
 
 export async function GET(request: NextRequest) {
   try {
@@ -41,11 +43,20 @@ export async function POST(request: NextRequest) {
   try {
     await requireAuth();
     const body = await request.json();
-    const number = body.number || await nextContractNumber();
+    const validation = validateBody(body, CreateContractSchema);
+    if (!validation.success) return validation.error;
+
+    const number = validation.data.number || await nextContractNumber();
     const existing = await prisma.contract.findUnique({ where: { number } });
     if (existing) return apiError(`Документ с номером ${number} уже существует`, 400);
+
+    const { items, ...data } = validation.data;
     const item = await prisma.contract.create({
-      data: { ...body, number },
+      data: {
+        ...data,
+        number,
+        items: items ? { create: items } : undefined,
+      },
       include: { items: true, client: true, organization: true },
     });
     return apiOk(item);

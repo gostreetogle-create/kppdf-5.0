@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Plus, Search, Edit, Trash2 } from 'lucide-react';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { EmptyState } from '@/components/ui/empty-state';
+import { StatusBadge, IS_ACTIVE_YESNO } from '@/lib/constants/statuses';
 
 interface StatusWorkflow {
   id: string;
@@ -143,9 +144,7 @@ export default function StatusWorkflowsPage() {
                   <td className="px-4 py-3"><span className="inline-flex px-2 py-0.5 rounded-full text-xs bg-blue-100 text-blue-700">{item.toStatus}</span></td>
                   <td className="px-4 py-3 text-[var(--muted-foreground)]">{item.roles}</td>
                   <td className="px-4 py-3 text-center">
-                    <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${item.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
-                      {item.isActive ? 'Да' : 'Нет'}
-                    </span>
+                    <StatusBadge status={item.isActive ? 'yes' : 'no'} map={IS_ACTIVE_YESNO} />
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-end gap-1">

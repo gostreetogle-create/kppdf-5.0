@@ -1,5 +1,5 @@
 import { cookies } from 'next/headers';
-import { verifyToken, signAccessToken } from '@/lib/auth';
+import { verifyToken, signAccessToken, signRefreshToken } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { apiOk, apiError } from '@/lib/api-response';
 
@@ -19,22 +19,45 @@ export async function POST() {
 
     const user = await prisma.user.findUnique({
       where: { id: payload.userId },
-      select: { id: true, username: true, role: true, isActive: true },
+      select: { id: true, username: true, role: true, isActive: true, refreshTokenVersion: true },
     });
 
     if (!user || !user.isActive) {
       return apiError('Пользователь не найден', 401);
     }
 
+    // Проверяем версию refresh-токена (старые токены после ротации становятся невалидными)
+    if (payload.tokenVersion !== undefined && payload.tokenVersion !== user.refreshTokenVersion) {
+      return apiError('Токен устарел, требуется повторная авторизация', 401);
+    }
+
     const newPayload = { userId: user.id, username: user.username, role: user.role };
+
+    // Ротация: инкрементируем версию, выдаём новый accessToken И новый refreshToken
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { refreshTokenVersion: { increment: 1 } },
+    });
+
     const accessToken = signAccessToken(newPayload);
+    const newRefreshToken = signRefreshToken({ ...newPayload, tokenVersion: user.refreshTokenVersion + 1 });
 
     const response = apiOk({ accessToken });
+
     response.cookies.set('accessToken', accessToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       maxAge: 60 * 60 * 24,
+      path: '/',
+    });
+
+    // Устанавливаем новый refresh token (старый становится невалидным)
+    response.cookies.set('refreshToken', newRefreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24 * 7,
       path: '/',
     });
 

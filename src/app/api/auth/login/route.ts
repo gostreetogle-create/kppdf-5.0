@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/db';
-import { signAccessToken, signRefreshToken } from '@/lib/auth';
+import { signAccessToken, signRefreshToken, requireEditor } from '@/lib/auth';
 import { apiOk, apiError } from '@/lib/api-response';
 
 export async function POST(request: NextRequest) {
@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
 
     const payload = { userId: user.id, username: user.username, role: user.role };
     const accessToken = signAccessToken(payload);
-    const refreshToken = signRefreshToken(payload);
+    const refreshToken = signRefreshToken({ ...payload, tokenVersion: user.refreshTokenVersion });
 
     const response = apiOk({
       user: {

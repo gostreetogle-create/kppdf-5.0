@@ -7,18 +7,21 @@ import {
   Home, Building2, Package, Factory, Warehouse, Banknote, Shield, ChevronDown, X
 } from 'lucide-react';
 import { useState } from 'react';
+import { useAuthStore } from '@/stores/auth-store';
 
 interface NavItem {
   label: string;
   href: string;
   icon: React.ElementType;
-  children?: { label: string; href: string }[];
+  roles?: string[];  // Какие роли видят этот пункт. Пусто/не указано = всем.
+  children?: { label: string; href: string; roles?: string[] }[];
 }
 
 const navigation: NavItem[] = [
   { label: 'Главная', href: '/dashboard', icon: Home },
   {
     label: 'Справочники', href: '/organizations', icon: Building2,
+    roles: ['admin', 'manager'],
     children: [
       { label: 'Контрагенты', href: '/organizations' },
       { label: 'Клиенты', href: '/clients' },
@@ -28,6 +31,7 @@ const navigation: NavItem[] = [
   },
   {
     label: 'Продажи', href: '/proposals', icon: Package,
+    roles: ['admin', 'manager'],
     children: [
       { label: 'КП (список)', href: '/proposals' },
       { label: 'Оформить КП', href: '/proposals/new' },
@@ -36,12 +40,13 @@ const navigation: NavItem[] = [
   },
   {
     label: 'Производство', href: '/production', icon: Factory,
+    roles: ['admin', 'manager', 'production'],
     children: [
       { label: 'Заказы', href: '/production' },
       { label: 'Гантт-чарт', href: '/production/gantt' },
       { label: 'Модули', href: '/production/modules' },
       { label: 'Снабжение', href: '/production/procurement' },
-      { label: 'Мои задачи', href: '/production/my-tasks' },
+      { label: 'Мои задачи', href: '/production/my-tasks', roles: ['production', 'worker'] },
       { label: 'Типы работ', href: '/production/work-types' },
       { label: 'Центры', href: '/production/work-centers' },
       { label: 'Работники', href: '/production/workers' },
@@ -49,14 +54,17 @@ const navigation: NavItem[] = [
   },
   {
     label: 'Склад', href: '/warehouse', icon: Warehouse,
+    roles: ['admin', 'storekeeper', 'manager'],
     children: [
       { label: 'Склады', href: '/warehouse' },
       { label: 'Позиции', href: '/warehouse/positions' },
       { label: 'Закупки', href: '/warehouse/purchases' },
+      { label: 'Отгрузка', href: '/warehouse/shipping' },
     ],
   },
   {
     label: 'Финансы', href: '/finance', icon: Banknote,
+    roles: ['admin', 'manager', 'accountant'],
     children: [
       { label: 'Обзор', href: '/finance' },
       { label: 'Закрытия заказов', href: '/finance/order-closings' },
@@ -66,6 +74,7 @@ const navigation: NavItem[] = [
   },
   {
     label: 'Администрирование', href: '/admin', icon: Shield,
+    roles: ['admin'],
     children: [
       { label: 'Пользователи', href: '/admin/users' },
       { label: 'Типы документов', href: '/admin/doc-types' },
@@ -89,6 +98,27 @@ interface SidebarProps {
 export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const pathname = usePathname();
   const [expanded, setExpanded] = useState<string | null>(null);
+  const user = useAuthStore((s) => s.user);
+
+  // Фильтруем навигацию по роли пользователя
+  const filteredNav = navigation.filter((item) => {
+    if (!item.roles || item.roles.length === 0) return true;
+    if (!user) return false;
+    // admin видит всё
+    if (user.role === 'admin') return true;
+    return item.roles.includes(user.role);
+  });
+
+  // Фильтруем дочерние пункты
+  const filterChildren = (children: { label: string; href: string; roles?: string[] }[] | undefined) => {
+    if (!children) return undefined;
+    return children.filter((child) => {
+      if (!child.roles || child.roles.length === 0) return true;
+      if (!user) return false;
+      if (user.role === 'admin') return true;
+      return child.roles.includes(user.role);
+    });
+  };
 
   const toggleSection = (href: string) => {
     setExpanded(expanded === href ? null : href);
@@ -126,13 +156,14 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
           {/* Navigation */}
           <nav className="flex-1 overflow-y-auto py-4 px-3">
             <ul className="space-y-1">
-              {navigation.map((item) => {
+              {filteredNav.map((item) => {
                 const Icon = item.icon;
+                const filteredChildren = filterChildren(item.children);
                 const isActive = pathname === item.href ||
-                  (item.children && item.children.some(c => pathname === c.href));
-                const isExpanded = expanded === item.href || item.children?.some(c => pathname === c.href);
+                  (filteredChildren && filteredChildren.some(c => pathname === c.href));
+                const isExpanded = expanded === item.href || filteredChildren?.some(c => pathname === c.href);
 
-                if (item.children) {
+                if (filteredChildren && filteredChildren.length > 0) {
                   return (
                     <li key={item.href}>
                       <button
@@ -153,7 +184,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                       </button>
                       {isExpanded && (
                         <ul className="mt-1 ml-6 space-y-1">
-                          {item.children.map((child) => (
+                          {filteredChildren.map((child) => (
                             <li key={child.href}>
                               <Link
                                 href={child.href}

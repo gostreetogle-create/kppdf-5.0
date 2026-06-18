@@ -2,7 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { CrudPage } from '@/components/crud-page';
-import { nextReconciliationNumber } from '@/lib/counter';
+function generateReconciliationNumber(): string {
+  const year = new Date().getFullYear();
+  const rand = Math.floor(1000 + Math.random() * 9000);
+  return `АС-${year}-${rand}`;
+}
 
 interface ReconciliationAct {
   [key: string]: unknown;
@@ -31,9 +35,8 @@ function ReconciliationForm({ item, onClose }: { item: ReconciliationAct | null;
 
   useEffect(() => {
     if (!item && !form.number) {
-      nextReconciliationNumber().then(number => {
-        setForm(f => f.number ? f : { ...f, number });
-      });
+      const number = generateReconciliationNumber();
+      setForm(f => f.number ? f : { ...f, number });
     }
   }, [item]);
 

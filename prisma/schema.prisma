@@ -22,16 +22,17 @@ model Counter {
 // ========================================
 
 model User {
-  id          String   @id @default(cuid())
-  username    String   @unique
-  password    String
-  displayName String
-  email       String?
-  phone       String?
-  role        String   @default("viewer") // admin | manager | production | storekeeper | accountant | viewer
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id                 String   @id @default(cuid())
+  username           String   @unique
+  password           String
+  displayName        String
+  email              String?
+  phone              String?
+  role               String   @default("viewer") // admin | manager | production | storekeeper | accountant | viewer
+  isActive           Boolean  @default(true)
+  refreshTokenVersion Int    @default(0)  // Инкрементируется при каждой выдаче refresh token
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
   @@index([username])
   @@index([role])
@@ -146,6 +147,7 @@ model Product {
   material              String?
   hasPassport           Boolean  @default(false)
   hasDrawing            Boolean  @default(false)
+  ralCode               String?  // Цвет покраски по RAL
   isActive              Boolean  @default(true)
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
@@ -282,6 +284,7 @@ model Proposal {
   markupPercent Float    @default(0)
   discountPercent Float @default(0)
   vatRate      Float    @default(20)
+  ralCode      String?  // Цвет покраски по RAL (из товара, но можно переопределить)
   notes        String?
   validUntil   DateTime?
   createdAt    DateTime @default(now())
@@ -412,6 +415,7 @@ model ProductionOrder {
   plannedEnd   DateTime?
   actualStart  DateTime?
   actualEnd    DateTime?
+  ralCode      String?  // Цвет покраски по RAL (из КП, но можно переопределить)
   notes       String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -579,6 +583,25 @@ model IncomingInvoice {
 }
 
 // ========================================
+// SHIPPING (ОТГРУЗКА)
+// ========================================
+
+model Shipment {
+  id          String   @id @default(cuid())
+  number      String   @unique
+  orderId     String?
+  status      String   @default("draft") // draft | partially | shipped | cancelled
+  items       String   @default("[]")    // JSON: [{ name, quantity, unit, shipped }]
+  photos      String   @default("[]")    // JSON: [{ url, caption }]
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([orderId])
+  @@index([status])
+}
+
+// ========================================
 // FINANCE
 // ========================================
 
@@ -658,6 +681,7 @@ model DocumentTemplate {
   name             String
   description      String?
   pageSize         String   @default("A4")
+  backgroundImage  String?
   backgroundOpacity Float   @default(1)
   isDefault        Boolean  @default(false)
   organizationId   String?
@@ -729,6 +753,37 @@ model Certificate {
   status      String   @default("active") // active | expired | revoked
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+// ========================================
+// ORDER HISTORY
+// ========================================
+
+model OrderHistory {
+  id        String   @id @default(cuid())
+  orderId   String
+  action    String   // created | status_changed | task_completed | task_assigned | note_added | converted
+  userId    String?
+  userName  String?
+  details   String?  // JSON with action-specific data
+  createdAt DateTime @default(now())
+
+  @@index([orderId])
+  @@index([orderId, createdAt])
+}
+
+model UserActivity {
+  id        String   @id @default(cuid())
+  userId    String
+  userName  String?
+  action    String
+  entity    String   // proposal | contract | production_order | task
+  entityId  String?
+  details   String?  // JSON
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([entity, entityId])
 }
 
 model InventorFile {

@@ -1,4 +1,5 @@
 import type { DocBlock, DocumentTemplateData } from '@/types';
+import { formatCurrency } from '@/lib/utils';
 
 interface CartItemForBuilder {
   product: {
@@ -93,10 +94,6 @@ function buildTableBlock(
     _inlineRows: inlineRows,
     _footerRows: footerRows,
   };
-}
-
-function formatCurrency(amount: number): string {
-  return Math.round(amount).toLocaleString('ru-RU') + ' ₽';
 }
 
 export function getTemplateBlocks(template: DocumentTemplateData | null): DocBlock[] {

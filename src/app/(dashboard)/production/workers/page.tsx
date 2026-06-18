@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { CrudPage } from '@/components/crud-page';
+import { StatusBadge, IS_ACTIVE_STATUS } from '@/lib/constants/statuses';
 
 interface Worker {
   [key: string]: unknown;
@@ -90,11 +91,7 @@ export default function WorkersPage() {
         {
           key: 'isActive',
           label: 'Статус',
-          render: (item) => (
-            <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${item.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
-              {item.isActive ? 'Активен' : 'Неактивен'}
-            </span>
-          ),
+          render: (item) => <StatusBadge status={item.isActive ? 'active' : 'inactive'} map={IS_ACTIVE_STATUS} />,
         },
       ]}
       renderForm={(item, onClose) => <WorkerForm item={item} onClose={onClose} />}

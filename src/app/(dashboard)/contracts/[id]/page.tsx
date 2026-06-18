@@ -6,6 +6,7 @@ import { ArrowLeft, Edit, Trash2, Factory } from 'lucide-react';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { ContractPreview } from '@/components/ui/contract-preview';
 import type { ContractPdfData } from '@/lib/pdf';
+import { CONTRACT_STATUS, getStatus } from '@/lib/constants/statuses';
 
 interface ContractItem {
   id: string;
@@ -53,12 +54,7 @@ interface Contract {
   createdAt: string;
 }
 
-const STATUS_MAP: Record<string, { label: string; className: string }> = {
-  draft: { label: 'Черновик', className: 'bg-gray-100 text-gray-600' },
-  active: { label: 'Активно', className: 'bg-green-100 text-green-700' },
-  completed: { label: 'Завершено', className: 'bg-blue-100 text-blue-700' },
-  cancelled: { label: 'Отменено', className: 'bg-red-100 text-red-700' },
-};
+
 
 export default function ContractDetailPage() {
   const params = useParams();
@@ -144,7 +140,7 @@ export default function ContractDetailPage() {
     );
   }
 
-  const status = STATUS_MAP[contract.status] || { label: contract.status, className: 'bg-gray-100 text-gray-600' };
+  const status = getStatus(CONTRACT_STATUS, contract.status);
 
   const pdfData: ContractPdfData = {
     number: contract.number,

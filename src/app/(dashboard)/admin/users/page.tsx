@@ -5,6 +5,7 @@ import { Plus, Search, Edit, Trash2, UserCheck, UserX } from 'lucide-react';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Skeleton } from '@/components/ui/skeleton';
+import { StatusBadge, USER_STATUS } from '@/lib/constants/statuses';
 
 interface User {
   id: string;
@@ -210,9 +211,7 @@ export default function UsersPage() {
                     </span>
                   </td>
                   <td className="px-4 py-3 text-center">
-                    <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${user.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
-                      {user.isActive ? 'Активен' : 'Заблокирован'}
-                    </span>
+                    <StatusBadge status={user.isActive ? 'active' : 'blocked'} map={USER_STATUS} />
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-end gap-1">

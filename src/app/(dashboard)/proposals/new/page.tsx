@@ -6,7 +6,12 @@ import { Download, Eye, Search, Minus, Plus, Trash2, FileText, Check, AlertCircl
 import { generateProposalPdf, downloadPdf, type ProposalPdfData } from '@/lib/pdf';
 import { DocPreview } from '@/components/ui/doc-preview';
 import { A4Canvas } from '@/components/ui/a4-canvas';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Select } from '@/components/ui/select';
+import { RalSelector } from '@/components/ui/ral-selector';
 import { buildProposalBlocks, getTemplateBlocks } from '@/lib/proposal-block-builder';
+import { formatCurrency } from '@/lib/utils';
 import type { DocBlock, DocumentTemplateData } from '@/types';
 
 interface Product {
@@ -75,6 +80,7 @@ export default function ProposalShowcasePage() {
   const [selectedTemplateId, setSelectedTemplateId] = useState('');
   const [proposalTitle, setProposalTitle] = useState('');
   const [discountPercent, setDiscountPercent] = useState(0);
+  const [ralCode, setRalCode] = useState('');
   const [showSettings, setShowSettings] = useState(false);
   const [templateBlocks, setTemplateBlocks] = useState<DocBlock[]>([]);
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
@@ -173,12 +179,13 @@ export default function ProposalShowcasePage() {
       const res = await fetch(`/api/cart/${cartId}/convert`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title: proposalTitle || undefined,
-          clientId: selectedClientId || undefined,
-          organizationId: selectedOrgId || undefined,
-          templateId: selectedTemplateId || undefined,
-        }),
+          body: JSON.stringify({
+            title: proposalTitle || undefined,
+            clientId: selectedClientId || undefined,
+            organizationId: selectedOrgId || undefined,
+            templateId: selectedTemplateId || undefined,
+            ralCode: ralCode || undefined,
+          }),
       });
       const data = await res.json();
       if (data.success) { setSuccess(true); setTimeout(() => router.push('/proposals'), 1500); }
@@ -221,7 +228,7 @@ export default function ProposalShowcasePage() {
       })
     : templateBlocks;
 
-  const formatPrice = (price: number) => Math.round(price).toLocaleString('ru-RU') + ' ₽';
+  const formatPrice = formatCurrency;
 
   const pdfData = useCallback((): ProposalPdfData | null => {
     if (!cart || cart.items.length === 0) return null;
@@ -300,20 +307,26 @@ export default function ProposalShowcasePage() {
         <div className="w-[45%] flex flex-col border-r border-[var(--border)] overflow-hidden">
           {/* Top bar: Search + Filters */}
           <div className="px-3 py-2 border-b border-[var(--border)] space-y-2 shrink-0">
-            <div className="relative">
-              <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--muted-foreground)]" />
-              <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Поиск..."
-                className="w-full h-8 pl-8 pr-3 rounded-md border border-[var(--input)] bg-[var(--background)] text-xs focus:outline-none focus:ring-1 focus:ring-[var(--ring)]" />
-            </div>
-            <select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)}
-              className="w-full h-7 px-2 rounded-md border border-[var(--input)] bg-[var(--background)] text-xs appearance-none">
-              <option value="">Все категории</option>
-              {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
+            <Input
+              type="search"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Поиск..."
+              prefix={<Search className="h-3.5 w-3.5" />}
+              className="h-8 text-xs bg-[var(--background)]"
+            />
+            <Select
+              value={filterCategory}
+              onChange={(e) => setFilterCategory(e.target.value)}
+              options={[
+                { value: '', label: 'Все категории' },
+                ...categories.map((c) => ({ value: c.id, label: c.name })),
+              ]}
+              className="h-7 text-xs"
+            />
           </div>
 
-          {/* Org / Client / Template / Discount selectors */}
+          {/* Org / Client / Template / Discount / RAL selectors */}
           <div className="px-3 py-2 border-b border-[var(--border)] grid grid-cols-2 gap-2 shrink-0">
             <div className="relative">
               <label className="text-[10px] font-medium text-[var(--muted-foreground)] uppercase">Организация</label>
@@ -371,6 +384,10 @@ export default function ProposalShowcasePage() {
               <input type="range" min="0" max="30" step="1" value={discountPercent}
                 onChange={(e) => setDiscountPercent(Number(e.target.value))}
                 className="w-full mt-1 h-5" />
+            </div>
+            <div>
+              <label className="text-[10px] font-medium text-[var(--muted-foreground)] uppercase mb-1 block">RAL покраска</label>
+              <RalSelector value={ralCode} onChange={setRalCode} />
             </div>
           </div>
 
@@ -451,7 +468,7 @@ export default function ProposalShowcasePage() {
             <A4Canvas
               blocks={proposalBlocks}
               selectedBlockId={selectedBlockId}
-              backgroundImage={selectedTemplateData.backgroundImages?.[0]}
+              backgroundImage={selectedTemplateData.backgroundImage}
               backgroundOpacity={selectedTemplateData.backgroundOpacity}
               scale={0.52}
               editable={false}
@@ -527,12 +544,17 @@ export default function ProposalShowcasePage() {
             <div className="space-y-3">
               <div>
                 <label className="text-xs font-medium text-[var(--muted-foreground)]">Название КП</label>
-                <input type="text" value={proposalTitle} onChange={(e) => setProposalTitle(e.target.value)} placeholder="Коммерческое предложение"
-                  className="w-full h-8 px-3 mt-1 rounded-md border border-[var(--input)] bg-[var(--background)] text-xs" />
+                <Input
+                  type="text"
+                  value={proposalTitle}
+                  onChange={(e) => setProposalTitle(e.target.value)}
+                  placeholder="Коммерческое предложение"
+                  className="h-8 text-xs bg-[var(--background)] mt-1"
+                />
               </div>
             </div>
             <div className="flex justify-end mt-4">
-              <button onClick={() => setShowSettings(false)} className="px-3 py-1.5 rounded-md bg-[var(--primary)] text-[var(--primary-foreground)] text-xs font-medium">Готово</button>
+              <Button size="sm" onClick={() => setShowSettings(false)}>Готово</Button>
             </div>
           </div>
         </div>

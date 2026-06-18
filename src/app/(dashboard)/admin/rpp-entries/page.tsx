@@ -4,7 +4,12 @@ import { useState, useEffect } from 'react';
 import { Plus, Search, Edit, Trash2 } from 'lucide-react';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { EmptyState } from '@/components/ui/empty-state';
-import { nextRppNumber } from '@/lib/counter';
+import { RPP_STATUS, getStatus } from '@/lib/constants/statuses';
+function generateRppNumber(): string {
+  const year = new Date().getFullYear();
+  const rand = Math.floor(1000 + Math.random() * 9000);
+  return `РПП-${year}-${rand}`;
+}
 
 interface RppEntry {
   id: string;
@@ -15,11 +20,7 @@ interface RppEntry {
   createdAt: string;
 }
 
-const STATUS_MAP: Record<string, { label: string; className: string }> = {
-  draft: { label: 'Черновик', className: 'bg-gray-100 text-gray-600' },
-  active: { label: 'Активно', className: 'bg-green-100 text-green-700' },
-  archived: { label: 'В архиве', className: 'bg-blue-100 text-blue-700' },
-};
+
 
 export default function RppEntriesPage() {
   const [items, setItems] = useState<RppEntry[]>([]);
@@ -31,26 +32,29 @@ export default function RppEntriesPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-  const load = async () => {
+  useEffect(() => {
+    let cancelled = false;
     setLoading(true);
-    try {
-      const params = new URLSearchParams({ limit: '100' });
-      if (search) params.set('search', search);
-      const res = await fetch(`/api/rpp-entries?${params}`);
-      const data = await res.json();
-      if (data.success) setItems(data.data.items || []);
-    } catch (e) {
-      console.error('Load error:', e);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => { load(); }, [search]);
+    (async () => {
+      try {
+        const params = new URLSearchParams({ limit: '100' });
+        if (search) params.set('search', search);
+        const res = await fetch(`/api/rpp-entries?${params}`);
+        const data = await res.json();
+        if (!cancelled && data.success) setItems(data.data.items || []);
+      } catch (e) {
+        if (!cancelled) console.error('Load error:', e);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [search, refreshTrigger]);
 
   const openCreate = async () => {
-    const number = await nextRppNumber();
+    const number = generateRppNumber();
     setEditItem(null);
     setError('');
     setForm({ number, title: '', status: 'draft', notes: '' });
@@ -74,7 +78,7 @@ export default function RppEntriesPage() {
       const data = await res.json();
       if (!data.success) { setError(data.message); return; }
       setShowDialog(false);
-      load();
+      setRefreshTrigger(t => t + 1);
     } catch (e) {
       setError('Ошибка сети');
     } finally {
@@ -87,7 +91,7 @@ export default function RppEntriesPage() {
     try {
       await fetch(`/api/rpp-entries/${deleteTarget}`, { method: 'DELETE' });
       setDeleteTarget(null);
-      load();
+      setRefreshTrigger(t => t + 1);
     } catch (e) {
       console.error('Delete error:', e);
     }
@@ -133,7 +137,7 @@ export default function RppEntriesPage() {
             </thead>
             <tbody className="divide-y divide-[var(--border)]">
               {items.map((item) => {
-                const status = STATUS_MAP[item.status] || { label: item.status, className: 'bg-gray-100 text-gray-600' };
+                const status = getStatus(RPP_STATUS, item.status);
                 return (
                   <tr key={item.id} className="hover:bg-[var(--muted)]/20 transition-colors">
                     <td className="px-4 py-3 font-medium text-[var(--foreground)]">{item.number}</td>

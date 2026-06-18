@@ -3,6 +3,8 @@ import { prisma } from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
 import { apiOk, apiError, apiPaginated, parseSearchParams } from '@/lib/api-response';
 import { nextProposalNumber } from '@/lib/counter';
+import { CreateProposalSchema } from '@/lib/validations/proposal';
+import { validateBody } from '@/lib/validations';
 
 export async function GET(request: NextRequest) {
   try {
@@ -41,11 +43,20 @@ export async function POST(request: NextRequest) {
   try {
     await requireAuth();
     const body = await request.json();
-    const number = body.number || await nextProposalNumber();
+    const validation = validateBody(body, CreateProposalSchema);
+    if (!validation.success) return validation.error;
+
+    const number = validation.data.number || await nextProposalNumber();
     const existing = await prisma.proposal.findUnique({ where: { number } });
     if (existing) return apiError(`Документ с номером ${number} уже существует`, 400);
+
+    const { items, ...data } = validation.data;
     const item = await prisma.proposal.create({
-      data: { ...body, number },
+      data: {
+        ...data,
+        number,
+        items: items ? { create: items } : undefined,
+      },
       include: { items: { include: { product: true } }, client: true, organization: true },
     });
     return apiOk(item);

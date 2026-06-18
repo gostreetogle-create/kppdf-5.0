@@ -65,7 +65,7 @@ export interface DocumentTemplateData {
   description?: string;
   docType: string;
   pageSize?: string;
-  backgroundImages?: string[];
+  backgroundImage?: string;
   backgroundOpacity?: number;
   organizationId?: string;
   isDefault?: boolean;

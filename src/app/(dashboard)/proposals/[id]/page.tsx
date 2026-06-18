@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, Edit, Trash2 } from 'lucide-react';
 import { ProposalPreview } from '@/components/ui/proposal-preview';
 import type { ProposalPdfData } from '@/lib/pdf';
+import { PROPOSAL_STATUS, getStatus } from '@/lib/constants/statuses';
 
 interface ProposalItem {
   id: string;
@@ -52,13 +53,7 @@ interface Proposal {
   createdAt: string;
 }
 
-const STATUS_MAP: Record<string, { label: string; className: string }> = {
-  draft: { label: 'Черновик', className: 'bg-gray-100 text-gray-600' },
-  sent: { label: 'Отправлено', className: 'bg-blue-100 text-blue-700' },
-  accepted: { label: 'Принято', className: 'bg-green-100 text-green-700' },
-  rejected: { label: 'Отклонено', className: 'bg-red-100 text-red-700' },
-  converted: { label: 'Конвертировано', className: 'bg-purple-100 text-purple-700' },
-};
+
 
 export default function ProposalDetailPage() {
   const params = useParams();
@@ -120,7 +115,7 @@ export default function ProposalDetailPage() {
     );
   }
 
-  const status = STATUS_MAP[proposal.status] || { label: proposal.status, className: 'bg-gray-100 text-gray-600' };
+  const status = getStatus(PROPOSAL_STATUS, proposal.status);
 
   const pdfData: ProposalPdfData = {
     number: proposal.number,

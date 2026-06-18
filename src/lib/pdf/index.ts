@@ -5,8 +5,24 @@
  * профессиональных PDF с таблицами.
  */
 
-import { jsPDF } from 'jspdf';
-import { autoTable } from 'jspdf-autotable';
+// jsPDF и jspdf-autotable импортируются динамически через getPdfLibs()
+// чтобы не раздувать основной бандл (эти библиотеки нужны только при скачивании PDF)
+import type jsPDFType from 'jspdf';
+
+let _jsPDF: typeof jsPDFType | null = null;
+let _autoTable: Function | null = null;
+
+async function getPdfLibs() {
+  if (!_jsPDF || !_autoTable) {
+    const [{ jsPDF }, { autoTable }] = await Promise.all([
+      import('jspdf'),
+      import('jspdf-autotable'),
+    ]);
+    _jsPDF = jsPDF;
+    _autoTable = autoTable;
+  }
+  return { jsPDF: _jsPDF, autoTable: _autoTable };
+}
 
 // ─── Cyrillic font loader ────────────────────────────────────────────────────
 
@@ -15,7 +31,7 @@ const ROBOTO_FONT_URL = 'https://fonts.gstatic.com/s/roboto/v30/KFOmCnqEu92Fr1Mu
 let fontBase64: string | null = null;
 let fontRetries = 0;
 
-async function ensureCyrillicFont(doc: jsPDF): Promise<void> {
+async function ensureCyrillicFont(doc: jsPDFType): Promise<void> {
   // Fetch once, retry up to 3 times on failure, register on every new doc
   if (!fontBase64 && fontRetries < 3) {
     try {
@@ -194,7 +210,8 @@ const MARGIN = 4;
 const PAGE_W = 210;
 
 /** Сгенерировать PDF для КП */
-export async function generateProposalPdf(data: ProposalPdfData): Promise<jsPDF> {
+export async function generateProposalPdf(data: ProposalPdfData): Promise<jsPDFType> {
+  const { jsPDF, autoTable } = await getPdfLibs();
   const doc = new jsPDF('p', 'mm', 'a4');
   await ensureCyrillicFont(doc);
   const contentW = PAGE_W - MARGIN * 2;
@@ -284,6 +301,7 @@ export async function generateProposalPdf(data: ProposalPdfData): Promise<jsPDF>
       formatPrice(item.total),
     ]);
 
+    const { autoTable } = await getPdfLibs();
     autoTable(doc, {
       startY: y,
       head,
@@ -322,7 +340,7 @@ export async function generateProposalPdf(data: ProposalPdfData): Promise<jsPDF>
       },
     });
 
-    const docAT = doc as jsPDF & { lastAutoTable: { finalY: number } };
+    const docAT = doc as unknown as { lastAutoTable: { finalY: number } };
     y = docAT.lastAutoTable.finalY + 5;
 
 
@@ -408,7 +426,8 @@ export async function generateProposalPdf(data: ProposalPdfData): Promise<jsPDF>
 }
 
 /** Сгенерировать PDF для договора */
-export async function generateContractPdf(data: ContractPdfData): Promise<jsPDF> {
+export async function generateContractPdf(data: ContractPdfData): Promise<jsPDFType> {
+  const { jsPDF, autoTable } = await getPdfLibs();
   const doc = new jsPDF('p', 'mm', 'a4');
   await ensureCyrillicFont(doc);
   let y = MARGIN;
@@ -489,7 +508,7 @@ export async function generateContractPdf(data: ContractPdfData): Promise<jsPDF>
       footStyles: { fillColor: [240, 240, 240], fontStyle: 'bold', fontSize: 8 },
     });
 
-    const docAT = doc as jsPDF & { lastAutoTable: { finalY: number } };
+    const docAT = doc as unknown as { lastAutoTable: { finalY: number } };
     y = docAT.lastAutoTable.finalY + 5;
 
   }
@@ -532,7 +551,8 @@ export async function generateContractPdf(data: ContractPdfData): Promise<jsPDF>
 }
 
 /** Сгенерировать PDF для счёта */
-export async function generateInvoicePdf(data: InvoicePdfData): Promise<jsPDF> {
+export async function generateInvoicePdf(data: InvoicePdfData): Promise<jsPDFType> {
+  const { jsPDF, autoTable } = await getPdfLibs();
   const doc = new jsPDF('p', 'mm', 'a4');
   await ensureCyrillicFont(doc);
   let y = MARGIN;
@@ -613,7 +633,7 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<jsPDF> {
       footStyles: { fillColor: [240, 240, 240], fontStyle: 'bold', fontSize: 8 },
     });
 
-    const docAT = doc as jsPDF & { lastAutoTable: { finalY: number } };
+    const docAT = doc as unknown as { lastAutoTable: { finalY: number } };
     y = docAT.lastAutoTable.finalY + 5;
 
   }
@@ -665,7 +685,8 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<jsPDF> {
 }
 
 /** Сгенерировать PDF из HTML элемента (через html2canvas) */
-export async function generatePdfFromHtml(elementId: string): Promise<jsPDF> {
+export async function generatePdfFromHtml(elementId: string): Promise<jsPDFType> {
+  const { jsPDF } = await getPdfLibs();
   const element = document.getElementById(elementId);
   if (!element) {
     throw new Error(`Element with id "${elementId}" not found`);
@@ -702,12 +723,12 @@ export async function generatePdfFromHtml(elementId: string): Promise<jsPDF> {
 }
 
 /** Скачать PDF */
-export function downloadPdf(doc: jsPDF, filename: string): void {
+export function downloadPdf(doc: jsPDFType, filename: string): void {
   doc.save(filename);
 }
 
 /** Открыть PDF в новой вкладке */
-export function openPdfInline(doc: jsPDF): void {
+export function openPdfInline(doc: jsPDFType): void {
   const blob = doc.output('blob');
   const url = URL.createObjectURL(blob);
   window.open(url, '_blank');
@@ -715,6 +736,6 @@ export function openPdfInline(doc: jsPDF): void {
 }
 
 /** Получить blob для отправки на сервер */
-export function getPdfBlob(doc: jsPDF): Blob {
+export function getPdfBlob(doc: jsPDFType): Blob {
   return doc.output('blob');
 }

@@ -21,6 +21,7 @@ export async function POST(_request: NextRequest, { params }: { params: Promise<
         description: original.description,
         docTypeId: original.docTypeId,
         pageSize: original.pageSize,
+        backgroundImage: original.backgroundImage,
         backgroundOpacity: original.backgroundOpacity,
         isDefault: false,
         organizationId: original.organizationId,

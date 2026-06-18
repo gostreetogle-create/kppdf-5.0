@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, type ReactNode } from 'react';
+import { useState, useEffect, useRef, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { Plus, Search, ChevronLeft, ChevronRight, Pencil, Trash2, Eye, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -22,6 +22,8 @@ interface CrudPageProps<T> {
   title: string;
   apiPath: string;
   columns: Column<T>[];
+  initialData?: T[];           // Server Component initial data — пропускает первый fetch
+  initialTotal?: number;       // Общее количество (для пагинации)
   createHref?: string;
   detailHref?: (item: T) => string;
   renderForm?: (item: T | null, onClose: () => void) => ReactNode;
@@ -32,19 +34,22 @@ export function CrudPage<T extends Record<string, unknown>>({
   title,
   apiPath,
   columns,
+  initialData,
+  initialTotal,
   createHref,
   detailHref,
   renderForm,
   extraActions,
 }: CrudPageProps<T>) {
   const router = useRouter();
-  const [items, setItems] = useState<T[]>([]);
-  const [total, setTotal] = useState(0);
+  const [items, setItems] = useState<T[]>(initialData || []);
+  const [total, setTotal] = useState(initialTotal || 0);
   const [page, setPage] = useState(1);
   const [limit] = useState(20);
-  const [totalPages, setTotalPages] = useState(0);
+  const [totalPages, setTotalPages] = useState(initialTotal ? Math.ceil(initialTotal / 20) : 0);
   const [search, setSearch] = useState('');
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!initialData);
+  const firstLoadSkipped = useRef(false);
   const [sortField, setSortField] = useState('createdAt');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [showForm, setShowForm] = useState(false);
@@ -53,6 +58,13 @@ export function CrudPage<T extends Record<string, unknown>>({
   const [trigger, setTrigger] = useState(0);
 
   useEffect(() => {
+    // Если данные пришли с сервера — первый useEffect вызов пропускаем,
+    // последующие вызовы (пагинация, поиск, refresh) работают как обычно
+    if (initialData && !firstLoadSkipped.current) {
+      firstLoadSkipped.current = true;
+      return;
+    }
+
     let cancelled = false;
     async function load() {
       setLoading(true);

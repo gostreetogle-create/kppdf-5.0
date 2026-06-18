@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, Edit, UserCheck, UserX, Mail, Phone, Calendar } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { StatusBadge, USER_STATUS } from '@/lib/constants/statuses';
 
 interface User {
   id: string;
@@ -144,9 +145,7 @@ export default function UserViewPage() {
               <p className="text-[var(--muted-foreground)]">@{user.username}</p>
             </div>
             <div className="ml-auto">
-              <span className={`inline-flex px-3 py-1 rounded-full text-sm font-medium ${user.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
-                {user.isActive ? 'Активен' : 'Заблокирован'}
-              </span>
+              <StatusBadge status={user.isActive ? 'active' : 'blocked'} map={USER_STATUS} />
             </div>
           </div>
         </div>

@@ -1,9 +1,22 @@
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/db';
-import { requireAuth } from '@/lib/auth';
+import { requireAuth, requireEditor } from '@/lib/auth';
 import { apiOk, apiError } from '@/lib/api-response';
 
-const include = { workType: true, workCenter: true, tasks: true };
+const include = {
+  workType: true,
+  workCenter: true,
+  contract: true,
+  proposal: true,
+  tasks: {
+    include: {
+      worker: true,
+      workType: true,
+      workCenter: true,
+    },
+    orderBy: { sortOrder: 'asc' as const },
+  },
+};
 
 export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -14,13 +27,14 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     return apiOk(item);
   } catch (error) {
     if (error instanceof Error && error.message === 'UNAUTHORIZED') return apiError('Не авторизован', 401);
+    if (error instanceof Error && error.message === 'FORBIDDEN') return apiError('Доступ запрещён', 403);
     return apiError(String(error), 500);
   }
 }
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    await requireAuth();
+    await requireEditor();
     const { id } = await params;
     const body = await request.json();
     if (body.number) {
@@ -31,18 +45,20 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     return apiOk(item);
   } catch (error) {
     if (error instanceof Error && error.message === 'UNAUTHORIZED') return apiError('Не авторизован', 401);
+    if (error instanceof Error && error.message === 'FORBIDDEN') return apiError('Доступ запрещён', 403);
     return apiError(String(error), 500);
   }
 }
 
 export async function DELETE(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    await requireAuth();
+    await requireEditor();
     const { id } = await params;
     await prisma.productionOrder.delete({ where: { id } });
     return apiOk(null, 'Удалено');
   } catch (error) {
     if (error instanceof Error && error.message === 'UNAUTHORIZED') return apiError('Не авторизован', 401);
+    if (error instanceof Error && error.message === 'FORBIDDEN') return apiError('Доступ запрещён', 403);
     return apiError(String(error), 500);
   }
 }

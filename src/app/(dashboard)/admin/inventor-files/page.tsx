@@ -33,23 +33,26 @@ export default function InventorFilesPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-  const load = async () => {
+  useEffect(() => {
+    let cancelled = false;
     setLoading(true);
-    try {
-      const params = new URLSearchParams({ limit: '100' });
-      if (search) params.set('search', search);
-      const res = await fetch(`/api/inventor-files?${params}`);
-      const data = await res.json();
-      if (data.success) setItems(data.data.items || []);
-    } catch (e) {
-      console.error('Load error:', e);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => { load(); }, [search]);
+    (async () => {
+      try {
+        const params = new URLSearchParams({ limit: '100' });
+        if (search) params.set('search', search);
+        const res = await fetch(`/api/inventor-files?${params}`);
+        const data = await res.json();
+        if (!cancelled && data.success) setItems(data.data.items || []);
+      } catch (e) {
+        if (!cancelled) console.error('Load error:', e);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [search, refreshTrigger]);
 
   const openCreate = () => {
     setEditItem(null);
@@ -76,7 +79,7 @@ export default function InventorFilesPage() {
       const data = await res.json();
       if (!data.success) { setError(data.message); return; }
       setShowDialog(false);
-      load();
+      setRefreshTrigger(t => t + 1);
     } catch (e) {
       setError('Ошибка сети');
     } finally {
@@ -89,7 +92,7 @@ export default function InventorFilesPage() {
     try {
       await fetch(`/api/inventor-files/${deleteTarget}`, { method: 'DELETE' });
       setDeleteTarget(null);
-      load();
+      setRefreshTrigger(t => t + 1);
     } catch (e) {
       console.error('Delete error:', e);
     }

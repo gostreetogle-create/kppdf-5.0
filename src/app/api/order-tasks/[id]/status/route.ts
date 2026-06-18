@@ -14,7 +14,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     const item = await prisma.orderTask.update({
       where: { id },
       data: { status },
-      include: { order: true, workType: true, worker: true },
+      include: { order: true, workType: true, worker: true, workCenter: true },
     });
     return apiOk(item);
   } catch (error) {

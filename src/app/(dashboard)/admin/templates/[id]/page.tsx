@@ -4,6 +4,9 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, Save, ImageIcon } from 'lucide-react';
 import { BlockEditor } from '@/components/ui/block-editor';
+import { Input } from '@/components/ui/input';
+import { Select } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
 import type { DocBlock } from '@/types';
 
 interface DocType {
@@ -190,38 +193,27 @@ export default function TemplateEditorPage() {
       <div className="bg-[var(--card)] rounded-2xl border border-[var(--border)] shadow-sm p-5">
         <h2 className="text-xs font-semibold text-[var(--muted-foreground)] uppercase tracking-wider mb-4">Настройки шаблона</h2>
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-          <div>
-            <label className="block text-[10px] font-semibold text-[var(--muted-foreground)] uppercase tracking-wider mb-1">Название *</label>
-            <input type="text" value={template.name} onChange={e => setTemplate({ ...template, name: e.target.value })}
-              className="w-full h-10 px-3 rounded-xl border border-[var(--input)] bg-[var(--background)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ring)]" placeholder="Название" required />
+          <div className="space-y-1">
+            <Label className="text-[10px] font-semibold uppercase tracking-wider" required>Название *</Label>
+            <Input value={template.name} onChange={e => setTemplate({ ...template, name: e.target.value })} placeholder="Название" required />
           </div>
-          <div>
-            <label className="block text-[10px] font-semibold text-[var(--muted-foreground)] uppercase tracking-wider mb-1">Тип документа</label>
-            <select value={template.docTypeId || ''} onChange={e => setTemplate({ ...template, docTypeId: e.target.value || undefined })}
-              className="w-full h-10 px-3 rounded-xl border border-[var(--input)] bg-[var(--background)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ring)] appearance-none cursor-pointer">
-              <option value="">Не выбран</option>
-              {docTypes.map(dt => <option key={dt.id} value={dt.id}>{dt.name}</option>)}
-            </select>
+          <div className="space-y-1">
+            <Label className="text-[10px] font-semibold uppercase tracking-wider">Тип документа</Label>
+            <Select value={template.docTypeId || ''} onChange={e => setTemplate({ ...template, docTypeId: e.target.value || undefined })}
+              options={[{ value: '', label: 'Не выбран' }, ...docTypes.map(dt => ({ value: dt.id, label: dt.name }))]} />
           </div>
-          <div>
-            <label className="block text-[10px] font-semibold text-[var(--muted-foreground)] uppercase tracking-wider mb-1">Организация</label>
-            <select value={template.organizationId || ''} onChange={e => setTemplate({ ...template, organizationId: e.target.value || undefined })}
-              className="w-full h-10 px-3 rounded-xl border border-[var(--input)] bg-[var(--background)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ring)] appearance-none cursor-pointer">
-              <option value="">Не выбрана</option>
-              {organizations.map(org => <option key={org.id} value={org.id}>{org.name}</option>)}
-            </select>
+          <div className="space-y-1">
+            <Label className="text-[10px] font-semibold uppercase tracking-wider">Организация</Label>
+            <Select value={template.organizationId || ''} onChange={e => setTemplate({ ...template, organizationId: e.target.value || undefined })}
+              options={[{ value: '', label: 'Не выбрана' }, ...organizations.map(org => ({ value: org.id, label: org.name }))]} />
           </div>
-          <div>
-            <label className="block text-[10px] font-semibold text-[var(--muted-foreground)] uppercase tracking-wider mb-1">Размер страницы</label>
-            <select value={template.pageSize || 'A4'} onChange={e => setTemplate({ ...template, pageSize: e.target.value })}
-              className="w-full h-10 px-3 rounded-xl border border-[var(--input)] bg-[var(--background)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ring)] appearance-none cursor-pointer">
-              <option value="A4">A4</option>
-              <option value="A5">A5</option>
-              <option value="Letter">Letter</option>
-            </select>
+          <div className="space-y-1">
+            <Label className="text-[10px] font-semibold uppercase tracking-wider">Размер страницы</Label>
+            <Select value={template.pageSize || 'A4'} onChange={e => setTemplate({ ...template, pageSize: e.target.value })}
+              options={[{ value: 'A4', label: 'A4' }, { value: 'A5', label: 'A5' }, { value: 'Letter', label: 'Letter' }]} />
           </div>
-          <div>
-            <label className="block text-[10px] font-semibold text-[var(--muted-foreground)] uppercase tracking-wider mb-1">Фоновое фото</label>
+          <div className="space-y-1">
+            <Label className="text-[10px] font-semibold uppercase tracking-wider">Фоновое фото</Label>
             <div className="flex items-center gap-2">
               {template.backgroundImage ? (
                 <div className="flex items-center gap-2">
@@ -243,9 +235,9 @@ export default function TemplateEditorPage() {
         {/* Second row */}
         <div className="grid grid-cols-3 gap-4 mt-4">
           <div>
-            <label className="block text-[10px] font-semibold text-[var(--muted-foreground)] uppercase tracking-wider mb-1">Описание</label>
-            <textarea value={template.description || ''} onChange={e => setTemplate({ ...template, description: e.target.value })}
-              rows={1} className="w-full h-10 px-3 py-2 rounded-xl border border-[var(--input)] bg-[var(--background)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ring)] resize-none" placeholder="Описание" />
+            <Label className="block text-[10px] font-semibold uppercase tracking-wider">Описание</Label>
+            <Input value={template.description || ''} onChange={e => setTemplate({ ...template, description: e.target.value })}
+              placeholder="Описание" className="h-10 px-3 py-2 rounded-xl" />
           </div>
           <div>
             <label className="block text-[10px] font-semibold text-[var(--muted-foreground)] uppercase tracking-wider mb-1">

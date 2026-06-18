@@ -1,10 +1,15 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Plus, Search, Edit, Trash2, ShieldCheck, ShieldAlert, ShieldX } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, ShieldCheck } from 'lucide-react';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { EmptyState } from '@/components/ui/empty-state';
-import { nextCertificateNumber } from '@/lib/counter';
+import { CERTIFICATE_STATUS, getStatus } from '@/lib/constants/statuses';
+function generateCertificateNumber(): string {
+  const year = new Date().getFullYear();
+  const rand = Math.floor(1000 + Math.random() * 9000);
+  return `С-${year}-${rand}`;
+}
 
 interface Certificate {
   id: string;
@@ -17,11 +22,7 @@ interface Certificate {
   createdAt: string;
 }
 
-const STATUS_MAP: Record<string, { label: string; className: string; icon: React.ElementType }> = {
-  active: { label: 'Действует', className: 'bg-green-100 text-green-700', icon: ShieldCheck },
-  expired: { label: 'Истёк', className: 'bg-yellow-100 text-yellow-700', icon: ShieldAlert },
-  revoked: { label: 'Отозван', className: 'bg-red-100 text-red-700', icon: ShieldX },
-};
+
 
 export default function CertificatesPage() {
   const [items, setItems] = useState<Certificate[]>([]);
@@ -33,26 +34,29 @@ export default function CertificatesPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-  const load = async () => {
+  useEffect(() => {
+    let cancelled = false;
     setLoading(true);
-    try {
-      const params = new URLSearchParams({ limit: '100' });
-      if (search) params.set('search', search);
-      const res = await fetch(`/api/certificates?${params}`);
-      const data = await res.json();
-      if (data.success) setItems(data.data.items || []);
-    } catch (e) {
-      console.error('Load error:', e);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => { load(); }, [search]);
+    (async () => {
+      try {
+        const params = new URLSearchParams({ limit: '100' });
+        if (search) params.set('search', search);
+        const res = await fetch(`/api/certificates?${params}`);
+        const data = await res.json();
+        if (!cancelled && data.success) setItems(data.data.items || []);
+      } catch (e) {
+        if (!cancelled) console.error('Load error:', e);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [search, refreshTrigger]);
 
   const openCreate = async () => {
-    const number = await nextCertificateNumber();
+    const number = generateCertificateNumber();
     setEditItem(null);
     setError('');
     setForm({ number, title: '', issuer: '', issuedAt: '', expiresAt: '', status: 'active' });
@@ -84,7 +88,7 @@ export default function CertificatesPage() {
       const data = await res.json();
       if (!data.success) { setError(data.message); return; }
       setShowDialog(false);
-      load();
+      setRefreshTrigger(t => t + 1);
     } catch (e) {
       setError('Ошибка сети');
     } finally {
@@ -97,7 +101,7 @@ export default function CertificatesPage() {
     try {
       await fetch(`/api/certificates/${deleteTarget}`, { method: 'DELETE' });
       setDeleteTarget(null);
-      load();
+      setRefreshTrigger(t => t + 1);
     } catch (e) {
       console.error('Delete error:', e);
     }
@@ -145,8 +149,8 @@ export default function CertificatesPage() {
             </thead>
             <tbody className="divide-y divide-[var(--border)]">
               {items.map((item) => {
-                const status = STATUS_MAP[item.status] || { label: item.status, className: 'bg-gray-100 text-gray-600', icon: ShieldCheck };
-                const StatusIcon = status.icon;
+                const status = getStatus(CERTIFICATE_STATUS, item.status);
+                const StatusIcon = status.icon || ShieldCheck;
                 return (
                   <tr key={item.id} className="hover:bg-[var(--muted)]/20 transition-colors">
                     <td className="px-4 py-3 font-medium text-[var(--foreground)]">{item.number}</td>

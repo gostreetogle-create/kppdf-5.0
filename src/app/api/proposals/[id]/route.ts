@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/db';
-import { requireAuth } from '@/lib/auth';
+import { requireAuth, requireEditor } from '@/lib/auth';
 import { apiOk, apiError } from '@/lib/api-response';
 import { nextProductionOrderNumber } from '@/lib/counter';
 
@@ -15,13 +15,14 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     return apiOk(item);
   } catch (error) {
     if (error instanceof Error && error.message === 'UNAUTHORIZED') return apiError('Не авторизован', 401);
+    if (error instanceof Error && error.message === 'FORBIDDEN') return apiError('Доступ запрещён', 403);
     return apiError(String(error), 500);
   }
 }
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    await requireAuth();
+    await requireEditor();
     const { id } = await params;
     const body = await request.json();
     if (body.number) {
@@ -32,18 +33,20 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     return apiOk(item);
   } catch (error) {
     if (error instanceof Error && error.message === 'UNAUTHORIZED') return apiError('Не авторизован', 401);
+    if (error instanceof Error && error.message === 'FORBIDDEN') return apiError('Доступ запрещён', 403);
     return apiError(String(error), 500);
   }
 }
 
 export async function DELETE(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    await requireAuth();
+    await requireEditor();
     const { id } = await params;
     await prisma.proposal.delete({ where: { id } });
     return apiOk(null, 'Удалено');
   } catch (error) {
     if (error instanceof Error && error.message === 'UNAUTHORIZED') return apiError('Не авторизован', 401);
+    if (error instanceof Error && error.message === 'FORBIDDEN') return apiError('Доступ запрещён', 403);
     return apiError(String(error), 500);
   }
 }
@@ -79,7 +82,25 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       // Загружаем полное КП с товарами и договором
       const proposal = await prisma.proposal.findUnique({
         where: { id },
-        include: { items: { include: { product: true } }, client: true, organization: true, contract: true },
+        include: {
+          items: {
+            include: {
+              product: {
+                include: {
+                  modules: {
+                    include: {
+                      workTypes: { include: { workType: true } },
+                    },
+                    orderBy: { sortOrder: 'asc' },
+                  },
+                },
+              },
+            },
+          },
+          client: true,
+          organization: true,
+          contract: true,
+        },
       });
       if (!proposal) return apiError('Не найдено', 404);
       if (proposal.items.length === 0) return apiError('КП не содержит товаров', 400);
@@ -98,6 +119,53 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
           ? await nextProductionOrderNumber()
           : proposal.number;
 
+        // Собираем задачи из модулей товаров
+        const tasks: Array<{
+          title: string;
+          description: string;
+          status: string;
+          sortOrder: number;
+          estimatedHours?: number;
+          workTypeId?: string;
+        }> = [];
+
+        let taskSort = 0;
+        for (const item of proposal.items) {
+          const product = item.product;
+          if (!product?.modules?.length) {
+            tasks.push({
+              title: product?.name || `Позиция ${taskSort + 1}`,
+              description: `Изготовление: ${product?.name || `Позиция ${taskSort + 1}`} × ${item.quantity} шт`,
+              status: 'pending',
+              sortOrder: taskSort++,
+            });
+            continue;
+          }
+
+          for (const mod of product.modules) {
+            if (!mod.workTypes?.length) {
+              tasks.push({
+                title: `${product.name} — ${mod.name}`,
+                description: `Изготовление модуля: ${mod.name}${mod.article ? ` (${mod.article})` : ''}`,
+                status: 'pending',
+                sortOrder: taskSort++,
+              });
+              continue;
+            }
+
+            for (const wt of mod.workTypes) {
+              tasks.push({
+                title: `${product.name} — ${mod.name} — ${wt.workType?.name || 'Работа'}`,
+                description: `${wt.workType?.name || 'Работа'}: ${mod.name} × ${item.quantity} шт. Ожидается: ${wt.estimatedHours}ч`,
+                status: 'pending',
+                sortOrder: taskSort++,
+                estimatedHours: wt.estimatedHours,
+                workTypeId: wt.workTypeId,
+              });
+            }
+          }
+        }
+
         const order = await tx.productionOrder.create({
           data: {
             number: orderNumber,
@@ -108,12 +176,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
             proposalId: id,
             contractId: proposal.contract?.id || null,
             tasks: {
-              create: proposal.items.map((item, index) => ({
-                title: item.product?.name || `Позиция ${index + 1}`,
-                description: `Изготовление: ${item.product?.name || `Позиция ${index + 1}`} × ${item.quantity} шт`,
-                status: 'pending',
-                sortOrder: index,
-              })),
+              create: tasks,
             },
           },
           include: { tasks: true },
@@ -136,6 +199,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     return apiOk(item);
   } catch (error) {
     if (error instanceof Error && error.message === 'UNAUTHORIZED') return apiError('Не авторизован', 401);
+    if (error instanceof Error && error.message === 'FORBIDDEN') return apiError('Доступ запрещён', 403);
     if (error instanceof Error && error.message === 'ALREADY_EXISTS') return apiError('Производственный заказ для этого КП уже существует', 400);
     return apiError(String(error), 500);
   }

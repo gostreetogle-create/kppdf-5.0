@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
   try {
     await requireAuth();
     const body = await request.json();
-    const { storageItemId, type, quantity, notes } = body;
+    const { storageItemId, type, quantity, notes, destinationStorageItemId } = body;
 
     if (!storageItemId || !type || !quantity) {
       return apiError('storageItemId, type, quantity обязательны', 400);
@@ -48,6 +48,11 @@ export async function POST(request: NextRequest) {
 
     if (!['in', 'out', 'transfer'].includes(type)) {
       return apiError('type должен быть in, out или transfer', 400);
+    }
+
+    // Для transfer требуется destinationStorageItemId
+    if (type === 'transfer' && !destinationStorageItemId) {
+      return apiError('Для перемещения (transfer) укажите destinationStorageItemId', 400);
     }
 
     const storageItem = await prisma.storageItem.findUnique({ where: { id: storageItemId } });
@@ -61,6 +66,30 @@ export async function POST(request: NextRequest) {
       return apiError('Недостаточно товара на складе', 400);
     }
 
+    // Для transfer: проверяем что destination существует
+    if (type === 'transfer') {
+      const destItem = await prisma.storageItem.findUnique({ where: { id: destinationStorageItemId } });
+      if (!destItem) return apiError('Пункт назначения не найден', 404);
+
+      // Транзакция: вычитаем из source, прибавляем в destination, создаём запись движения
+      const [movement] = await prisma.$transaction([
+        prisma.inventoryMovement.create({
+          data: { storageItemId, type, quantity, notes },
+          include: { storageItem: { include: { warehouse: true, product: true } } },
+        }),
+        prisma.storageItem.update({
+          where: { id: storageItemId },
+          data: { quantity: storageItem.quantity - quantity },
+        }),
+        prisma.storageItem.update({
+          where: { id: destinationStorageItemId },
+          data: { quantity: destItem.quantity + quantity },
+        }),
+      ]);
+      return apiOk(movement);
+    }
+
+    // Для in / out: обычная операция
     const [movement] = await prisma.$transaction([
       prisma.inventoryMovement.create({
         data: { storageItemId, type, quantity, notes },

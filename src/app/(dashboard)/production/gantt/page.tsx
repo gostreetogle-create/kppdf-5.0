@@ -4,16 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { GanttChart, type GanttItem, type GanttItemUpdate } from '@/components/ui/gantt-chart';
 import { BarChart3, RefreshCw, X, Calendar, Clock, User, MapPin, FileText } from 'lucide-react';
-
-const STATUS_LABELS: Record<string, string> = {
-  planned: 'Запланировано',
-  in_progress: 'В работе',
-  completed: 'Завершено',
-  cancelled: 'Отменено',
-  pending: 'Ожидание',
-  active: 'Активно',
-  draft: 'Черновик',
-};
+import { StatusBadge, ORDER_STATUS } from '@/lib/constants/statuses';
 
 export default function GanttPage() {
   const router = useRouter();
@@ -167,14 +158,7 @@ export default function GanttPage() {
                   }`}>
                     {selectedItem.type === 'order' ? 'ЗАКАЗ' : 'ЗАДАЧА'}
                   </span>
-                  <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
-                    selectedItem.status === 'completed' ? 'bg-green-100 text-green-700' :
-                    selectedItem.status === 'in_progress' ? 'bg-yellow-100 text-yellow-700' :
-                    selectedItem.status === 'cancelled' ? 'bg-red-100 text-red-700' :
-                    'bg-gray-100 text-gray-600'
-                  }`}>
-                    {STATUS_LABELS[selectedItem.status] || selectedItem.status}
-                  </span>
+                  <StatusBadge status={selectedItem.status} map={ORDER_STATUS} className="text-[10px] px-2 py-0.5" />
                 </div>
                 <h2 className="text-lg font-bold text-[var(--foreground)]">{selectedItem.title}</h2>
               </div>

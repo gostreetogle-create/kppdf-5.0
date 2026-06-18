@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
 import { apiOk, apiError, apiPaginated, parseSearchParams } from '@/lib/api-response';
+import { nextSupplierOrderNumber } from '@/lib/counter';
 
 export async function GET(request: NextRequest) {
   try {
@@ -40,7 +41,9 @@ export async function POST(request: NextRequest) {
   try {
     await requireAuth();
     const body = await request.json();
-    if (body.number) {
+    if (!body?.number) {
+      body.number = await nextSupplierOrderNumber();
+    } else {
       const existing = await prisma.purchaseRequest.findUnique({ where: { number: body.number } });
       if (existing) return apiError(`Документ с номером ${body.number} уже существует`, 400);
     }

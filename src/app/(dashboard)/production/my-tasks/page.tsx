@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ClipboardList, User, Clock, CheckCircle, Play, Pause, RefreshCw, AlertTriangle, Building2, Wrench } from 'lucide-react';
+import { ClipboardList, User, RefreshCw, AlertTriangle, Building2, Wrench, CheckCircle, Clock } from 'lucide-react';
+import { TASK_STATUS, StatusBadge } from '@/lib/constants/statuses';
 
 interface WorkerInfo {
   id: string;
@@ -29,13 +30,6 @@ interface MyTasksData {
   worker: WorkerInfo | null;
   tasks: TaskInfo[];
 }
-
-const STATUS_MAP: Record<string, { label: string; color: string; icon: React.ElementType }> = {
-  pending: { label: 'Ожидание', color: 'bg-gray-100 text-gray-700 border-gray-300', icon: Clock },
-  in_progress: { label: 'В работе', color: 'bg-yellow-100 text-yellow-700 border-yellow-300', icon: Play },
-  completed: { label: 'Завершено', color: 'bg-green-100 text-green-700 border-green-300', icon: CheckCircle },
-  blocked: { label: 'Заблокировано', color: 'bg-red-100 text-red-700 border-red-300', icon: Pause },
-};
 
 export default function MyTasksPage() {
   const [data, setData] = useState<MyTasksData | null>(null);
@@ -236,8 +230,6 @@ export default function MyTasksPage() {
           </div>
 
           {data.tasks.map(task => {
-            const stat = STATUS_MAP[task.status] || STATUS_MAP.pending;
-            const StatIcon = stat.icon;
             const nextStatus = getNextStatus(task.status);
             const nextLabel = getNextLabel(task.status);
 
@@ -253,10 +245,7 @@ export default function MyTasksPage() {
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
-                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border ${stat.color}`}>
-                        <StatIcon className="h-3 w-3" />
-                        {stat.label}
-                      </span>
+                      <StatusBadge status={task.status} map={TASK_STATUS} />
                       {task.order && (
                         <span className="text-[10px] text-[var(--muted-foreground)] flex items-center gap-1">
                           <Building2 className="h-3 w-3" />

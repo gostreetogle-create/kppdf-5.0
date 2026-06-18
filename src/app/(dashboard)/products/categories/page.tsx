@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Plus, Pencil, Trash2 } from 'lucide-react';
+import { FormField, FormTextarea } from '@/components/ui';
 
 interface Category {
   id: string;
@@ -130,25 +131,8 @@ export default function ProductCategoriesPage() {
               {editItem ? 'Редактировать категорию' : 'Новая категория'}
             </h2>
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-[var(--foreground)] mb-1">Название</label>
-                <input
-                  type="text"
-                  value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg border border-[var(--input)] bg-[var(--background)] text-[var(--foreground)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ring)]"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-[var(--foreground)] mb-1">Описание</label>
-                <textarea
-                  value={form.description}
-                  onChange={(e) => setForm({ ...form, description: e.target.value })}
-                  rows={3}
-                  className="w-full px-3 py-2 rounded-lg border border-[var(--input)] bg-[var(--background)] text-[var(--foreground)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ring)] resize-none"
-                />
-              </div>
+              <FormField label="Название" name="name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
+              <FormTextarea label="Описание" name="description" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={3} />
               <div className="flex justify-end gap-2 pt-4 border-t border-[var(--border)]">
                 <button type="button" onClick={() => { setShowForm(false); setEditItem(null); }} className="px-4 py-2 rounded-lg border border-[var(--border)] text-sm hover:bg-[var(--muted)] transition-colors">
                   Отмена

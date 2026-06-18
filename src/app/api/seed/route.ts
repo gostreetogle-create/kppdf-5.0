@@ -1,9 +1,12 @@
+import { requireAuth, requireRole } from '@/lib/auth';
+import { apiOk, apiError } from '@/lib/api-response';
 import { prisma } from '@/lib/db';
 import bcrypt from 'bcryptjs';
-import { apiOk, apiError } from '@/lib/api-response';
 
 export async function POST() {
   try {
+    await requireAuth();
+    await requireRole(['admin']);
     // Users
     const adminPass = await bcrypt.hash('admin123', 10);
     const managerPass = await bcrypt.hash('manager123', 10);

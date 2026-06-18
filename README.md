@@ -8,7 +8,7 @@
 
 | Слой | Технология |
 |------|-----------|
-| Фреймворк | Next.js 15 (App Router) + React 19 |
+| Фреймворк | Next.js 16 (App Router) + React 19 |
 | Язык | TypeScript |
 | Стили | Tailwind CSS 4 + CSS-переменные (светлая/тёмная темы) |
 | UI | Radix UI + Lucide иконки |
@@ -21,11 +21,20 @@
 
 ## 🚀 Быстрый старт
 
+## Требования
+
+- Node.js 20+
+- JWT_SECRET в переменных окружения для production сборки
+
 ```bash
+# Копировать .env.example
+cp .env.example .env
+
 # Установка
 npm install
 
 # База данных (создание и миграции)
+npx prisma generate
 npx prisma db push
 
 # Запуск dev-сервера
@@ -33,10 +42,12 @@ npm run dev
 # → http://localhost:3000
 
 # Продакшн сборка
-npm run build
+export JWT_SECRET=your-secret-key && npm run build
 ```
 
 **Логин по умолчанию:** `admin` / `admin123`
+
+**Seed-данные:** POST /api/seed (требует роль admin)
 
 ---
 
