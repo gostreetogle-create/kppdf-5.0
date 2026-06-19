@@ -64,17 +64,15 @@
 //   реэкспортит. Поэтому явный annotation/satisfies.
 // ============================================================================
 
-import { Prisma } from '@/generated/prisma/client';
-// NOTE: Direct-imports of base models (Warehouse, etc.) require that our
-// Prisma generator emits top-level `export type XModel` in generated/client.
-// If the generator config changes (e.g. flat-output vs type-only), these
-// imports may break — keep this comment when modifying prisma config.
+// NOTE: Prisma v7 `prisma-client` generator does NOT re-export `Prisma.validator`.
+//       Use explicit annotation/satisfies pattern (see PATTERN GUIDE above).
+import { Prisma } from '../../generated/prisma/client';
 import type {
   Warehouse,
   ProductCategory,
   Organization,
   Tender,
-} from '@/generated/prisma/client';
+} from '../../generated/prisma/client';
 
 // PAGE-SIZE CONTRACT (Cycle 26 ADR — closes prior `TODO pagination`):
 //

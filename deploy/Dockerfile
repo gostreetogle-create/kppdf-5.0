@@ -28,10 +28,7 @@ RUN npm ci
 COPY . .
 
 # Генерируем Prisma Client
-RUN npx prisma generate && \
-    echo '--- generated files ---' && \
-    find src/generated -type f 2>&1 | head -30 && \
-    echo '--- end ---'
+RUN npx prisma generate
 
 # Создаём БД со схемой (миграция) — seed-файл для runtime
 ENV DATABASE_URL=file:/app/prisma/dev.db

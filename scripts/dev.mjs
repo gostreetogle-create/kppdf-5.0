@@ -32,8 +32,9 @@
 
 import { spawn } from 'node:child_process';
 import { existsSync, rmSync } from 'node:fs';
-import { argv, env } from 'node:process';
-import { platform } from 'node:os';
+import { argv, env, execPath } from 'node:process';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
 import { killPort } from './kill-port.mjs';
 
 // 0. Smart process-kill — detect + reclaim any orphan dev-server still
@@ -73,15 +74,17 @@ if (existsSync('.next/dev')) {
 //    stdio: 'inherit' pipes the dev server's stdin/stdout/stderr to the
 //    parent shell so Ctrl-C / SIGINT forward correctly.
 const userArgs = argv.slice(2);
-// On Windows, the local `next` binary is `next.cmd`. On Unix, `next` is a
-// shell-script wrapper around Node. Node's spawn with shell:false works
-// portably as long as `next` (or `next.cmd`) is on PATH (npm adds
-// node_modules/.bin to PATH automatically before running scripts).
-const nextCmd = platform() === 'win32' ? 'next.cmd' : 'next';
 
-const devServer = spawn(nextCmd, ['dev', '--webpack', ...userArgs], {
+// Запускаем `next` напрямую через Node.js (минуя .cmd/.sh обёртки).
+// На Windows spawn с shell:false не может запустить next.cmd (batch-скрипт).
+// На Unix next — shell-скрипт с shebang, spawn открывает его через ядро.
+// Используем process.execPath для прямого запуска entry-точки Next.js CLI.
+// Это работает на всех платформах без shell.
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const nextEntry = join(__dirname, '..', 'node_modules', 'next', 'dist', 'bin', 'next');
+
+const devServer = spawn(execPath, [nextEntry, 'dev', '--webpack', ...userArgs], {
   stdio: 'inherit',
-  shell: false,
 });
 
 devServer.on('error', (err) => {

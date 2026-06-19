@@ -36,9 +36,9 @@
 
 import { spawn } from 'node:child_process';
 import { existsSync, readdirSync, rmSync, statSync } from 'node:fs';
-import { argv, env } from 'node:process';
-import { platform } from 'node:os';
-import { join } from 'node:path';
+import { argv, env, execPath } from 'node:process';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
 import { killPort } from './kill-port.mjs';
 
 // Helper: Calculate recursive directory size in bytes (no `du` shell-out).
@@ -117,11 +117,14 @@ if (existsSync('.next')) {
 //    userArgs (everything after argv[1]) is forwarded verbatim.
 //    stdio: 'inherit' so operator sees dev-server I/O + Ctrl-C works.
 const userArgs = argv.slice(2);
-const nextCmd = platform() === 'win32' ? 'next.cmd' : 'next';
 
-const devServer = spawn(nextCmd, ['dev', '--webpack', ...userArgs], {
+// Запускаем `next` напрямую через Node.js — работает на всех платформах
+// без shell, без .cmd/.sh обёрток. См. dev.mjs для деталей.
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const nextEntry = join(__dirname, '..', 'node_modules', 'next', 'dist', 'bin', 'next');
+
+const devServer = spawn(execPath, [nextEntry, 'dev', '--webpack', ...userArgs], {
   stdio: 'inherit',
-  shell: false,
 });
 
 devServer.on('error', (err) => {
