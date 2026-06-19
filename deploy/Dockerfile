@@ -7,6 +7,8 @@
 #   runner  — минимальный образ для запуска
 # ============================================================
 
+ARG NPM_REGISTRY=https://registry.npmjs.org/
+
 # ---- Stage 1: Install dependencies ----
 FROM node:20-alpine AS deps
 WORKDIR /app
@@ -14,7 +16,11 @@ WORKDIR /app
 RUN apk add --no-cache python3 make g++
 
 COPY package.json ./
-RUN npm ci --omit=dev
+RUN npm config set fetch-timeout 120000 && \
+    npm config set fetch-retries 5 && \
+    npm config set fetch-retry-mintimeout 20000 && \
+    npm config set fetch-retry-maxtimeout 120000 && \
+    npm ci --omit=dev
 
 # ---- Stage 2: Build + Prisma migrations ----
 FROM node:20-alpine AS builder
@@ -23,7 +29,11 @@ WORKDIR /app
 RUN apk add --no-cache python3 make g++
 
 COPY package.json package-lock.json* ./
-RUN npm ci
+RUN npm config set fetch-timeout 120000 && \
+    npm config set fetch-retries 5 && \
+    npm config set fetch-retry-mintimeout 20000 && \
+    npm config set fetch-retry-maxtimeout 120000 && \
+    npm ci
 
 COPY . .
 
