@@ -13,8 +13,8 @@ WORKDIR /app
 
 RUN apk add --no-cache python3 make g++
 
-COPY package.json package-lock.json* ./
-RUN npm ci --only=production
+COPY package.json ./
+RUN npm ci --omit=dev
 
 # ---- Stage 2: Build + Prisma migrations ----
 FROM node:20-alpine AS builder
@@ -28,7 +28,10 @@ RUN npm ci
 COPY . .
 
 # Генерируем Prisma Client
-RUN npx prisma generate
+RUN npx prisma generate && \
+    echo '--- generated files ---' && \
+    find src/generated -type f 2>&1 | head -30 && \
+    echo '--- end ---'
 
 # Создаём БД со схемой (миграция) — seed-файл для runtime
 ENV DATABASE_URL=file:/app/prisma/dev.db
