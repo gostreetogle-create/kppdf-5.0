@@ -5,7 +5,7 @@ import { Plus, Search, Edit, Trash2, UserCheck, UserX } from 'lucide-react';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Skeleton } from '@/components/ui/skeleton';
-import { StatusBadge, USER_STATUS } from '@/lib/constants/statuses';
+import { StatusBadge, USER_STATUS, USER_ROLE } from '@/lib/constants/statuses';
 
 interface User {
   id: string;
@@ -18,23 +18,7 @@ interface User {
   createdAt: string;
 }
 
-const ROLE_LABELS: Record<string, string> = {
-  admin: 'Администратор',
-  manager: 'Менеджер',
-  production: 'Производство',
-  storekeeper: 'Кладовщик',
-  accountant: 'Бухгалтер',
-  viewer: 'Наблюдатель',
-};
-
-const ROLE_COLORS: Record<string, string> = {
-  admin: 'bg-red-100 text-red-700',
-  manager: 'bg-blue-100 text-blue-700',
-  production: 'bg-orange-100 text-orange-700',
-  storekeeper: 'bg-green-100 text-green-700',
-  accountant: 'bg-purple-100 text-purple-700',
-  viewer: 'bg-gray-100 text-gray-600',
-};
+// Роли берутся из общей карты USER_ROLE (см. src/lib/constants/statuses.tsx)
 
 export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
@@ -62,6 +46,7 @@ export default function UsersPage() {
     }
   };
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect, react-hooks/exhaustive-deps
   useEffect(() => { loadUsers(); }, [search]);
 
   const openCreate = () => {
@@ -108,7 +93,7 @@ export default function UsersPage() {
       }
       setShowDialog(false);
       loadUsers();
-    } catch (e) {
+    } catch {
       setError('Ошибка сети');
     } finally {
       setSaving(false);
@@ -159,6 +144,7 @@ export default function UsersPage() {
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--muted-foreground)]" />
         <input
           type="text"
+          id="search-polzovateli"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Поиск по логину, имени или email..."
@@ -206,9 +192,7 @@ export default function UsersPage() {
                   <td className="px-4 py-3 text-[var(--foreground)]">{user.displayName}</td>
                   <td className="px-4 py-3 text-[var(--muted-foreground)]">{user.email || '—'}</td>
                   <td className="px-4 py-3">
-                    <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${ROLE_COLORS[user.role] || 'bg-gray-100 text-gray-600'}`}>
-                      {ROLE_LABELS[user.role] || user.role}
-                    </span>
+                    <StatusBadge status={user.role} map={USER_ROLE} />
                   </td>
                   <td className="px-4 py-3 text-center">
                     <StatusBadge status={user.isActive ? 'active' : 'blocked'} map={USER_STATUS} />
@@ -305,8 +289,8 @@ export default function UsersPage() {
                   onChange={(e) => setForm({ ...form, role: e.target.value })}
                   className="w-full h-9 px-3 mt-1 rounded-lg border border-[var(--input)] bg-[var(--background)] text-sm appearance-none"
                 >
-                  {Object.entries(ROLE_LABELS).map(([key, label]) => (
-                    <option key={key} value={key}>{label}</option>
+                  {Object.entries(USER_ROLE).map(([key, cfg]) => (
+                    <option key={key} value={key}>{cfg.label}</option>
                   ))}
                 </select>
               </div>

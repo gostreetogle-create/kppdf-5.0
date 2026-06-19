@@ -2,6 +2,8 @@ import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requireAuth, requireEditor } from '@/lib/auth';
 import { apiOk, apiError } from '@/lib/api-response';
+import { UpdateDocumentTemplateSchema } from '@/lib/validations/document-template';
+import { validateBody } from '@/lib/validations';
 
 export async function GET(
   request: NextRequest,
@@ -32,14 +34,14 @@ export async function PUT(
     await requireEditor();
     const { id } = await params;
     const body = await request.json();
-    const { name, description, docTypeId, pageSize, backgroundImage, backgroundOpacity, isDefault, organizationId, blocks } = body;
-
-    if (!name?.trim()) return apiError('Название обязательно', 400);
+    const validation = validateBody(body, UpdateDocumentTemplateSchema);
+    if (!validation.success) return validation.error;
+    const { name, description, docTypeId, pageSize, backgroundImage, backgroundOpacity, isDefault, organizationId, blocks } = validation.data;
 
     await prisma.documentTemplate.update({
       where: { id },
       data: {
-        name: name.trim(),
+        name: name?.trim(),
         description: description || null,
         docTypeId: docTypeId || null,
         pageSize: pageSize || 'A4',

@@ -2,6 +2,8 @@ import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
 import { apiOk, apiError, apiPaginated, parseSearchParams } from '@/lib/api-response';
+import { CreateProductModuleSchema } from '@/lib/validations/product-module';
+import { validateBody } from '@/lib/validations';
 
 const include = {
   product: true,
@@ -53,7 +55,9 @@ export async function POST(request: NextRequest) {
   try {
     await requireAuth();
     const body = await request.json();
-    const { workTypes, materials, ...moduleData } = body;
+    const validation = validateBody(body, CreateProductModuleSchema);
+    if (!validation.success) return validation.error;
+    const { workTypes, materials, ...moduleData } = validation.data;
 
     const item = await prisma.productModule.create({
       data: {

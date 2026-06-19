@@ -52,16 +52,6 @@ function OrderClosingForm({ item, onClose }: { item: OrderClosing | null; onClos
   const [selectedOrder, setSelectedOrder] = useState<ProductionOrderInfo | null>(null);
   const [autoFillLoading, setAutoFillLoading] = useState(false);
 
-  useEffect(() => {
-    if (!item && !form.number) {
-      const number = generateOrderClosingNumber();
-      setForm(f => f.number ? f : { ...f, number });
-    }
-    if (item?.orderId) {
-      loadOrderInfo(item.orderId);
-    }
-  }, [item]);
-
   const loadOrderInfo = async (orderId: string) => {
     setAutoFillLoading(true);
     try {
@@ -73,6 +63,18 @@ function OrderClosingForm({ item, onClose }: { item: OrderClosing | null; onClos
     } catch { /* ignore */ }
     finally { setAutoFillLoading(false); }
   };
+
+  useEffect(() => {
+    if (!item && !form.number) {
+      const number = generateOrderClosingNumber();
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setForm(f => f.number ? f : { ...f, number });
+    }
+    if (item?.orderId) {
+      loadOrderInfo(item.orderId);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [item]);
 
   const openOrderPicker = async () => {
     setShowOrderPicker(true);
@@ -218,7 +220,7 @@ function OrderClosingForm({ item, onClose }: { item: OrderClosing | null; onClos
               <h3 className="text-lg font-semibold text-[var(--foreground)]">Выбор производственного заказа</h3>
               <div className="relative mt-2">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--muted-foreground)]" />
-                <input type="text" value={orderSearch} onChange={(e) => setOrderSearch(e.target.value)}
+                <input type="text" id="search-zakaz-dlya-zakrytiya" value={orderSearch} onChange={(e) => setOrderSearch(e.target.value)}
                   placeholder="Поиск по номеру или названию..."
                   className="w-full pl-9 pr-3 py-2 rounded-lg border border-[var(--input)] bg-[var(--background)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ring)]" />
               </div>
@@ -265,6 +267,7 @@ export default function OrderClosingsPage() {
     <CrudPage<OrderClosing>
       title="Закрытия заказов"
       apiPath="/api/order-closings"
+      searchId="search-zakrytiya-zakazov"
       columns={[
         { key: 'number', label: 'Номер' },
         { key: 'orderId', label: 'Заказ', render: (item) => item.orderId ? item.orderId.substring(0, 8) + '...' : '—' },

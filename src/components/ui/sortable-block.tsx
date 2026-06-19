@@ -2,7 +2,7 @@
 
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { GripVertical, ArrowUp, ArrowDown, Trash2, Pencil } from 'lucide-react';
+import { GripVertical, Trash2, Pencil } from 'lucide-react';
 import type { DocBlock } from '@/types';
 
 interface SortableBlockProps {
@@ -153,7 +153,7 @@ function TableBlockContent({ block }: { block: DocBlock }) {
       <div className="border rounded">
         <table className="w-full text-sm">
           <thead>
-            <tr className="bg-gray-100">
+            <tr className="bg-[var(--status-neutral-bg)]">
               <th className="border border-[var(--border)] px-3 py-2 text-left text-xs font-medium text-[var(--muted-foreground)]">Наименование</th>
               <th className="border border-[var(--border)] px-3 py-2 text-right text-xs font-medium text-[var(--muted-foreground)]">Кол-во</th>
               <th className="border border-[var(--border)] px-3 py-2 text-center text-xs font-medium text-[var(--muted-foreground)]">Ед.</th>

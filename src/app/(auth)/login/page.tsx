@@ -1,9 +1,15 @@
 'use client';
 
-import { useState, FormEvent } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, FormEvent } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuthStore } from '@/stores/auth-store';
-import { Eye, EyeOff, Shield, Zap, BarChart3 } from 'lucide-react';
+import { Eye, EyeOff, Shield, Zap, BarChart3, AlertTriangle } from 'lucide-react';
+
+const ERROR_MESSAGES: Record<string, string> = {
+  forbidden: 'Доступ запрещён. У вас нет прав для просмотра этой страницы.',
+  viewer: 'Роль «наблюдатель» не позволяет редактировать данные.',
+  expired: 'Сеанс истёк. Пожалуйста, войдите снова.',
+};
 
 export default function LoginPage() {
   const [username, setUsername] = useState('');
@@ -13,6 +19,15 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const { setUser } = useAuthStore();
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    const errorKey = searchParams.get('error');
+    if (errorKey && ERROR_MESSAGES[errorKey]) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setError(ERROR_MESSAGES[errorKey]);
+    }
+  }, [searchParams]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -99,8 +114,9 @@ export default function LoginPage() {
             </div>
 
             {error && (
-              <div className="p-3 rounded-xl bg-[var(--destructive)]/10 border border-[var(--destructive)]/20 text-[var(--destructive)] text-sm animate-fadeIn">
-                {error}
+              <div className="flex items-start gap-3 p-3 rounded-xl bg-[var(--destructive)]/10 border border-[var(--destructive)]/20 text-[var(--destructive)] text-sm animate-fadeIn">
+                <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+                <span>{error}</span>
               </div>
             )}
 

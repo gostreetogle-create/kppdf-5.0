@@ -1,192 +1,190 @@
-import { NextRequest } from 'next/server';
+import { type NextRequest } from 'next/server';
 import { prisma } from '@/lib/db';
-import { requireAuth } from '@/lib/auth';
+import { withEditor } from '@/lib/api-wrapper';
 import { apiOk, apiError } from '@/lib/api-response';
-import { z } from 'zod';
 import { validateBody } from '@/lib/validations';
+import { ImportCadSchema, type CadProductInput } from '@/lib/validations/cad-import';
 
-/**
- * POST /api/import/cad — Импорт данных из CAD-систем (Inventor/AutoCAD/SolidWorks)
- *
- * Формат запроса:
- * {
- *   "products": [
- *     {
- *       "sku": "ST0001",           // Артикул (обязательно)
- *       "name": "Токарный станок",  // Название (обязательно)
- *       "productType": "manufactured", // purchased | manufactured
- *       "basePrice": 450000,        // Базовая цена (опционально)
- *       "unit": "шт",              // Ед. измерения (опционально)
- *       "weightKg": 1200,          // Вес (опционально)
- *       "material": "Сталь",       // Материал (опционально)
- *       "categoryId": "...",       // ID категории (опционально)
- *       "modules": [
- *         {
- *           "name": "Столешница",   // Название модуля (обязательно)
- *           "article": "СТ-001",   // Артикул (опционально)
- *           "width": 1200,         // Ширина мм (опционально)
- *           "height": 50,          // Высота мм (опционально)
- *           "depth": 600,          // Глубина мм (опционально)
- *           "weight": 25,          // Вес кг (опционально)
- *           "workTypes": [
- *             {
- *               "workTypeName": "Токарная обработка", // Имя или ID
- *               "estimatedHours": 2                   // Часы
- *             }
- *           ],
- *           "materials": [
- *             {
- *               "name": "ДСП 1200x600",
- *               "quantity": 1,
- *               "unit": "шт",
- *               "isPurchased": true
- *             }
- *           ]
- *         }
- *       ]
- *     }
- *   ]
- * }
- *
- * Возвращает: { imported: number, errors: string[] }
- */
+// ========================================
+// POST /api/import/cad
+//
+// Массовый импорт товаров с модулями из CAD-систем
+// (Inventor / AutoCAD / SolidWorks / Kompas-3D и т.п.).
+//
+// RBAC: requireEditor (admin, manager, production, storekeeper, accountant).
+//
+// Формат запроса описан в src/lib/validations/cad-import.ts.
+// Краткая спецификация:
+//
+//   {
+//     "products": [
+//       {
+//         "sku": "ART-001",           // уникальный ключ upsert
+//         "name": "Стол письменный",
+//         // ... другие поля Product (опционально)
+//         "modules": [
+//           {
+//             "name": "Столешница",
+//             "article": "MOD-001",
+//             "materials": [{ "name", "quantity", "unit", "isPurchased" }],
+//             "workTypes": [{ "workTypeId" (cuid), "estimatedHours" }]
+//           }
+//         ]
+//       }
+//     ]
+//   }
+//
+// Поведение:
+//   - Upsert Product по sku (создать новый или обновить существующий)
+//   - Модули: полная замена (deleteMany + create) — гарантирует идемпотентность
+//   - Per-product interactive transaction — частичный успех, отчёт по каждому SKU
+//   - WorkType валидируются заранее: неверный workTypeId → 422 для этого товара,
+//     остальные товары продолжают импортироваться
+//
+// Коды ответов:
+//   - 200: Импорт завершён (включая частичный успех), см. data.results для деталей
+//   - 400: Невалидный JSON / ошибка Zod-валидации
+//   - 401/403: Проблемы авторизации (обрабатываются withEditor)
+//   - 500: Непредвиденная ошибка (обрабатывается withEditor)
+// ========================================
 
-const CadMaterialSchema = z.object({
-  name: z.string().min(1),
-  quantity: z.number().min(0).default(1),
-  unit: z.string().default('шт'),
-  isPurchased: z.boolean().default(true),
-});
+type ResultEntry =
+  | { sku: string; status: 'success'; action: 'created' | 'updated'; id: string; modulesCount: number }
+  | { sku: string; status: 'error'; message: string };
 
-const CadWorkTypeSchema = z.object({
-  workTypeName: z.string().min(1),
-  estimatedHours: z.number().min(0.5),
-});
-
-const CadModuleSchema = z.object({
-  name: z.string().min(1),
-  article: z.string().optional(),
-  width: z.number().optional(),
-  height: z.number().optional(),
-  depth: z.number().optional(),
-  weight: z.number().optional(),
-  workTypes: z.array(CadWorkTypeSchema).optional(),
-  materials: z.array(CadMaterialSchema).optional(),
-});
-
-const CadProductSchema = z.object({
-  sku: z.string().min(1),
-  name: z.string().min(1),
-  productType: z.enum(['purchased', 'manufactured']).default('manufactured'),
-  basePrice: z.number().min(0).optional(),
-  unit: z.string().default('шт'),
-  weightKg: z.number().optional(),
-  material: z.string().optional(),
-  categoryId: z.string().cuid().optional(),
-  modules: z.array(CadModuleSchema).optional(),
-});
-
-const CadImportSchema = z.object({
-  products: z.array(CadProductSchema).min(1, 'Хотя бы один товар обязателен'),
-});
-
-export async function POST(request: NextRequest) {
+export const POST = withEditor(async (req: NextRequest, _ctx, _user) => {
+  let body: unknown;
   try {
-    await requireAuth();
-    const body = await request.json();
+    body = await req.json();
+  } catch {
+    return apiError('Тело запроса не является валидным JSON', 400);
+  }
 
-    const validation = validateBody(body, CadImportSchema);
-    if (!validation.success) return validation.error;
+  const validation = validateBody(body, ImportCadSchema);
+  if (!validation.success) return validation.error;
 
-    const { products } = validation.data;
-    const errors: string[] = [];
-    let imported = 0;
+  const products = validation.data.products;
 
-    for (const productData of products) {
-      try {
-        const { modules, ...productFields } = productData;
+  // Дедупликация по SKU: при двух одинаковых SKU в одном запросе оставляем последний
+  const uniqueProducts: CadProductInput[] = [];
+  const seenSkus = new Set<string>();
+  for (const p of products) {
+    if (seenSkus.has(p.sku)) continue;
+    seenSkus.add(p.sku);
+    uniqueProducts.push(p);
+  }
 
-        // Ищем или создаём продукт
-        const existing = await prisma.product.findUnique({ where: { sku: productFields.sku } });
+  // Предварительная загрузка валидных WorkType ID — для быстрой валидации
+  const workTypes = await prisma.workType.findMany({ select: { id: true } });
+  const validWorkTypeIds = new Set(workTypes.map((w) => w.id));
 
-        let product;
-        if (existing) {
-          product = await prisma.product.update({
-            where: { id: existing.id },
-            data: productFields,
-          });
-        } else {
-          product = await prisma.product.create({
-            data: productFields,
-          });
+  const results: ResultEntry[] = [];
+
+  for (const productInput of uniqueProducts) {
+    // Pre-validation WorkType IDs (до транзакции — быстрый отказ без DB-нагрузки)
+    const invalidWorkTypeIds = new Set<string>();
+    let hasInvalid = false;
+    for (const m of productInput.modules) {
+      for (const wt of m.workTypes) {
+        if (!validWorkTypeIds.has(wt.workTypeId)) {
+          invalidWorkTypeIds.add(wt.workTypeId);
+          hasInvalid = true;
         }
-
-        // Если есть модули — обновляем их
-        if (modules && modules.length > 0) {
-          // Удаляем старые модули
-          await prisma.moduleMaterial.deleteMany({ where: { module: { productId: product.id } } });
-          await prisma.moduleWorkType.deleteMany({ where: { module: { productId: product.id } } });
-          await prisma.productModule.deleteMany({ where: { productId: product.id } });
-
-          // Создаём новые модули
-          for (let i = 0; i < modules.length; i++) {
-            const mod = modules[i];
-
-            // Ищем или создаём виды работ
-            const workTypeIds: string[] = [];
-            if (mod.workTypes) {
-              for (const wt of mod.workTypes) {
-                let workType = await prisma.workType.findFirst({
-                  where: { name: wt.workTypeName },
-                });
-                if (!workType) {
-                  workType = await prisma.workType.create({
-                    data: { name: wt.workTypeName, description: wt.workTypeName, hourlyRate: 0 },
-                  });
-                }
-                workTypeIds.push(workType.id);
-              }
-            }
-
-            await prisma.productModule.create({
-              data: {
-                productId: product.id,
-                name: mod.name,
-                article: mod.article,
-                width: mod.width,
-                height: mod.height,
-                depth: mod.depth,
-                weight: mod.weight,
-                sortOrder: i,
-                workTypes: workTypeIds.length > 0 ? {
-                  create: mod.workTypes!.map((wt, j) => ({
-                    workTypeId: workTypeIds[j],
-                    estimatedHours: wt.estimatedHours,
-                    sortOrder: j,
-                  })),
-                } : undefined,
-                materials: mod.materials ? {
-                  create: mod.materials.map(m => ({
-                    name: m.name,
-                    quantity: m.quantity,
-                    unit: m.unit,
-                    isPurchased: m.isPurchased,
-                  })),
-                } : undefined,
-              },
-            });
-          }
-        }
-
-        imported++;
-      } catch (err) {
-        errors.push(`${productData.sku}: ${err instanceof Error ? err.message : 'Unknown error'}`);
       }
     }
+    if (hasInvalid) {
+      results.push({
+        sku: productInput.sku,
+        status: 'error',
+        message: `Неизвестные workTypeId: ${Array.from(invalidWorkTypeIds).join(', ')}`,
+      });
+      continue;
+    }
 
-    return apiOk({ imported, errors }, `Импортировано ${imported} из ${products.length} товаров`);
-  } catch (error) {
-    if (error instanceof Error && error.message === 'UNAUTHORIZED') return apiError('Не авторизован', 401);
-    return apiError(String(error), 500);
+    try {
+      const outcome = await prisma.$transaction(async (tx) => {
+        // Upsert Product по sku
+        const existing = await tx.product.findUnique({
+          where: { sku: productInput.sku },
+          select: { id: true },
+        });
+
+        // Подготовка полей Product (без модулей)
+        const {
+          modules: _modulesInput,
+          ...productFields
+        } = productInput;
+
+        const product = existing
+          ? await tx.product.update({
+              where: { id: existing.id },
+              data: productFields,
+              select: { id: true },
+            })
+          : await tx.product.create({
+              data: { ...productFields, sku: productInput.sku },
+              select: { id: true },
+            });
+
+        const action: 'created' | 'updated' = existing ? 'updated' : 'created';
+
+        // Полная замена модулей: удалить существующие, создать новые
+        await tx.productModule.deleteMany({ where: { productId: product.id } });
+
+        for (const moduleInput of productInput.modules) {
+          const { materials: mats, workTypes: wts, ...moduleRest } = moduleInput;
+          await tx.productModule.create({
+            data: {
+              ...moduleRest,
+              productId: product.id,
+              materials: mats.length ? { create: mats } : undefined,
+              workTypes: wts.length
+                ? {
+                    create: wts.map((wt) => ({
+                      workTypeId: wt.workTypeId,
+                      estimatedHours: wt.estimatedHours,
+                      sortOrder: wt.sortOrder ?? 0,
+                    })),
+                  }
+                : undefined,
+            },
+          });
+        }
+
+        return {
+          id: product.id,
+          action,
+          modulesCount: productInput.modules.length,
+        };
+      });
+
+      results.push({
+        sku: productInput.sku,
+        status: 'success',
+        id: outcome.id,
+        action: outcome.action,
+        modulesCount: outcome.modulesCount,
+      });
+    } catch (err) {
+      results.push({
+        sku: productInput.sku,
+        status: 'error',
+        message: err instanceof Error ? err.message : 'Неизвестная ошибка транзакции',
+      });
+    }
   }
-}
+
+  const successCount = results.filter((r) => r.status === 'success').length;
+  const errorCount = results.length - successCount;
+
+  return apiOk({
+    summary: {
+      total: results.length,
+      received: products.length,
+      deduped: products.length - uniqueProducts.length,
+      success: successCount,
+      failed: errorCount,
+    },
+    results,
+  });
+});

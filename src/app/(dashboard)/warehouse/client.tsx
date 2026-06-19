@@ -8,7 +8,7 @@ interface Warehouse {
   [key: string]: unknown;
   id: string;
   name: string;
-  address: string;
+  address: string | null;   // Prisma Warehouse.address — nullable в БД; form/через ?? '' уже конвертирует
   isActive: boolean;
 }
 
@@ -68,6 +68,7 @@ export function WarehouseClient({ initialData, initialTotal }: { initialData: Wa
     <CrudPage<Warehouse>
       title="Склады"
       apiPath="/api/warehouses"
+      searchId="search-sklady"
       initialData={initialData}
       initialTotal={initialTotal}
       columns={[

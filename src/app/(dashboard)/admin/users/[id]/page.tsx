@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, Edit, UserCheck, UserX, Mail, Phone, Calendar } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { StatusBadge, USER_STATUS } from '@/lib/constants/statuses';
+import { StatusBadge, USER_STATUS, USER_ROLE } from '@/lib/constants/statuses';
 
 interface User {
   id: string;
@@ -18,23 +18,7 @@ interface User {
   updatedAt: string;
 }
 
-const ROLE_LABELS: Record<string, string> = {
-  admin: 'Администратор',
-  manager: 'Менеджер',
-  production: 'Производство',
-  storekeeper: 'Кладовщик',
-  accountant: 'Бухгалтер',
-  viewer: 'Наблюдатель',
-};
-
-const ROLE_COLORS: Record<string, string> = {
-  admin: 'bg-red-100 text-red-700',
-  manager: 'bg-blue-100 text-blue-700',
-  production: 'bg-orange-100 text-orange-700',
-  storekeeper: 'bg-green-100 text-green-700',
-  accountant: 'bg-purple-100 text-purple-700',
-  viewer: 'bg-gray-100 text-gray-600',
-};
+// Роли берутся из общей карты USER_ROLE (см. src/lib/constants/statuses.tsx)
 
 export default function UserViewPage() {
   const params = useParams();
@@ -53,7 +37,7 @@ export default function UserViewPage() {
         } else {
           setError(data.message || 'Пользователь не найден');
         }
-      } catch (e) {
+      } catch {
         setError('Ошибка загрузки');
       } finally {
         setLoading(false);
@@ -116,7 +100,7 @@ export default function UserViewPage() {
             className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
               user.isActive
                 ? 'bg-[var(--destructive)]/10 text-[var(--destructive)] hover:bg-[var(--destructive)]/20'
-                : 'bg-green-100 text-green-700 hover:bg-green-200'
+                : 'bg-[var(--status-success-bg)] text-[var(--status-success-text)] hover:bg-[var(--status-success-text)] hover:text-[var(--status-success-bg)]'
             }`}
           >
             {user.isActive ? <UserX className="h-4 w-4" /> : <UserCheck className="h-4 w-4" />}
@@ -155,9 +139,7 @@ export default function UserViewPage() {
             <div>
               <label className="text-xs font-medium text-[var(--muted-foreground)] uppercase tracking-wider">Роль</label>
               <div className="mt-1">
-                <span className={`inline-flex px-3 py-1 rounded-full text-sm font-medium ${ROLE_COLORS[user.role] || 'bg-gray-100 text-gray-600'}`}>
-                  {ROLE_LABELS[user.role] || user.role}
-                </span>
+                <StatusBadge status={user.role} map={USER_ROLE} />
               </div>
             </div>
 

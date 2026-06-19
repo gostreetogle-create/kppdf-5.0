@@ -78,6 +78,7 @@ export default function MyTasksPage() {
       .then(d => { if (d.success) setWorkers(d.data.items); })
       .catch(() => {});
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     load();
   }, []);
 
@@ -195,7 +196,7 @@ export default function MyTasksPage() {
 
       {/* Error */}
       {error && (
-        <div className="flex items-center gap-3 p-4 rounded-xl bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800">
+        <div className="flex items-center gap-3 p-4 rounded-xl bg-[var(--status-danger-bg)] border border-[var(--status-danger-text)]">
           <AlertTriangle className="h-5 w-5 text-red-500" />
           <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
         </div>
@@ -221,10 +222,10 @@ export default function MyTasksPage() {
             <span className="px-3 py-1.5 rounded-lg bg-[var(--muted)]/50 text-[var(--foreground)]">
               Всего: <strong>{data.tasks.length}</strong>
             </span>
-            <span className="px-3 py-1.5 rounded-lg bg-yellow-50 dark:bg-yellow-950/20 text-yellow-700 dark:text-yellow-400">
+            <span className="px-3 py-1.5 rounded-lg bg-[var(--status-warning-bg)] text-[var(--status-warning-text)]">
               В работе: <strong>{data.tasks.filter(t => t.status === 'in_progress').length}</strong>
             </span>
-            <span className="px-3 py-1.5 rounded-lg bg-green-50 dark:bg-green-950/20 text-green-700 dark:text-green-400">
+            <span className="px-3 py-1.5 rounded-lg bg-[var(--status-success-bg)] text-[var(--status-success-text)]">
               Завершено: <strong>{data.tasks.filter(t => t.status === 'completed').length}</strong>
             </span>
           </div>
@@ -295,10 +296,10 @@ export default function MyTasksPage() {
                         disabled={statusUpdating === task.id}
                         className={`px-3 py-1.5 rounded-lg text-[10px] font-semibold transition-all disabled:opacity-50 ${
                           nextStatus === 'in_progress'
-                            ? 'bg-yellow-500 text-white hover:bg-yellow-600'
+                            ? 'bg-[var(--status-warning-solid)] text-white hover:opacity-90'
                             : nextStatus === 'completed'
-                            ? 'bg-green-500 text-white hover:bg-green-600'
-                            : 'bg-gray-500 text-white hover:bg-gray-600'
+                            ? 'bg-[var(--status-success-solid)] text-white hover:opacity-90'
+                            : 'bg-[var(--status-neutral-text)] text-white hover:opacity-90'
                         }`}
                       >
                         {statusUpdating === task.id ? '...' : nextLabel}
@@ -308,7 +309,7 @@ export default function MyTasksPage() {
                       <button
                         onClick={() => updateStatus(task.id, 'blocked')}
                         disabled={statusUpdating === task.id}
-                        className="px-3 py-1 rounded-lg text-[10px] font-medium border border-red-200 text-red-600 hover:bg-red-50 transition-all disabled:opacity-50"
+                        className="px-3 py-1 rounded-lg text-[10px] font-medium border border-[var(--status-danger-text)] text-[var(--status-danger-text)] hover:bg-[var(--status-danger-bg)] transition-all disabled:opacity-50"
                       >
                         Заблокировать
                       </button>

@@ -24,7 +24,6 @@ export function TextBlockDialog({ block, onSave, onClose }: TextBlockDialogProps
   const colRefs = useRef<Map<string, HTMLDivElement | null>>(new Map());
 
   // Initialize contentEditable divs via ref (avoids dangerouslySetInnerHTML cursor jump)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     columns.forEach(c => {
       const el = colRefs.current.get(c.id);
@@ -32,6 +31,7 @@ export function TextBlockDialog({ block, onSave, onClose }: TextBlockDialogProps
         el.innerHTML = c.content || '';
       }
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // only on mount — content is managed by user input after that
 
   const addColumn = () => {
@@ -185,7 +185,7 @@ export function TextBlockDialog({ block, onSave, onClose }: TextBlockDialogProps
                     {/* Delete column */}
                     {columns.length > 1 && (
                       <button onClick={() => removeColumn(col.id)}
-                        className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-red-50 transition-colors"
+                        className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-[var(--status-danger-bg)] hover:text-[var(--status-danger-solid)] transition-colors"
                         title="Удалить колонку">
                         <Trash2 size={13} className="text-[var(--destructive)]" />
                       </button>

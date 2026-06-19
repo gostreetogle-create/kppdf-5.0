@@ -2,6 +2,8 @@ import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
 import { apiOk, apiError, apiPaginated, parseSearchParams } from '@/lib/api-response';
+import { CreateSupplierOrderSchema } from '@/lib/validations/supplier-order';
+import { validateBody } from '@/lib/validations';
 
 export async function GET(request: NextRequest) {
   try {
@@ -40,11 +42,13 @@ export async function POST(request: NextRequest) {
   try {
     await requireAuth();
     const body = await request.json();
-    if (body.number) {
-      const existing = await prisma.supplierOrder.findUnique({ where: { number: body.number } });
-      if (existing) return apiError(`Документ с номером ${body.number} уже существует`, 400);
+    const validation = validateBody(body, CreateSupplierOrderSchema);
+    if (!validation.success) return validation.error;
+    if (validation.data.number) {
+      const existing = await prisma.supplierOrder.findUnique({ where: { number: validation.data.number } });
+      if (existing) return apiError(`Документ с номером ${validation.data.number} уже существует`, 400);
     }
-    const { items, ...data } = body;
+    const { items, ...data } = validation.data;
 
     const item = await prisma.supplierOrder.create({
       data: {

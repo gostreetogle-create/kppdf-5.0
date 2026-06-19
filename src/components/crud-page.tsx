@@ -28,6 +28,7 @@ interface CrudPageProps<T> {
   detailHref?: (item: T) => string;
   renderForm?: (item: T | null, onClose: () => void) => ReactNode;
   extraActions?: (item: T) => ReactNode;
+  searchId?: string;
 }
 
 export function CrudPage<T extends Record<string, unknown>>({
@@ -40,6 +41,7 @@ export function CrudPage<T extends Record<string, unknown>>({
   detailHref,
   renderForm,
   extraActions,
+  searchId,
 }: CrudPageProps<T>) {
   const router = useRouter();
   const [items, setItems] = useState<T[]>(initialData || []);
@@ -90,6 +92,7 @@ export function CrudPage<T extends Record<string, unknown>>({
     }
     load();
     return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [apiPath, page, limit, search, sortField, sortOrder, trigger]);
 
   const handleDelete = async (id: string) => {
@@ -141,6 +144,7 @@ export function CrudPage<T extends Record<string, unknown>>({
       {/* Search */}
       <div className="max-w-md">
         <Input
+          id={searchId}
           prefix={<Search className="h-4 w-4" />}
           value={search}
           onChange={(e) => { setSearch(e.target.value); setPage(1); }}

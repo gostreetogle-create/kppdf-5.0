@@ -2,6 +2,8 @@ import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requireAuth, requireEditor } from '@/lib/auth';
 import { apiOk, apiError } from '@/lib/api-response';
+import { UpdateSupplierOrderSchema } from '@/lib/validations/supplier-order';
+import { validateBody } from '@/lib/validations';
 
 const include = { items: true };
 
@@ -24,11 +26,13 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     await requireEditor();
     const { id } = await params;
     const body = await request.json();
-    if (body.number) {
-      const existing = await prisma.supplierOrder.findUnique({ where: { number: body.number } });
-      if (existing && existing.id !== id) return apiError(`Документ с номером ${body.number} уже существует`, 400);
+    const validation = validateBody(body, UpdateSupplierOrderSchema);
+    if (!validation.success) return validation.error;
+    if (validation.data.number) {
+      const existing = await prisma.supplierOrder.findUnique({ where: { number: validation.data.number } });
+      if (existing && existing.id !== id) return apiError(`Документ с номером ${validation.data.number} уже существует`, 400);
     }
-    const { items, ...data } = body;
+    const { items, ...data } = validation.data;
 
     const item = await prisma.supplierOrder.update({
       where: { id },

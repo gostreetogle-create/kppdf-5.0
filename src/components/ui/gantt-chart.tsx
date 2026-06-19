@@ -198,14 +198,9 @@ export function GanttChart({ items, loading = false, onItemClick, onItemUpdate }
   const todayLeft = useMemo(() => {
     if (today < startDate || today > endDate) return null;
     return ((today.getTime() - startDate.getTime()) / MS_IN_DAY) * dayWidth;
-  }, [today, startDate, dayWidth]);
+  }, [today, startDate, endDate, dayWidth]);
 
   // ── Drag handlers ──────────────────────────────────────────
-
-  const getContainerScrollLeft = (): number => {
-    const el = containerRef.current?.querySelector('.gantt-timeline') as HTMLElement | null;
-    return el?.scrollLeft ?? 0;
-  };
 
   const startDrag = useCallback((item: GanttItem, mode: DragMode, clientX: number) => {
     hasMoved.current = false;
@@ -276,6 +271,7 @@ export function GanttChart({ items, loading = false, onItemClick, onItemUpdate }
 
   // Cancel drag on zoom change
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setDrag(null);
   }, [zoom]);
 
@@ -385,7 +381,7 @@ export function GanttChart({ items, loading = false, onItemClick, onItemUpdate }
             borderLeft: `3px solid ${priorityColor}`,
             opacity: hasActual && !isDragging ? 0.7 : isDragging ? 0.65 : 0.9,
           }}
-          onClick={(e) => {
+          onClick={() => {
             if (!drag && !hasMoved.current) onItemClick?.(item);
           }}
           onPointerDown={(e) => {
@@ -565,9 +561,9 @@ export function GanttChart({ items, loading = false, onItemClick, onItemUpdate }
 
         {/* Today indicator */}
         {todayLeft !== null && todayLeft >= 0 && (
-          <div className="px-4 py-1 border-b border-[var(--border)] bg-red-50/30 dark:bg-red-950/10">
+          <div className="px-4 py-1 border-b border-[var(--border)] bg-[var(--status-danger-bg)]">
             <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-red-500" />
+              <div className="w-2 h-2 rounded-full bg-[var(--status-danger-solid)]" />
               <span className="text-[10px] font-semibold text-red-600 dark:text-red-400">
                 Сегодня — {today.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })}
               </span>
@@ -674,8 +670,7 @@ export function GanttChart({ items, loading = false, onItemClick, onItemUpdate }
 
                   {/* Today vertical line */}
                   {todayLeft !== null && (
-                    <div
-                      className="absolute top-0 bottom-0 w-0.5 bg-red-500 z-30 pointer-events-none"
+                    <div                              className="absolute top-0 bottom-0 w-0.5 bg-[var(--status-danger-solid)] z-30 pointer-events-none"
                       style={{ left: `${todayLeft}px` }}
                     />
                   )}

@@ -40,10 +40,10 @@ function ProposalForm({ item, onClose }: { item: Proposal | null; onClose: () =>
   // Лёгкий fetch для select-опций
   useEffect(() => {
     fetch('/api/clients?limit=100').then(r => r.json()).then(d => {
-      if (d.success) setClients(d.data.items.map((c: any) => ({ id: c.id, name: `${c.name || ''}`.trim() || c.id })));
+      if (d.success) setClients(d.data.items.map((c: Record<string, unknown>) => ({ id: c.id as string, name: `${(c.name as string) || ''}`.trim() || (c.id as string) })));
     }).catch(() => {});
     fetch('/api/organizations?limit=100').then(r => r.json()).then(d => {
-      if (d.success) setOrganizations(d.data.items.map((o: any) => ({ id: o.id, name: o.name || o.id })));
+      if (d.success) setOrganizations(d.data.items.map((o: Record<string, unknown>) => ({ id: o.id as string, name: (o.name as string) || (o.id as string) })));
     }).catch(() => {});
   }, []);
 
@@ -117,6 +117,7 @@ export function ProposalsClient({ initialData, initialTotal }: { initialData: Pr
       <CrudPage<Proposal>
         title="Предложения"
         apiPath="/api/proposals"
+        searchId="search-predlozheniya"
         initialData={initialData}
         initialTotal={initialTotal}
         columns={[

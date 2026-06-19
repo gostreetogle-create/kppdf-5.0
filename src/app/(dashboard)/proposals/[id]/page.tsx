@@ -157,7 +157,7 @@ export default function ProposalDetailPage() {
           </button>
           <button
             onClick={handleDelete}
-            className="p-2 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 transition-colors"
+            className="p-2 rounded-lg border border-[var(--status-danger-text)] text-[var(--status-danger-text)] hover:bg-[var(--status-danger-bg)] transition-colors"
           >
             <Trash2 size={16} />
           </button>

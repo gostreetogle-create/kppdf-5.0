@@ -43,13 +43,14 @@ export default function StatusWorkflowsPage() {
       const res = await fetch(`/api/status-workflows?${params}`);
       const data = await res.json();
       if (data.success) setItems(data.data.items || []);
-    } catch (e) {
-      console.error('Load error:', e);
+    } catch {
+      console.error('Load error');
     } finally {
       setLoading(false);
     }
   };
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect, react-hooks/exhaustive-deps
   useEffect(() => { load(); }, [search]);
 
   const openCreate = () => {
@@ -77,7 +78,7 @@ export default function StatusWorkflowsPage() {
       if (!data.success) { setError(data.message); return; }
       setShowDialog(false);
       load();
-    } catch (e) {
+    } catch {
       setError('Ошибка сети');
     } finally {
       setSaving(false);
@@ -90,8 +91,8 @@ export default function StatusWorkflowsPage() {
       await fetch(`/api/status-workflows/${deleteTarget}`, { method: 'DELETE' });
       setDeleteTarget(null);
       load();
-    } catch (e) {
-      console.error('Delete error:', e);
+    } catch {
+      console.error('Delete error');
     }
   };
 
@@ -109,7 +110,7 @@ export default function StatusWorkflowsPage() {
 
       <div className="relative">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--muted-foreground)]" />
-        <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Поиск..." className="w-full h-10 pl-9 pr-3 rounded-lg border border-[var(--input)] bg-[var(--background)] text-sm text-[var(--foreground)] placeholder:text-[var(--muted-foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)]" />
+        <input type="text" id="search-status-workflows" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Поиск..." className="w-full h-10 pl-9 pr-3 rounded-lg border border-[var(--input)] bg-[var(--background)] text-sm text-[var(--foreground)] placeholder:text-[var(--muted-foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)]" />
       </div>
 
       <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl shadow-sm overflow-hidden">
@@ -140,8 +141,8 @@ export default function StatusWorkflowsPage() {
                 <tr key={item.id} className="hover:bg-[var(--muted)]/20 transition-colors">
                   <td className="px-4 py-3 font-medium text-[var(--foreground)]">{item.name}</td>
                   <td className="px-4 py-3 text-[var(--muted-foreground)]">{ENTITY_LABELS[item.entity] || item.entity}</td>
-                  <td className="px-4 py-3"><span className="inline-flex px-2 py-0.5 rounded-full text-xs bg-gray-100 text-gray-600">{item.fromStatus}</span></td>
-                  <td className="px-4 py-3"><span className="inline-flex px-2 py-0.5 rounded-full text-xs bg-blue-100 text-blue-700">{item.toStatus}</span></td>
+                  <td className="px-4 py-3"><span className="inline-flex px-2 py-0.5 rounded-full text-xs bg-[var(--status-neutral-bg)] text-[var(--status-neutral-text)]">{item.fromStatus}</span></td>
+                  <td className="px-4 py-3"><span className="inline-flex px-2 py-0.5 rounded-full text-xs bg-[var(--status-info-bg)] text-[var(--status-info-text)]">{item.toStatus}</span></td>
                   <td className="px-4 py-3 text-[var(--muted-foreground)]">{item.roles}</td>
                   <td className="px-4 py-3 text-center">
                     <StatusBadge status={item.isActive ? 'yes' : 'no'} map={IS_ACTIVE_YESNO} />

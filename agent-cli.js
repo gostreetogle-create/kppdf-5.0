@@ -33,6 +33,7 @@
  *   node agent-cli.js buffy signal mimo "API готов, проверяй"
  */
 
+/* eslint-disable @typescript-eslint/no-require-imports */
 const fs = require('fs');
 const path = require('path');
 
@@ -109,7 +110,7 @@ function cmdList(queue) {
   }
   if (byStatus.pending.length) {
     console.log('⏳ ОЖИДАЮТ:');
-    byStatus.pending.sort((a, b) => (a.priority || 99) - (b.priority || 99))
+    byStatus.pending.sort((a, b) => (a.priority ?? 99) - (b.priority ?? 99))
       .forEach(t => printTask(t, true));
   }
   if (byStatus.blocked.length) {
@@ -125,7 +126,7 @@ function cmdList(queue) {
 function cmdPending(queue) {
   const pending = queue.tasks
     .filter(t => t.status === 'pending')
-    .sort((a, b) => (a.priority || 99) - (b.priority || 99));
+    .sort((a, b) => (a.priority ?? 99) - (b.priority ?? 99));
 
   console.log(`\n⏳ Ожидают выполнения (${pending.length}):\n`);
   pending.forEach(t => printTask(t, true));
@@ -315,7 +316,7 @@ function cmdNext(queue, agentName) {
   }
 
   // Sort by priority (lower = higher)
-  ready.sort((a, b) => (a.priority || 99) - (b.priority || 99));
+  ready.sort((a, b) => (a.priority ?? 99) - (b.priority ?? 99));
   const next = ready[0];
 
   console.log(`\n🎯 Следующая задача для ${queue.agents[agentName].name}:\n`);
@@ -429,9 +430,9 @@ function cmdCheck(queue, agentName) {
 
   if (ready.length > 0) {
     console.log(`🎯 ГОТОВЫ К ВЗЯТИЮ (${ready.length}):`);
-    ready.sort((a, b) => (a.priority || 99) - (b.priority || 99));
+    ready.sort((a, b) => (a.priority ?? 99) - (b.priority ?? 99));
     ready.slice(0, 3).forEach(t => {
-      console.log(`   ⏳ ${t.id} (P${t.priority || 99}): ${t.title}`);
+      console.log(`   ⏳ ${t.id} (P${t.priority ?? 99}): ${t.title}`);
     });
     if (ready.length > 3) console.log(`   ... и ещё ${ready.length - 3}`);
     console.log('');

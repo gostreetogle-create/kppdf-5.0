@@ -74,6 +74,7 @@ export default function WorkTypesPage() {
     <CrudPage<WorkType>
       title="Типы работ"
       apiPath="/api/work-types"
+      searchId="search-tipy-rabot"
       columns={[
         { key: 'name', label: 'Название' },
         {

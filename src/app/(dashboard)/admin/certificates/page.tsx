@@ -38,7 +38,6 @@ export default function CertificatesPage() {
 
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
     (async () => {
       try {
         const params = new URLSearchParams({ limit: '100' });
@@ -46,7 +45,7 @@ export default function CertificatesPage() {
         const res = await fetch(`/api/certificates?${params}`);
         const data = await res.json();
         if (!cancelled && data.success) setItems(data.data.items || []);
-      } catch (e) {
+    } catch (e) {
         if (!cancelled) console.error('Load error:', e);
       } finally {
         if (!cancelled) setLoading(false);
@@ -89,7 +88,7 @@ export default function CertificatesPage() {
       if (!data.success) { setError(data.message); return; }
       setShowDialog(false);
       setRefreshTrigger(t => t + 1);
-    } catch (e) {
+    } catch {
       setError('Ошибка сети');
     } finally {
       setSaving(false);
@@ -121,7 +120,7 @@ export default function CertificatesPage() {
 
       <div className="relative">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--muted-foreground)]" />
-        <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Поиск по номеру, названию или издателю..." className="w-full h-10 pl-9 pr-3 rounded-lg border border-[var(--input)] bg-[var(--background)] text-sm text-[var(--foreground)] placeholder:text-[var(--muted-foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)]" />
+        <input type="text" id="search-certificates" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Поиск по номеру, названию или издателю..." className="w-full h-10 pl-9 pr-3 rounded-lg border border-[var(--input)] bg-[var(--background)] text-sm text-[var(--foreground)] placeholder:text-[var(--muted-foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)]" />
       </div>
 
       <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl shadow-sm overflow-hidden">

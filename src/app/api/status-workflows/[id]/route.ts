@@ -1,7 +1,9 @@
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/db';
-import { requireAuth, requireRole, requireEditor } from '@/lib/auth';
+import { requireAuth, requireRole } from '@/lib/auth';
 import { apiOk, apiError } from '@/lib/api-response';
+import { UpdateStatusWorkflowSchema } from '@/lib/validations/status-workflow';
+import { validateBody } from '@/lib/validations';
 
 export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -22,7 +24,9 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     await requireRole(['admin']);
     const { id } = await params;
     const body = await request.json();
-    const item = await prisma.statusWorkflow.update({ where: { id }, data: body });
+    const validation = validateBody(body, UpdateStatusWorkflowSchema);
+    if (!validation.success) return validation.error;
+    const item = await prisma.statusWorkflow.update({ where: { id }, data: validation.data });
     return apiOk(item);
   } catch (error) {
     if (error instanceof Error && error.message === 'UNAUTHORIZED') return apiError('Не авторизован', 401);

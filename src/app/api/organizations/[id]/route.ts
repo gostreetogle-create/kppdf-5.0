@@ -2,6 +2,8 @@ import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requireAuth, requireEditor } from '@/lib/auth';
 import { apiOk, apiError } from '@/lib/api-response';
+import { UpdateOrganizationSchema } from '@/lib/validations/organization';
+import { validateBody } from '@/lib/validations';
 
 export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -22,7 +24,9 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     await requireEditor();
     const { id } = await params;
     const body = await request.json();
-    const item = await prisma.organization.update({ where: { id }, data: body, include: { roles: true } });
+    const validation = validateBody(body, UpdateOrganizationSchema);
+    if (!validation.success) return validation.error;
+    const item = await prisma.organization.update({ where: { id }, data: validation.data, include: { roles: true } });
     return apiOk(item);
   } catch (error) {
     if (error instanceof Error && error.message === 'UNAUTHORIZED') return apiError('Не авторизован', 401);

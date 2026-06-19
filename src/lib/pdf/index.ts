@@ -10,7 +10,7 @@
 import type jsPDFType from 'jspdf';
 
 let _jsPDF: typeof jsPDFType | null = null;
-let _autoTable: Function | null = null;
+let _autoTable: ((doc: jsPDFType, options: Record<string, unknown>) => void) | null = null;
 
 async function getPdfLibs() {
   if (!_jsPDF || !_autoTable) {
@@ -211,7 +211,7 @@ const PAGE_W = 210;
 
 /** Сгенерировать PDF для КП */
 export async function generateProposalPdf(data: ProposalPdfData): Promise<jsPDFType> {
-  const { jsPDF, autoTable } = await getPdfLibs();
+  const { jsPDF } = await getPdfLibs();
   const doc = new jsPDF('p', 'mm', 'a4');
   await ensureCyrillicFont(doc);
   const contentW = PAGE_W - MARGIN * 2;

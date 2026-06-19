@@ -36,8 +36,10 @@ function TenderForm({ item, onClose }: { item: Tender | null; onClose: () => voi
   useEffect(() => {
     if (!item && !form.number) {
       const number = generateTenderNumber();
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setForm(f => f.number ? f : { ...f, number });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -105,6 +107,7 @@ export function TendersClient({ initialData, initialTotal }: { initialData: Tend
     <CrudPage<Tender>
       title="Тендеры"
       apiPath="/api/tenders"
+      searchId="search-tendery"
       initialData={initialData}
       initialTotal={initialTotal}
       columns={[

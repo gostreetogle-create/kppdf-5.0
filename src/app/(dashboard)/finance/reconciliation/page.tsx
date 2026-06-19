@@ -36,8 +36,10 @@ function ReconciliationForm({ item, onClose }: { item: ReconciliationAct | null;
   useEffect(() => {
     if (!item && !form.number) {
       const number = generateReconciliationNumber();
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setForm(f => f.number ? f : { ...f, number });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [item]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -101,6 +103,7 @@ export default function ReconciliationPage() {
     <CrudPage<ReconciliationAct>
       title="Акты сверки"
       apiPath="/api/reconciliation-acts"
+      searchId="search-akty-sverki"
       columns={[
         { key: 'number', label: 'Номер' },
         { key: 'periodStart', label: 'Начало периода', render: (item) => new Date(item.periodStart).toLocaleDateString('ru-RU') },

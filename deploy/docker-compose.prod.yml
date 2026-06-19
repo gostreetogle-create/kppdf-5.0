@@ -1,0 +1,39 @@
+# ============================================================
+# KPPDF v5.0 — docker-compose.prod.yml (Synology)
+# ============================================================
+# Использование:
+#   docker compose -f deploy/docker-compose.prod.yml up -d
+# ============================================================
+
+services:
+  kppdf50:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    container_name: kppdf50
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - JWT_SECRET=${JWT_SECRET:?JWT_SECRET is required}
+      - DATABASE_URL=file:/data/dev.db
+      - HOSTNAME=0.0.0.0
+      - PORT=3000
+    volumes:
+      # SQLite база данных — персистентность между рестартами
+      - kppdf50_data:/data
+      # Загрузки (фото товаров, CAD, аватары)
+      - kppdf50_uploads:/app/public/uploads
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3000').then(r => process.exit(r.ok ? 0 : 1)).catch(_ => process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+
+volumes:
+  kppdf50_data:
+    driver: local
+  kppdf50_uploads:
+    driver: local

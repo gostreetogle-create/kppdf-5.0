@@ -117,6 +117,28 @@ src/
 
 ---
 
+## 🚢 Деплой на Synology NAS
+
+Подробное руководство по развёртыванию на Synology через Docker:
+
+👉 [DEPLOY-SYNO.md](./DEPLOY-SYNO.md)
+
+**Быстрый старт:**
+```bash
+export SYNO_HOST="192.168.1.100"
+export SYNO_USER="admin"
+export JWT_SECRET="$(openssl rand -base64 32)"
+bash deploy/deploy.sh
+```
+
+Конфигурация:
+- `deploy/Dockerfile` — multi-stage сборка Next.js
+- `deploy/docker-compose.prod.yml` — production compose
+- `deploy/deploy.sh` — скрипт деплоя (remote сборка на NAS)
+- `deploy/nginx-kppdf50.conf` — reverse proxy для Synology
+
+---
+
 ## 🤝 Разработка
 
 Проект использует систему AI-агентов Codebuff:

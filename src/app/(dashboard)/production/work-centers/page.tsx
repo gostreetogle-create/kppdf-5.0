@@ -74,6 +74,7 @@ export default function WorkCentersPage() {
     <CrudPage<WorkCenter>
       title="Рабочие центры"
       apiPath="/api/work-centers"
+      searchId="search-rabochie-centry"
       columns={[
         { key: 'name', label: 'Название' },
         { key: 'capacity', label: 'Мощность' },

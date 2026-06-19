@@ -71,12 +71,12 @@ function SimplePieChart({ data }: { data: CategoryStats[] }) {
   const RADIUS = 80;
   const cx = 150;
   const cy = 130;
-  const labelOffset = 100;
 
   let cumulativePercent = 0;
-  const slices = data.map((d, i) => {
+  const slices = data.reduce<{ path: string; color: string; label: string; percent: string }[]>((acc, d, i) => {
     const percent = d.count / total;
     const startAngle = cumulativePercent * 360;
+    // eslint-disable-next-line react-hooks/immutability
     cumulativePercent += percent;
     const endAngle = cumulativePercent * 360;
     const startRad = (startAngle - 90) * (Math.PI / 180);
@@ -87,8 +87,9 @@ function SimplePieChart({ data }: { data: CategoryStats[] }) {
     const y2 = cy + RADIUS * Math.sin(endRad);
     const largeArc = endAngle - startAngle > 180 ? 1 : 0;
 
-    return { path: `M ${cx} ${cy} L ${x1} ${y1} A ${RADIUS} ${RADIUS} 0 ${largeArc} 1 ${x2} ${y2} Z`, color: PIE_COLORS[i % PIE_COLORS.length], label: d.name, percent: ((d.count / total) * 100).toFixed(0) };
-  });
+    acc.push({ path: `M ${cx} ${cy} L ${x1} ${y1} A ${RADIUS} ${RADIUS} 0 ${largeArc} 1 ${x2} ${y2} Z`, color: PIE_COLORS[i % PIE_COLORS.length], label: d.name, percent: ((d.count / total) * 100).toFixed(0) });
+    return acc;
+  }, []);
 
   return (
     <div className="flex flex-col items-center">

@@ -61,6 +61,7 @@ export default function ProcurementPage() {
     }
   };
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { load(); }, []);
 
   const createPurchaseRequest = async (order: OrderNeed) => {
@@ -137,7 +138,7 @@ export default function ProcurementPage() {
 
       {/* Error */}
       {error && (
-        <div className="flex items-center gap-3 p-4 rounded-xl bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800">
+        <div className="flex items-center gap-3 p-4 rounded-xl bg-[var(--status-danger-bg)] border border-[var(--status-danger-text)]">
           <AlertTriangle className="h-5 w-5 text-red-500" />
           <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
         </div>
@@ -178,7 +179,7 @@ export default function ProcurementPage() {
               </thead>
               <tbody className="divide-y divide-[var(--border)]">
                 {data.items.map((item, idx) => (
-                  <tr key={idx} className={`hover:bg-[var(--muted)]/20 transition-colors ${item.deficit > 0 ? 'bg-red-50/30 dark:bg-red-950/5' : ''}`}>
+                  <tr key={idx} className={`hover:bg-[var(--muted)]/20 transition-colors ${item.deficit > 0 ? 'bg-[var(--status-danger-bg)]/40' : ''}`}>
                     <td className="px-4 py-3 font-medium text-[var(--foreground)]">{item.name} <span className="text-[var(--muted-foreground)] text-xs">({item.unit})</span></td>
                     <td className="px-4 py-3 text-right font-semibold text-[var(--foreground)]">{item.totalQuantity.toLocaleString('ru-RU')}</td>
                     <td className="px-4 py-3 text-right text-[var(--muted-foreground)]">{item.inStock.toLocaleString('ru-RU')}</td>
@@ -235,7 +236,7 @@ export default function ProcurementPage() {
                   </thead>
                   <tbody className="divide-y divide-[var(--border)]">
                     {order.materials.map((m, mi) => (
-                      <tr key={mi} className={`hover:bg-[var(--muted)]/10 transition-colors ${m.deficit > 0 ? 'bg-red-50/20 dark:bg-red-950/5' : ''}`}>
+                      <tr key={mi} className={`hover:bg-[var(--muted)]/10 transition-colors ${m.deficit > 0 ? 'bg-[var(--status-danger-bg)]/40' : ''}`}>
                         <td className="px-4 py-2 text-[var(--foreground)]">{m.name} <span className="text-[var(--muted-foreground)] text-[10px]">({m.unit})</span></td>
                         <td className="px-4 py-2 text-right font-medium text-[var(--foreground)]">{m.quantity.toLocaleString('ru-RU')}</td>
                         <td className="px-4 py-2 text-right text-[var(--muted-foreground)]">{m.inStock.toLocaleString('ru-RU')}</td>

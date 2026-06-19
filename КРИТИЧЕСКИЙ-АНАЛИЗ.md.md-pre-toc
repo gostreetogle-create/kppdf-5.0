@@ -1,0 +1,237 @@
+# КРИТИЧЕСКИЙ АНАЛИЗ ПРОЕКТА kppdf-5.0
+
+> Дата: 2026-06-18
+> Автор: MiMo Code Agent
+> Назначение: детальный профессиональный анализ всего проекта с выявлением проблем и рекомендациями
+
+---
+
+## СВОДКА
+
+**Общая оценка: 6/10** — Проект функционально покрывает бизнес-процессы, но имеет серьёзные проблемы с безопасностью, архитектурой и качеством кода.
+
+---
+
+## 1. КРИТИЧЕСКИЕ ПРОБЛЕМЫ (P0) — ИСПРАВИТЬ НЕМЕДЛЕННО
+
+### 1.1. JWT secret захардкожен
+- **Файл:** `src/lib/auth.ts:5`
+- **Проблема:** `const JWT_SECRET = process.env.JWT_SECRET || 'kppdf-dev-secret-key-change-in-production'`
+- **Риск:** Если `.env` не содержит `JWT_SECRET`, используется предсказуемый секрет. Любой может подделать JWT.
+- **Исправление:** Требовать `JWT_SECRET` в env, падать при его отсутствии.
+
+### 1.2. Seed endpoint без авторизации
+- **Файл:** `src/app/api/seed/route.ts:5`
+- **Проблема:** `POST /api/seed` не вызывает `requireAuth()`
+- **Риск:** Любой может перезаписать все тестовые данные в продакшене.
+- **Исправление:** Добавить `requireAuth()` + `requireRole(['admin'])`.
+
+### 1.3. Upload без валидации типа файла
+- **Файл:** `src/app/api/upload/route.ts:33`
+- **Проблема:** Расширение берётся из имени файла клиента, нет проверки MIME-type
+- **Риск:** Можно загрузить `.exe`, `.php`, `.js` файл. Файлы доступны напрямую через `/uploads/`.
+- **Исправление:** Whitelist допустимых расширений + проверка MIME + limitations на размер.
+
+### 1.4. Нет валидации входных данных
+- **Файлы:** Все API routes
+- **Проблема:** `zod` установлен, но нигде не используется. Тело запроса напрямую передаётся в Prisma.
+- **Риск:** Любой клиент может отправить произвольные поля и они запишутся в БД.
+- **Исправление:** Добавить Zod-схемы для каждого API endpoint.
+
+### 1.5. Нет role-based access control
+- **Файлы:** Большинство API routes
+- **Проблема:** DELETE proposals, contracts, production-orders выполняется любым авторизованным пользователем (включая viewer).
+- **Риск:** Viewer может удалить производственный заказ.
+- **Исправление:** `requireRole(['admin', 'manager'])` для DELETE/PUT операций.
+
+---
+
+## 2. ВЫСОКИЕ ПРОБЛЕМЫ (P1)
+
+### 2.1. Refresh token не ротируется
+- **Файл:** `src/app/api/auth/refresh/route.ts`
+- **Проблема:** При обновлении выдаётся новый access token, но refresh token остаётся тем же.
+- **Исправление:** Ротация refresh token при каждом использовании.
+
+### 2.2. SQLite для production
+- **Файл:** `prisma/schema.prisma:7`
+- **Проблема:** `provider = "sqlite"` — нет concurrent writes, нет row-level locking, limited full-text search.
+- **Исправление:** Миграция на PostgreSQL для production.
+
+### 2.3. Статусы как строки без enum
+- **Файл:** `prisma/schema.prisma` (все модели)
+- **Проблема:** `status String @default("draft")` — нет защиты на уровне БД от невалидных статусов.
+- **Исправление:** Использовать Prisma enums для ролей и статусов.
+
+### 2.4. Transfer не перемещает между складами
+- **Файл:** `src/app/api/inventory-movements/route.ts:56`
+- **Проблема:** Операция `transfer` вычитает количество, но не создаёт запись на пункте назначения.
+- **Исправление:** Транзакция: вычитание из source + прибавление в destination.
+
+### 2.5. Нет автосписания со склада при начале производства
+- **Файл:** `src/app/api/production-orders/[id]/status/route.ts`
+- **Проблема:** Смена статуса заказа на `in_progress` не уменьшает `StorageItem.quantity`.
+- **Исправление:** Автоматическое списание материалов при начале производства.
+
+---
+
+## 3. СРЕДНИЕ ПРОБЛЕМЫ (P2)
+
+### 3.1. Дублирование типов ApiResponse
+- **Файлы:** `src/lib/api-response.ts` + `src/types/index.ts`
+- **Проблема:** Определения `ApiResponse<T>` и `PaginatedData<T>` продублированы.
+- **Исправление:** Оставить только в `src/types/index.ts`.
+
+### 3.2. Три копии formatCurrency
+- **Файлы:** `utils.ts`, `pdf/index.ts`, `proposal-block-builder.ts`
+- **Проблема:** Три разные реализации форматирования валюты.
+- **Исправление:** Единая функция в `utils.ts`, переиспользовать.
+
+### 3.3. Boilerplate в API routes
+- **Файлы:** 30+ файлов
+- **Проблема:** Повторяющийся try/catch с requireAuth() в каждом роуте.
+- **Исправление:** HOF-обёртка или middleware.
+
+### 3.4. CrudPage модалка без a11y
+- **Файл:** `src/components/crud-page.tsx:283`
+- **Проблема:** Собственная реализация модалки вместо Dialog. Нет focus trap, escape key, aria-labels.
+- **Исправление:** Использовать компонент Dialog.
+
+### 3.5. Две таблицы не переиспользуются
+- **Файлы:** `crud-page.tsx` + `ui/table.tsx`
+- **Проблема:** CrudPage реализует свою таблицу, не используя Table компонент.
+- **Исправление:** CrudPage должен использовать Table.
+
+### 3.6. Dashboard 8 fetch-запросов
+- **Файл:** `src/app/(dashboard)/dashboard/page.tsx:48`
+- **Проблема:** Весь анализ данных на клиенте, нет серверного aggregation endpoint.
+- **Исправление:** Создать `/api/dashboard/stats` endpoint.
+
+### 3.7. Пустой next.config
+- **Файл:** `next.config.ts`
+- **Проблема:** Нет настроек `serverExternalPackages` для `better-sqlite3`, нет security headers.
+- **Исправление:** Добавить необходимые конфигурации.
+
+---
+
+## 4. НИЗКИЕ ПРОБЛЕМЫ (P3)
+
+### 4.1. STATUS_MAP дублируется
+- **Файлы:** `proposals/page.tsx` + `proposals/[id]/page.tsx`
+- **Проблема:** Определения статусов дублируются.
+- **Исправление:** Вынести в общую константу.
+
+### 4.2. Sidebar без role-filtering
+- **Файл:** `src/components/layout/sidebar.tsx`
+- **Проблема:** Навигация захардкожена, viewer видит "Администрирование".
+- **Исправление:** Фильтрация по роли пользователя.
+
+### 4.3. jspdf в основном бандле
+- **Файл:** `src/lib/pdf/index.ts:8`
+- **Проблема:** Статический импорт jspdf попадает в основной бандл.
+- **Исправление:** Dynamic import для всех PDF-зависимостей.
+
+### 4.4. Нет тестов
+- **Проблема:** В package.json нет скрипта `test`, нет файлов `*.test.ts`.
+- **Исправление:** Добавить Vitest + unit тесты на критическую логику.
+
+### 4.5. Нет loading.tsx/error.tsx
+- **Файлы:** `(dashboard)/` routes
+- **Проблема:** Нет автоматических skeleton'ов и error boundary на уровне маршрутов.
+- **Исправление:** Добавить `loading.tsx` и `error.tsx` в каждый route group.
+
+---
+
+## 5. АРХИТЕКТУРНЫЕ РЕКОМЕНДАЦИИ
+
+### 5.1. Ввести API middleware
+```typescript
+// src/lib/api-wrapper.ts
+export function withAuth(handler: Function, roles?: string[]) {
+  return async (req, params) => {
+    const user = await requireAuth();
+    if (roles && !roles.includes(user.role)) {
+      return apiError('Доступ запрещён', 403);
+    }
+    return handler(req, params, user);
+  };
+}
+```
+
+### 5.2. Zod-схемы для всех DTO
+```typescript
+// src/lib/validations/proposal.ts
+export const CreateProposalSchema = z.object({
+  number: z.string().optional(),
+  title: z.string().min(1),
+  clientId: z.string().cuid().optional(),
+  // ...
+});
+```
+
+### 5.3. Вынести общие константы
+```typescript
+// src/lib/constants.ts
+export const PROPOSAL_STATUSES = { ... } as const;
+export const ORDER_STATUSES = { ... } as const;
+```
+
+### 5.4. Dashboard API endpoint
+```typescript
+// src/app/api/dashboard/stats/route.ts
+export async function GET() {
+  const [proposals, orders, tasks] = await Promise.all([
+    prisma.proposal.groupBy({ by: ['status'], _count: true }),
+    prisma.productionOrder.groupBy({ by: ['status'], _count: true }),
+    prisma.orderTask.groupBy({ by: ['status'], _count: true }),
+  ]);
+  return apiOk({ proposals, orders, tasks });
+}
+```
+
+### 5.5. Server Components вместо Client для списков
+Многие страницы списков (`/products`, `/contracts`, `/proposals`) используют `'use client'` и fetch на клиенте. Следует использовать Server Components с `async` для первичной загрузки данных.
+
+---
+
+## 6. ЧТО СДЕЛАНО ХОРОШО
+
+1. **Полный набор CRUD** для всех бизнес-сущностей
+2. **Автогенерация номеров** через атомарный Counter
+3. **Workflow КП → Договор → Производство** реализован
+4. **Авто-конвертация КП в ProductionOrder** при оплате
+5. **Gantt-чарт** с DnD, фильтрами, today-линией
+6. **UI-библиотека** с CVA-variant'ами
+7. **ErrorBoundary** с retry-механизмом
+8. **Снабжение** — авто-формирование списка закупок из модулей
+9. **PDF генерация** с html2canvas + jsPDF
+10. **Визуальный редактор шаблонов** с drag-and-drop
+
+---
+
+## 7. ПРИОРИТЕТЫ ИСПРАВЛЕНИЯ
+
+| Приоритет | Задача | Время |
+|-----------|--------|-------|
+| P0 | JWT secret → env | 30 мин |
+| P0 | Seed auth + role | 15 мин |
+| P0 | Upload validation | 1 час |
+| P0 | Zod для ключевых API | 4 часа |
+| P0 | RBAC для DELETE/PUT | 2 часа |
+| P1 | Refresh token rotation | 1 час |
+| P1 | Transfer fix | 1 час |
+| P1 | Auto-deduct materials | 2 часа |
+| P2 | API middleware wrapper | 2 часа |
+| P2 | Common constants | 1 час |
+| P2 | Dashboard API endpoint | 2 часа |
+| P3 | Tests (Vitest) | 4 часа |
+| P3 | loading/error.tsx | 2 часа |
+| P3 | Sidebar role-filtering | 2 часа |
+
+**Общая оценка времени:** ~26 часов на исправление всех проблем.
+
+---
+
+## ЗАКЛЮЧЕНИЕ
+
+Проект kppdf-5.0 — рабочий CRM/ERP с покрытием основных бизнес-процессов. Однако **безопасность** и **качество кода** требуют серьёзной работы. Критичные проблемы (JWT, seed, upload, валидация) должны быть исправлены до деплоя в продакшен. Архитектурные улучшения (middleware, Zod, Server Components) сделают код поддерживаемым и масштабируемым.

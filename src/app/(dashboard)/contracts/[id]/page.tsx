@@ -193,7 +193,7 @@ export default function ContractDetailPage() {
           </button>
           <button
             onClick={() => setShowDelete(true)}
-            className="p-2 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 transition-colors"
+            className="p-2 rounded-lg border border-[var(--status-danger-text)] text-[var(--status-danger-text)] hover:bg-[var(--status-danger-bg)] transition-colors"
           >
             <Trash2 size={16} />
           </button>
@@ -202,9 +202,9 @@ export default function ContractDetailPage() {
 
       {/* Success banner */}
       {convertedOrder && (
-        <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-xl p-4 flex items-center justify-between">
+        <div className="bg-[var(--status-emerald-bg)] border border-[var(--status-emerald-text)] rounded-xl p-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-full bg-emerald-100 dark:bg-emerald-800 flex items-center justify-center">
+            <div className="w-9 h-9 rounded-full bg-[var(--status-emerald-bg)] flex items-center justify-center">
               <Factory size={16} className="text-emerald-600 dark:text-emerald-400" />
             </div>
             <div>
@@ -227,7 +227,7 @@ export default function ContractDetailPage() {
 
       {/* Error banner */}
       {convertError && (
-        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-3 flex items-center gap-2">
+        <div className="bg-[var(--status-danger-bg)] border border-[var(--status-danger-text)] rounded-xl p-3 flex items-center gap-2">
           <span className="text-sm text-red-600 dark:text-red-400">{convertError}</span>
           <button onClick={() => setConvertError('')} className="ml-auto text-red-400 hover:text-red-600">×</button>
         </div>

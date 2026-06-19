@@ -2,6 +2,8 @@ import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
 import { apiOk, apiError, apiPaginated, parseSearchParams } from '@/lib/api-response';
+import { CreateTableTemplateSchema } from '@/lib/validations/table-template';
+import { validateBody } from '@/lib/validations';
 
 export async function GET(request: NextRequest) {
   try {
@@ -28,15 +30,14 @@ export async function POST(request: NextRequest) {
   try {
     await requireAuth();
     const body = await request.json();
-    const { name, description, columns } = body;
-
-    if (!name?.trim()) return apiError('Название обязательно', 400);
+    const validation = validateBody(body, CreateTableTemplateSchema);
+    if (!validation.success) return validation.error;
 
     const template = await prisma.tableTemplate.create({
       data: {
-        name: name.trim(),
-        description: description || null,
-        columns: columns || '[]',
+        name: validation.data.name.trim(),
+        description: validation.data.description || null,
+        columns: validation.data.columns || '[]',
       },
     });
 

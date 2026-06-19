@@ -1,19 +1,17 @@
 import { prisma } from '@/lib/db';
-import { requireAuth } from '@/lib/auth';
+import { requireAuthPage } from '@/lib/auth-page';
 import { WarehouseClient } from './client';
+import { WAREHOUSE_LIST_QUERY_ARGS } from '@/lib/types/server-pages';
 
 export default async function WarehousePage() {
-  await requireAuth();
+  await requireAuthPage();
 
   const [warehouses, total] = await Promise.all([
-    prisma.warehouse.findMany({
-      orderBy: { createdAt: 'desc' },
-      take: 20,
-    }),
+    prisma.warehouse.findMany(WAREHOUSE_LIST_QUERY_ARGS),
     prisma.warehouse.count(),
   ]);
 
-  return (
-    <WarehouseClient initialData={warehouses as any[]} initialTotal={total} />
-  );
+  // WAREHOUSE_LIST_QUERY_ARGS types findMany as `Warehouse[]` (Prisma base model).
+  // Structural-compat with the client's permissive local interface (incl. `address: string | null`).
+  return <WarehouseClient initialData={warehouses} initialTotal={total} />;
 }

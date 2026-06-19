@@ -105,6 +105,7 @@ export function ProductionClient({ initialData, initialTotal }: { initialData: P
     <CrudPage<ProductionOrder>
       title="Производственные заказы"
       apiPath="/api/production-orders"
+      searchId="search-proizvodstvennye-zakazy"
       initialData={initialData}
       initialTotal={initialTotal}
       columns={[

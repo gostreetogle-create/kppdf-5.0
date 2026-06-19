@@ -107,7 +107,12 @@ function fmtHours(h?: number | null): string {
 
 function PriorityBadge({ p }: { p: number }) {
   if (p <= 0) return <span className="text-xs text-[var(--muted-foreground)]">обычный</span>;
-  const colors = ['bg-blue-100 text-blue-700', 'bg-amber-100 text-amber-700', 'bg-orange-100 text-orange-700', 'bg-red-100 text-red-700'];
+  const colors = [
+    'bg-[var(--status-info-bg)] text-[var(--status-info-text)]',
+    'bg-[var(--status-warning-bg)] text-[var(--status-warning-text)]',
+    'bg-[var(--status-orange-bg)] text-[var(--status-orange-text)]',
+    'bg-[var(--status-danger-bg)] text-[var(--status-danger-text)]',
+  ];
   const cls = colors[Math.min(p - 1, colors.length - 1)] ?? colors[0];
   return (
     <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold ${cls}`}>
@@ -290,8 +295,8 @@ export default function ProductionOrderDetailPage() {
         <div
           className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm border ${
             statusMessage.type === 'success'
-              ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
-              : 'bg-red-50 border-red-200 text-red-700'
+              ? 'bg-[var(--status-success-bg)] border-[var(--status-success-text)] text-[var(--status-success-text)]'
+              : 'bg-[var(--status-danger-bg)] border-[var(--status-danger-text)] text-[var(--status-danger-text)]'
           }`}
         >
           {statusMessage.type === 'success' ? <CheckCircle2 className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
@@ -384,10 +389,10 @@ export default function ProductionOrderDetailPage() {
             </div>
             <div className="flex items-center gap-3 text-[11px]">
               {taskStats.inProgress > 0 && (
-                <span className="px-2 py-0.5 rounded bg-yellow-100 text-yellow-700 font-semibold">{taskStats.inProgress} в работе</span>
+                <span className="px-2 py-0.5 rounded bg-[var(--status-warning-bg)] text-[var(--status-warning-text)] font-semibold">{taskStats.inProgress} в работе</span>
               )}
               {taskStats.blocked > 0 && (
-                <span className="px-2 py-0.5 rounded bg-red-100 text-red-700 font-semibold">{taskStats.blocked} блок</span>
+                <span className="px-2 py-0.5 rounded bg-[var(--status-danger-bg)] text-[var(--status-danger-text)] font-semibold">{taskStats.blocked} блок</span>
               )}
               <span className="text-[var(--muted-foreground)]">План: {fmtHours(taskStats.estHours)} · Факт: {fmtHours(taskStats.actHours)}</span>
             </div>
@@ -397,7 +402,7 @@ export default function ProductionOrderDetailPage() {
           <div className="px-5 pt-4">
             <div className="h-2 rounded-full bg-[var(--muted)] overflow-hidden">
               <div
-                className="h-full rounded-full bg-emerald-500 transition-all"
+                className="h-full rounded-full bg-[var(--status-success-solid)] transition-all"
                 style={{ width: `${taskStats.percent}%` }}
               />
             </div>

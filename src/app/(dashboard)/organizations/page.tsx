@@ -1,18 +1,16 @@
 import { prisma } from '@/lib/db';
-import { requireAuth } from '@/lib/auth';
+import { requireAuthPage } from '@/lib/auth-page';
 import { OrganizationsClient } from './client';
+import { ORGANIZATION_LIST_QUERY_ARGS } from '@/lib/types/server-pages';
 
 export default async function OrganizationsPage() {
-  await requireAuth();
+  await requireAuthPage();
 
-  const organizations = await prisma.organization.findMany({
-    orderBy: { createdAt: 'desc' },
-    take: 20,
-  });
+  const [organizations, total] = await Promise.all([
+    prisma.organization.findMany(ORGANIZATION_LIST_QUERY_ARGS),
+    prisma.organization.count(),
+  ]);
 
-  const total = await prisma.organization.count();
-
-  return (
-    <OrganizationsClient initialData={organizations as any[]} initialTotal={total} />
-  );
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return <OrganizationsClient initialData={organizations as any[]} initialTotal={total} />;
 }

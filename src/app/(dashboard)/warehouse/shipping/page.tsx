@@ -14,6 +14,7 @@ import {
   ArrowRight,
   FileText,
 } from 'lucide-react';
+import { StatusBadge, SHIPPING_STATUS } from '@/lib/constants/statuses';
 
 // ========================================
 // Types
@@ -54,26 +55,10 @@ interface ProductionOrder {
 // Helpers
 // ========================================
 
-const SHIPPING_STATUS_MAP: Record<string, { label: string; className: string }> = {
-  draft: { label: 'Черновик', className: 'bg-gray-100 text-gray-600 dark:bg-gray-900/30 dark:text-gray-300' },
-  partially: { label: 'Частично', className: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300' },
-  shipped: { label: 'Отгружено', className: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' },
-  cancelled: { label: 'Отменено', className: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300' },
-};
-
 function generateNumber(): string {
   const year = new Date().getFullYear();
   const rand = Math.floor(1000 + Math.random() * 9000);
   return `ОТГ-${year}-${rand}`;
-}
-
-function StatusBadgeLocal({ status }: { status: string }) {
-  const cfg = SHIPPING_STATUS_MAP[status] || { label: status, className: 'bg-gray-100 text-gray-600' };
-  return (
-    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${cfg.className}`}>
-      {cfg.label}
-    </span>
-  );
 }
 
 // ========================================
@@ -121,6 +106,7 @@ export default function ShippingPage() {
     }
   }, [search]);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { load(); }, [load]);
 
   const openCreate = () => {
@@ -280,7 +266,7 @@ export default function ShippingPage() {
       {/* Search */}
       <div className="relative max-w-md">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--muted-foreground)]" />
-        <input type="text" value={search} onChange={(e) => setSearch(e.target.value)}
+        <input type="text" id="search-otgruzki" value={search} onChange={(e) => setSearch(e.target.value)}
           placeholder="Поиск по номеру или примечаниям..."
           className="w-full h-10 pl-9 pr-3 rounded-lg border border-[var(--input)] bg-[var(--background)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ring)]" />
       </div>
@@ -304,7 +290,7 @@ export default function ShippingPage() {
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
-                    <StatusBadgeLocal status={s.status} />
+                    <StatusBadge status={s.status} map={SHIPPING_STATUS} />
                     <span className="text-xs font-mono text-[var(--muted-foreground)]">{s.number}</span>
                   </div>
                   <p className="text-sm font-medium text-[var(--foreground)]">
@@ -351,7 +337,7 @@ export default function ShippingPage() {
 
             <form onSubmit={handleSave} className="p-6 space-y-5">
               {error && (
-                <div className="flex items-center gap-2 p-3 rounded-lg bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 text-sm text-red-700 dark:text-red-400">
+                <div className="flex items-center gap-2 p-3 rounded-lg bg-[var(--status-danger-bg)] border border-[var(--status-danger-text)] text-sm text-[var(--status-danger-text)]">
                   <AlertCircle className="h-4 w-4 shrink-0" />
                   {error}
                 </div>
@@ -451,10 +437,11 @@ export default function ShippingPage() {
                   <div className="flex flex-wrap gap-2 mb-3">
                     {formPhotos.map((photo, idx) => (
                       <div key={idx} className="relative group">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src={photo.url} alt={photo.caption || 'Фото'}
                           className="w-20 h-20 object-cover rounded-lg border border-[var(--border)]" />
                         <button type="button" onClick={() => removePhoto(idx)}
-                          className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-red-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                          className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-[var(--status-danger-solid)] text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                           <X className="h-3 w-3" />
                         </button>
                       </div>
@@ -506,7 +493,7 @@ export default function ShippingPage() {
               <h3 className="text-lg font-semibold text-[var(--foreground)]">Выбор заказа для отгрузки</h3>
               <div className="relative mt-2">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--muted-foreground)]" />
-                <input type="text" value={orderSearch} onChange={(e) => setOrderSearch(e.target.value)}
+                <input type="text" id="search-zakaz-dlya-otgruzki" value={orderSearch} onChange={(e) => setOrderSearch(e.target.value)}
                   placeholder="Поиск по номеру или названию..."
                   className="w-full pl-9 pr-3 py-2 rounded-lg border border-[var(--input)] bg-[var(--background)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ring)]" />
               </div>

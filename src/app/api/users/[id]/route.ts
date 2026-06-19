@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/db';
-import { requireAuth, requireRole, requireEditor } from '@/lib/auth';
+import { requireAuth, requireRole } from '@/lib/auth';
 import { apiOk, apiError } from '@/lib/api-response';
 import bcrypt from 'bcryptjs';
 

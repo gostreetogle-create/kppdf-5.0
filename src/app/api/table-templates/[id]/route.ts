@@ -2,6 +2,8 @@ import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requireAuth, requireEditor } from '@/lib/auth';
 import { apiOk, apiError } from '@/lib/api-response';
+import { UpdateTableTemplateSchema } from '@/lib/validations/table-template';
+import { validateBody } from '@/lib/validations';
 
 export async function GET(
   request: NextRequest,
@@ -29,16 +31,15 @@ export async function PUT(
     await requireEditor();
     const { id } = await params;
     const body = await request.json();
-    const { name, description, columns } = body;
-
-    if (!name?.trim()) return apiError('Название обязательно', 400);
+    const validation = validateBody(body, UpdateTableTemplateSchema);
+    if (!validation.success) return validation.error;
 
     const item = await prisma.tableTemplate.update({
       where: { id },
       data: {
-        name: name.trim(),
-        description: description ?? null,
-        columns: columns || '[]',
+        name: validation.data.name?.trim(),
+        description: validation.data.description ?? null,
+        columns: validation.data.columns || '[]',
       },
     });
 

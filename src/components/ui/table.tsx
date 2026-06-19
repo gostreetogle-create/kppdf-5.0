@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, type ReactNode } from 'react';
-import { ArrowUpDown, ArrowUp, ArrowDown, ChevronLeft, ChevronRight, Search, Loader2 } from 'lucide-react';
+import { ArrowUpDown, ArrowUp, ArrowDown, ChevronLeft, ChevronRight, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Skeleton } from './skeleton';
 
@@ -22,6 +22,7 @@ export interface TableProps<T> {
   searchable?: boolean;
   searchPlaceholder?: string;
   searchKeys?: (keyof T & string)[];
+  searchId?: string;
   emptyMessage?: string;
   loading?: boolean;
   loadingRows?: number;
@@ -39,6 +40,7 @@ export function Table<T extends Record<string, unknown>>({
   searchable = false,
   searchPlaceholder = 'Поиск...',
   searchKeys,
+  searchId,
   emptyMessage = 'Нет данных',
   loading = false,
   loadingRows = 5,
@@ -134,6 +136,7 @@ export function Table<T extends Record<string, unknown>>({
         <div className="relative max-w-sm">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <input
+            id={searchId}
             type="text"
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(0); }}

@@ -94,21 +94,10 @@ export async function GET(_request: NextRequest) {
       }
       const orderEntry = byOrderMap.get(order.id)!;
 
-      for (const module of (item.product?.modules ?? [])) {
-        for (const mat of (module.materials ?? [])) {
+      for (const mod of (item.product?.modules ?? [])) {
+        for (const mat of (mod.materials ?? [])) {
           const neededQty = mat.quantity * item.quantity;
           const key = `${mat.name}|${mat.unit}`;
-
-          // Ищем остаток на складе: сопоставляем по названию (подстрока) + единице
-          const matName = mat.name.toLowerCase().trim();
-          const stockKey = matName;
-          // Ищем все совпадения по подстроке из stockIndex
-          let stockForThis = 0;
-          for (const [sk, sv] of stockIndex) {
-            if (sk.includes(matName) || matName.includes(sk)) {
-              stockForThis += sv.total;
-            }
-          }
 
           // Per-order
           const existing = orderEntry.materials.find(m => m.name === mat.name && m.unit === mat.unit);
@@ -117,7 +106,7 @@ export async function GET(_request: NextRequest) {
           } else {
             orderEntry.materials.push({
               name: mat.name, quantity: neededQty, unit: mat.unit,
-              source: `${item.product?.name || '?'} / ${module.name}`,
+              source: `${item.product?.name || '?'} / ${mod.name}`,
               inStock: 0, deficit: 0,
             });
           }
@@ -128,7 +117,7 @@ export async function GET(_request: NextRequest) {
           agg.unit = mat.unit;
           const orderRef = agg.orders.find(o => o.orderNumber === order.number);
           if (orderRef) { orderRef.quantity += neededQty; }
-          else { agg.orders.push({ orderNumber: order.number, quantity: neededQty, source: `${item.product?.name || '?'} / ${module.name}` }); }
+          else { agg.orders.push({ orderNumber: order.number, quantity: neededQty, source: `${item.product?.name || '?'} / ${mod.name}` }); }
           aggregated.set(key, agg);
         }
       }

@@ -11,6 +11,7 @@ import {
   getDataSourceOptions,
   getFieldOptions,
   getFieldLabel,
+  getSourceColor,
   type TableTemplateColumnV4,
 } from '@/lib/table-template-data';
 
@@ -21,18 +22,23 @@ interface TableTemplate {
   columns?: string;
 }
 
+/**
+ * Шейп устаревших v5 колонок (legacy data, не экспортируется из
+ * `@/lib/table-template-data.ts`). Мигратор читает ровно эти 5 полей.
+ */
+interface LegacyV5Column {
+  id?: string;
+  key?: string;
+  label?: string;
+  width?: number | string;                                  // число-пиксели (без суффикса "px") ИЛИ строка-ширина (e.g. "100%"); мигратор добавляет "px"-суффикс через template
+  type?: 'text' | 'number' | 'date' | 'currency';
+}
+
 const ALIGN_OPTIONS = [
   { value: 'left', label: 'Слева' },
   { value: 'center', label: 'Центр' },
   { value: 'right', label: 'Справа' },
 ];
-
-const SOURCE_COLORS: Record<string, string> = {
-  products: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',
-  items: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300',
-  services: 'bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300',
-  finance: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
-};
 
 const FIELD_TYPE_ICONS: Record<string, string> = {
   text: 'Aa',
@@ -56,7 +62,7 @@ function isV4Columns(json: string): boolean {
   }
 }
 
-function migrateV5toV4(cols: any[]): TableTemplateColumnV4[] {
+function migrateV5toV4(cols: LegacyV5Column[]): TableTemplateColumnV4[] {
   return cols.map((col, i) => ({
     id: col.id || `col_${Date.now()}_${i}`,
     tableName: 'products',
@@ -96,7 +102,7 @@ function SortableColumnChip({
   };
 
   const isVisible = col.visible !== false;
-  const sourceColor = SOURCE_COLORS[col.tableName] || 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300';
+  const sourceColor = getSourceColor(col.tableName);
   const typeIcon = FIELD_TYPE_ICONS[col.type || 'text'] || 'Aa';
 
   return (
@@ -167,7 +173,7 @@ function SortableColumnChip({
                 </button>
                 <button
                   onClick={onDelete}
-                  className="p-1.5 rounded-lg text-[var(--muted-foreground)] hover:bg-red-50 hover:text-red-500 transition-colors"
+                  className="p-1.5 rounded-lg text-[var(--muted-foreground)] hover:bg-[var(--status-danger-bg)] hover:text-[var(--status-danger-solid)] transition-colors"
                   title="Удалить колонку"
                 >
                   <Trash2 size={14} />
@@ -360,9 +366,17 @@ export default function TableTemplateEditorPage() {
   } | null>(null);
   const tableRef = useRef<HTMLTableElement>(null);
   const columnsRef = useRef(columns);
-  columnsRef.current = columns;
   const tableLockedRef = useRef(tableLocked);
-  tableLockedRef.current = tableLocked;
+
+  useEffect(() => {
+    columnsRef.current = columns;
+  }, [columns]);
+
+  useEffect(() => {
+    tableLockedRef.current = tableLocked;
+  }, [tableLocked]);
+
+  const handleResizeEndRef = useRef<() => void>(() => {});
 
   const handleResizeMove = useCallback((e: MouseEvent) => {
     if (!resizeRef.current) return;
@@ -383,24 +397,27 @@ export default function TableTemplateEditorPage() {
   const handleResizeEnd = useCallback(() => {
     resizeRef.current = null;
     document.removeEventListener('mousemove', handleResizeMove);
-    document.removeEventListener('mouseup', handleResizeEnd);
     document.body.style.cursor = '';
     document.body.style.userSelect = '';
   }, [handleResizeMove]);
+
+  useEffect(() => {
+    handleResizeEndRef.current = handleResizeEnd;
+  });
 
   // Cleanup on unmount during drag
   useEffect(() => {
     return () => {
       if (resizeRef.current) {
         document.removeEventListener('mousemove', handleResizeMove);
-        document.removeEventListener('mouseup', handleResizeEnd);
+        document.removeEventListener('mouseup', handleResizeEndRef.current);
         document.body.style.cursor = '';
         document.body.style.userSelect = '';
       }
     };
-  }, [handleResizeMove, handleResizeEnd]);
+  }, [handleResizeMove]);
 
-  const handleResizeStart = useCallback((e: React.MouseEvent, colIndex: number) => {
+  const handleResizeStart = useCallback((e: React.MouseEvent, _colIndex: number) => {
     e.preventDefault();
     e.stopPropagation();
     const cols = columnsRef.current;
@@ -411,9 +428,6 @@ export default function TableTemplateEditorPage() {
     const draggedWidth = th.getBoundingClientRect().width;
     const nextWidth = nextTh.getBoundingClientRect().width;
     // Map visible index back to full columns array
-    const visibleSorted = cols
-      .filter(c => c.visible !== false)
-      .sort((a, b) => a.order - b.order);
     const draggedColId = th.dataset.colId;
     const nextColId = nextTh.dataset.colId;
     resizeRef.current = {
@@ -424,14 +438,14 @@ export default function TableTemplateEditorPage() {
       nextStartWidth: nextWidth,
     };
     document.addEventListener('mousemove', handleResizeMove);
-    document.addEventListener('mouseup', handleResizeEnd);
+    document.addEventListener('mouseup', handleResizeEndRef.current);
     document.body.style.cursor = 'col-resize';
     document.body.style.userSelect = 'none';
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [handleResizeMove, handleResizeEnd]);
+  }, [handleResizeMove]);
 
   useEffect(() => {
     if (isNew && columns.length === 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setColumns([{
         id: `col_${Date.now()}`,
         tableName: 'products',
@@ -710,7 +724,7 @@ export default function TableTemplateEditorPage() {
               <DragOverlay dropAnimation={null}>
                 {activeId ? (() => {
                   const activeCol = columns.find(c => c.id === activeId);
-                  const sourceColor = activeCol ? (SOURCE_COLORS[activeCol.tableName] || 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300') : '';
+                  const sourceColor = activeCol ? getSourceColor(activeCol.tableName) : '';
                   return (
                   <div className="flex items-center gap-2 h-12 px-4 rounded-xl border-2 border-[var(--primary)] bg-[var(--card)] shadow-xl opacity-95">
                     <span className="flex items-center justify-center w-5 h-5 rounded-md bg-[var(--muted)] text-[10px] font-bold text-[var(--muted-foreground)] flex-shrink-0">

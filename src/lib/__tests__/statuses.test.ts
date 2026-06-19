@@ -5,13 +5,13 @@ describe('getStatus', () => {
   it('должен возвращать конфиг для существующего статуса', () => {
     const result = getStatus(PROPOSAL_STATUS, 'draft');
     expect(result.label).toBe('Черновик');
-    expect(result.className).toContain('bg-gray-100');
+    expect(result.className).toMatch(/var\(--status-[a-z]+-bg\)/);
   });
 
   it('должен возвращать дефолтный конфиг для неизвестного статуса', () => {
     const result = getStatus(ORDER_STATUS, 'unknown_status');
     expect(result.label).toBe('unknown_status');
-    expect(result.className).toContain('bg-gray-100');
+    expect(result.className).toMatch(/var\(--status-[a-z]+-bg\)/);
   });
 
   it('должен корректно возвращать все статусы proposal', () => {

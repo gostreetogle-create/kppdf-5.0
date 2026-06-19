@@ -3,6 +3,8 @@ import { prisma } from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
 import { apiOk, apiError, apiPaginated, parseSearchParams } from '@/lib/api-response';
 import { nextSupplierOrderNumber } from '@/lib/counter';
+import { CreatePurchaseRequestSchema } from '@/lib/validations/purchase-request';
+import { validateBody } from '@/lib/validations';
 
 export async function GET(request: NextRequest) {
   try {
@@ -41,14 +43,20 @@ export async function POST(request: NextRequest) {
   try {
     await requireAuth();
     const body = await request.json();
-    if (!body?.number) {
-      body.number = await nextSupplierOrderNumber();
+    const validation = validateBody(body, CreatePurchaseRequestSchema);
+    if (!validation.success) return validation.error;
+    if (!validation.data.number) {
+      validation.data.number = await nextSupplierOrderNumber();
     } else {
-      const existing = await prisma.purchaseRequest.findUnique({ where: { number: body.number } });
-      if (existing) return apiError(`Документ с номером ${body.number} уже существует`, 400);
+      const existing = await prisma.purchaseRequest.findUnique({ where: { number: validation.data.number } });
+      if (existing) return apiError(`Документ с номером ${validation.data.number} уже существует`, 400);
     }
+    const { items, ...data } = validation.data;
     const item = await prisma.purchaseRequest.create({
-      data: body,
+      data: {
+        ...data,
+        items: items ? { create: items } : undefined,
+      },
       include: { items: true },
     });
     return apiOk(item);

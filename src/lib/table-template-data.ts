@@ -78,6 +78,23 @@ export const DATA_SOURCES: Record<string, DataSource> = {
   },
 };
 
+// ───────────────────────────────────────────────────────────────
+// Цветовые классы для бейджей источников (CSS-переменные из globals.css)
+// Визуальная дифференциация колонок в редакторе шаблонов таблиц
+// ───────────────────────────────────────────────────────────────
+export const SOURCE_COLORS: Record<string, string> = {
+  products: 'bg-[var(--status-info-bg)]    text-[var(--status-info-text)]',
+  items:    'bg-[var(--status-emerald-bg)] text-[var(--status-emerald-text)]',
+  services: 'bg-[var(--status-violet-bg)]  text-[var(--status-violet-text)]',
+  finance:  'bg-[var(--status-amber-bg)]   text-[var(--status-amber-text)]',
+};
+
+const SOURCE_COLOR_FALLBACK = 'bg-[var(--status-neutral-bg)] text-[var(--status-neutral-text)]';
+
+export function getSourceColor(tableName: string): string {
+  return SOURCE_COLORS[tableName] || SOURCE_COLOR_FALLBACK;
+}
+
 /**
  * v4.0-стиль: колонка знает источник и поле
  */

@@ -22,14 +22,12 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     // Генерируем номер КП через counter
     const number = body.number || await nextProposalNumber();
 
-    // Рассчитываем общую сумму
-    let totalAmount = 0;
+    // Рассчитываем суммы
     const proposalItems = session.items.map((item, index) => {
       const basePrice = item.priceSnapshot;
       const markupMultiplier = 1 + (item.markupPercent || 0) / 100;
       const unitPrice = Math.round(basePrice * markupMultiplier * 100) / 100;
       const total = Math.round(unitPrice * item.quantity * 100) / 100;
-      totalAmount += total;
 
       return {
         productId: item.productId,

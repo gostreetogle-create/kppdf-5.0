@@ -1,7 +1,7 @@
 'use client';
 
 import { AlertTriangle, Info } from 'lucide-react';
-import { Dialog, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from './dialog';
+import { Dialog, DialogFooter } from './dialog';
 import { Button } from './button';
 
 export interface ConfirmDialogProps {

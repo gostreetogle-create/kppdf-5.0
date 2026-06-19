@@ -2,6 +2,8 @@ import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requireAuth, requireEditor } from '@/lib/auth';
 import { apiOk, apiError } from '@/lib/api-response';
+import { UpdateReconciliationActSchema } from '@/lib/validations/reconciliation-act';
+import { validateBody } from '@/lib/validations';
 
 export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -22,11 +24,13 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     await requireEditor();
     const { id } = await params;
     const body = await request.json();
-    if (body.number) {
-      const existing = await prisma.reconciliationAct.findUnique({ where: { number: body.number } });
-      if (existing && existing.id !== id) return apiError(`Документ с номером ${body.number} уже существует`, 400);
+    const validation = validateBody(body, UpdateReconciliationActSchema);
+    if (!validation.success) return validation.error;
+    if (validation.data.number) {
+      const existing = await prisma.reconciliationAct.findUnique({ where: { number: validation.data.number } });
+      if (existing && existing.id !== id) return apiError(`Документ с номером ${validation.data.number} уже существует`, 400);
     }
-    const item = await prisma.reconciliationAct.update({ where: { id }, data: body });
+    const item = await prisma.reconciliationAct.update({ where: { id }, data: validation.data });
     return apiOk(item);
   } catch (error) {
     if (error instanceof Error && error.message === 'UNAUTHORIZED') return apiError('Не авторизован', 401);

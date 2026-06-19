@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Download, Eye, Search, Minus, Plus, Trash2, FileText, Check, AlertCircle, ChevronDown, Settings } from 'lucide-react';
+import { Download, Eye, Search, Minus, Plus, Trash2, FileText, Check, AlertCircle, ChevronDown } from 'lucide-react';
 import { generateProposalPdf, downloadPdf, type ProposalPdfData } from '@/lib/pdf';
 import { DocPreview } from '@/components/ui/doc-preview';
 import { A4Canvas } from '@/components/ui/a4-canvas';
@@ -192,9 +192,10 @@ export default function ProposalShowcasePage() {
       else setError(data.message || 'Ошибка создания КП');
     } catch { setError('Ошибка сети'); }
     finally { setSaving(false); }
-  }, [cartId, cart, proposalTitle, selectedClientId, selectedOrgId, selectedTemplateId, router]);
+  }, [cartId, cart, proposalTitle, selectedClientId, selectedOrgId, selectedTemplateId, router, ralCode]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (!selectedTemplateId) { setSelectedTemplateData(null); setTemplateBlocks([]); return; }
     fetch(`/api/document-templates/${selectedTemplateId}`).then(r => r.json()).then(d => {
       if (d.success) { setSelectedTemplateData(d.data); setTemplateBlocks(getTemplateBlocks(d.data)); }
@@ -230,6 +231,7 @@ export default function ProposalShowcasePage() {
 
   const formatPrice = formatCurrency;
 
+  // eslint-disable-next-line react-hooks/preserve-manual-memoization
   const pdfData = useCallback((): ProposalPdfData | null => {
     if (!cart || cart.items.length === 0) return null;
     const org = organizations.find((o) => o.id === selectedOrgId);
@@ -253,6 +255,7 @@ export default function ProposalShowcasePage() {
       vatAmount,
       grandTotal,
     };
+    // eslint-disable-next-line react-hooks/preserve-manual-memoization
   }, [cart, organizations, clients, selectedOrgId, selectedClientId, proposalTitle, discountPercent, discountAmount, selectedVatRate, vatAmount, grandTotal]);
 
   const handleDownloadPdf = useCallback(async () => {
@@ -308,6 +311,7 @@ export default function ProposalShowcasePage() {
           {/* Top bar: Search + Filters */}
           <div className="px-3 py-2 border-b border-[var(--border)] space-y-2 shrink-0">
             <Input
+              id="search-tovary"
               type="search"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}

@@ -101,6 +101,7 @@ export function OrganizationsClient({ initialData, initialTotal }: { initialData
     <CrudPage<Organization>
       title="Организации"
       apiPath="/api/organizations"
+      searchId="search-organizacii"
       initialData={initialData}
       initialTotal={initialTotal}
       columns={[

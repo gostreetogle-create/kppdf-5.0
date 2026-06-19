@@ -50,12 +50,12 @@ export default function AdminDashboardPage() {
   }, []);
 
   const cards = [
-    { label: 'Пользователи', value: stats?.users ?? 0, icon: Users, bgClass: 'bg-blue-500/10', iconClass: 'text-blue-500', href: '/admin/users' },
-    { label: 'КП', value: stats?.proposals ?? 0, icon: FileText, bgClass: 'bg-green-500/10', iconClass: 'text-green-500', href: '/proposals' },
-    { label: 'Договоры', value: stats?.contracts ?? 0, icon: Shield, bgClass: 'bg-purple-500/10', iconClass: 'text-purple-500', href: '/contracts' },
-    { label: 'Контрагенты', value: stats?.organizations ?? 0, icon: Building2, bgClass: 'bg-orange-500/10', iconClass: 'text-orange-500', href: '/organizations' },
-    { label: 'Товары', value: stats?.products ?? 0, icon: Package, bgClass: 'bg-cyan-500/10', iconClass: 'text-cyan-500', href: '/products' },
-    { label: 'Заказы производства', value: stats?.productionOrders ?? 0, icon: Factory, bgClass: 'bg-red-500/10', iconClass: 'text-red-500', href: '/production' },
+    { label: 'Пользователи', value: stats?.users ?? 0, icon: Users, bgClass: 'bg-[var(--status-info-solid)]/10', iconClass: 'text-[var(--status-info-solid)]', href: '/admin/users' },
+    { label: 'КП', value: stats?.proposals ?? 0, icon: FileText, bgClass: 'bg-[var(--status-success-solid)]/10', iconClass: 'text-[var(--status-success-solid)]', href: '/proposals' },
+    { label: 'Договоры', value: stats?.contracts ?? 0, icon: Shield, bgClass: 'bg-[var(--status-purple-text)]/10', iconClass: 'text-[var(--status-purple-text)]', href: '/contracts' },
+    { label: 'Контрагенты', value: stats?.organizations ?? 0, icon: Building2, bgClass: 'bg-[var(--status-orange-text)]/10', iconClass: 'text-[var(--status-orange-text)]', href: '/organizations' },
+    { label: 'Товары', value: stats?.products ?? 0, icon: Package, bgClass: 'bg-[var(--status-cyan-text)]/10', iconClass: 'text-[var(--status-cyan-text)]', href: '/products' },
+    { label: 'Заказы производства', value: stats?.productionOrders ?? 0, icon: Factory, bgClass: 'bg-[var(--status-danger-solid)]/10', iconClass: 'text-[var(--status-danger-solid)]', href: '/production' },
   ];
 
   return (

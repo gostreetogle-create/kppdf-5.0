@@ -2,6 +2,8 @@ import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
 import { apiOk, apiError, apiPaginated, parseSearchParams } from '@/lib/api-response';
+import { CreateDocumentTemplateSchema } from '@/lib/validations/document-template';
+import { validateBody } from '@/lib/validations';
 
 export async function GET(request: NextRequest) {
   try {
@@ -34,9 +36,9 @@ export async function POST(request: NextRequest) {
   try {
     await requireAuth();
     const body = await request.json();
-    const { name, description, docTypeId, pageSize, backgroundImage, backgroundOpacity, isDefault, organizationId, blocks } = body;
-
-    if (!name?.trim()) return apiError('Название обязательно', 400);
+    const validation = validateBody(body, CreateDocumentTemplateSchema);
+    if (!validation.success) return validation.error;
+    const { name, description, docTypeId, pageSize, backgroundImage, backgroundOpacity, isDefault, organizationId, blocks } = validation.data;
 
     const template = await prisma.documentTemplate.create({
       data: {
@@ -49,8 +51,8 @@ export async function POST(request: NextRequest) {
         isDefault: !!isDefault,
         organizationId: organizationId || null,
         blocks: blocks ? {
-          create: (Array.isArray(blocks) ? blocks : (blocks.create || [])).map(
-            (b: Record<string, unknown>, i: number) => ({
+          create: blocks.map(
+            (b: { type?: string; title?: string; content?: string; height?: number; showLine?: boolean; settings?: unknown }, i: number) => ({
               type: String(b.type || 'text'),
               order: i,
               title: b.title ? String(b.title) : null,

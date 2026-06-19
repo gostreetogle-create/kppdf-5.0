@@ -1,24 +1,23 @@
 import { prisma } from '@/lib/db';
-import { requireAuth } from '@/lib/auth';
+import { requireAuthPage } from '@/lib/auth-page';
 import { ProductsClient } from './client';
+import { PRODUCT_LIST_QUERY_ARGS, PRODUCT_CATEGORY_LIST_QUERY_ARGS } from '@/lib/types/server-pages';
 
 export default async function ProductsPage() {
-  await requireAuth();
+  await requireAuthPage();
 
   const [products, total, categories] = await Promise.all([
-    prisma.product.findMany({
-      orderBy: { createdAt: 'desc' },
-      take: 20,
-      include: { category: { select: { name: true } } },
-    }),
+    prisma.product.findMany(PRODUCT_LIST_QUERY_ARGS),
     prisma.product.count(),
-    prisma.productCategory.findMany({ orderBy: { sortOrder: 'asc' } }),
+    prisma.productCategory.findMany(PRODUCT_CATEGORY_LIST_QUERY_ARGS),
   ]);
 
   return (
     <ProductsClient
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       initialData={products as any[]}
       initialTotal={total}
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       categories={categories as any[]}
     />
   );

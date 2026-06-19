@@ -64,6 +64,7 @@ export default function GanttPage() {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadData();
   }, [loadData]);
 
@@ -154,7 +155,7 @@ export default function GanttPage() {
                   <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
                     selectedItem.type === 'order'
                       ? 'bg-[var(--primary)]/10 text-[var(--primary)]'
-                      : 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'
+                      : 'bg-[var(--status-info-bg)] text-[var(--status-info-text)]'
                   }`}>
                     {selectedItem.type === 'order' ? 'ЗАКАЗ' : 'ЗАДАЧА'}
                   </span>
@@ -177,7 +178,7 @@ export default function GanttPage() {
                 <h3 className="text-[10px] font-semibold text-[var(--muted-foreground)] uppercase tracking-wider mb-3">Сроки</h3>
                 <div className="space-y-3">
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
+                    <div className="w-8 h-8 rounded-lg bg-[var(--status-purple-bg)] flex items-center justify-center">
                       <Calendar size={14} className="text-purple-600 dark:text-purple-400" />
                     </div>
                     <div>
@@ -186,7 +187,7 @@ export default function GanttPage() {
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                    <div className="w-8 h-8 rounded-lg bg-[var(--status-info-bg)] flex items-center justify-center">
                       <Calendar size={14} className="text-blue-600 dark:text-blue-400" />
                     </div>
                     <div>
@@ -196,23 +197,23 @@ export default function GanttPage() {
                   </div>
                   {selectedItem.actualStart && (
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                      <div className="w-8 h-8 rounded-lg bg-[var(--status-success-bg)] flex items-center justify-center">
                         <Clock size={14} className="text-green-600 dark:text-green-400" />
                       </div>
                       <div>
                         <div className="text-[10px] text-[var(--muted-foreground)]">Фактическое начало</div>
-                        <div className="text-sm font-medium text-green-700 dark:text-green-400">{formatDateTime(selectedItem.actualStart)}</div>
+                        <div className="text-sm font-medium text-[var(--status-success-text)]">{formatDateTime(selectedItem.actualStart)}</div>
                       </div>
                     </div>
                   )}
                   {selectedItem.actualEnd && (
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                      <div className="w-8 h-8 rounded-lg bg-[var(--status-success-bg)] flex items-center justify-center">
                         <Clock size={14} className="text-green-600 dark:text-green-400" />
                       </div>
                       <div>
                         <div className="text-[10px] text-[var(--muted-foreground)]">Фактическое окончание</div>
-                        <div className="text-sm font-medium text-green-700 dark:text-green-400">{formatDateTime(selectedItem.actualEnd)}</div>
+                        <div className="text-sm font-medium text-[var(--status-success-text)]">{formatDateTime(selectedItem.actualEnd)}</div>
                       </div>
                     </div>
                   )}
@@ -246,7 +247,7 @@ export default function GanttPage() {
                 <div className="space-y-3">
                   {selectedItem.assignee && (
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+                      <div className="w-8 h-8 rounded-lg bg-[var(--status-warning-bg)] flex items-center justify-center">
                         <User size={14} className="text-amber-600 dark:text-amber-400" />
                       </div>
                       <div>
@@ -257,7 +258,7 @@ export default function GanttPage() {
                   )}
                   {selectedItem.workCenter && (
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center">
+                      <div className="w-8 h-8 rounded-lg bg-[var(--status-violet-bg)] flex items-center justify-center">
                         <MapPin size={14} className="text-violet-600 dark:text-violet-400" />
                       </div>
                       <div>
@@ -279,7 +280,7 @@ export default function GanttPage() {
                   )}
                   {selectedItem.priority !== undefined && selectedItem.priority > 0 && (
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+                      <div className="w-8 h-8 rounded-lg bg-[var(--status-danger-bg)] flex items-center justify-center">
                         <span className="text-xs font-bold text-red-600 dark:text-red-400">!</span>
                       </div>
                       <div>

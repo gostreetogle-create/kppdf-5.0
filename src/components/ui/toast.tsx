@@ -33,6 +33,7 @@ const variantConfig: Record<ToastVariant, { icon: typeof CheckCircle2; styles: s
 
 function ToastContainer({ toasts, removeToast }: { toasts: Toast[]; removeToast: (id: string) => void }) {
   const [mounted, setMounted] = useState(false);
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { setMounted(true); }, []);
   if (!mounted) return null;
 

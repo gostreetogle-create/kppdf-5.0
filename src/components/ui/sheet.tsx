@@ -38,6 +38,7 @@ export function Sheet({ open, onClose, children, side = 'right', className, clos
 
   useEffect(() => {
     if (open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setMounted(true);
       requestAnimationFrame(() => setVisible(true));
       document.body.style.overflow = 'hidden';

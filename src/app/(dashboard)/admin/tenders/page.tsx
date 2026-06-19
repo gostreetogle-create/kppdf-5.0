@@ -1,19 +1,16 @@
 import { prisma } from '@/lib/db';
-import { requireAuth } from '@/lib/auth';
+import { requireAuthPage } from '@/lib/auth-page';
 import { TendersClient } from './client';
+import { TENDER_LIST_QUERY_ARGS } from '@/lib/types/server-pages';
 
 export default async function TendersPage() {
-  await requireAuth();
+  await requireAuthPage();
 
   const [tenders, total] = await Promise.all([
-    prisma.tender.findMany({
-      orderBy: { createdAt: 'desc' },
-      take: 20,
-    }),
+    prisma.tender.findMany(TENDER_LIST_QUERY_ARGS),
     prisma.tender.count(),
   ]);
 
-  return (
-    <TendersClient initialData={tenders as any[]} initialTotal={total} />
-  );
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return <TendersClient initialData={tenders as any[]} initialTotal={total} />;
 }

@@ -80,6 +80,7 @@ export default function WorkersPage() {
     <CrudPage<Worker>
       title="Сотрудники"
       apiPath="/api/workers"
+      searchId="search-sotrudniki"
       columns={[
         {
           key: 'lastName',

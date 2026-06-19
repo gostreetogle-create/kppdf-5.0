@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { CrudPage } from '@/components/crud-page';
 import { FormField, FormTextarea, Button } from '@/components/ui';
 import { PURCHASE_STATUS, StatusBadge } from '@/lib/constants/statuses';
@@ -87,6 +87,7 @@ export default function PurchasesPage() {
     <CrudPage<PurchaseRequest>
       title="Заявки на закупку"
       apiPath="/api/purchase-requests"
+      searchId="search-zayavki-na-zakupku"
       columns={[
         { key: 'number', label: 'Номер' },
         { key: 'title', label: 'Название' },

@@ -111,6 +111,7 @@ export function RalSelector({ value, onChange, className = '' }: RalSelectorProp
           <div className="p-2 border-b border-[var(--border)]">
             <input
               type="text"
+              id="search-ral"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Поиск по коду или названию..."

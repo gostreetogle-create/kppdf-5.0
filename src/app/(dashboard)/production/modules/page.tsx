@@ -269,6 +269,7 @@ export default function ModulesPage() {
     <CrudPage<ProductModule>
       title="Модули продуктов"
       apiPath="/api/product-modules"
+      searchId="search-moduli-produktov"
       columns={[
         { key: 'name', label: 'Название' },
         { key: 'article', label: 'Артикул', render: (item) => item.article || '—' },

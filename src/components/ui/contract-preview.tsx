@@ -45,7 +45,7 @@ export function ContractPreview({ data }: ContractPreviewProps) {
         {data.items && data.items.length > 0 && (
           <table className="w-full border-collapse">
             <thead>
-              <tr className="bg-gray-100">
+              <tr className="bg-[var(--status-neutral-bg)]">
                 <th className="border p-2 text-left">Наименование</th>
                 <th className="border p-2 text-right">Кол-во</th>
                 <th className="border p-2 text-center">Ед.</th>
@@ -54,7 +54,7 @@ export function ContractPreview({ data }: ContractPreviewProps) {
             </thead>
             <tbody>
               {data.items.map((item, index) => (
-                <tr key={index} className="hover:bg-gray-50">
+                <tr key={index} className="hover:bg-[var(--muted)]/40">
                   <td className="border p-2">{item.name}</td>
                   <td className="border p-2 text-right">{item.quantity}</td>
                   <td className="border p-2 text-center">{item.unit || 'шт'}</td>

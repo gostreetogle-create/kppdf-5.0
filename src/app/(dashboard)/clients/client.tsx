@@ -89,6 +89,7 @@ export function ClientsClient({ initialData, initialTotal }: { initialData: Clie
     <CrudPage<Client>
       title="Клиенты"
       apiPath="/api/clients"
+      searchId="search-klienty"
       initialData={initialData}
       initialTotal={initialTotal}
       columns={[

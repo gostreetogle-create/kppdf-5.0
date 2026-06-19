@@ -1,26 +1,16 @@
 import { prisma } from '@/lib/db';
-import { requireAuth } from '@/lib/auth';
+import { requireAuthPage } from '@/lib/auth-page';
 import { ProposalsClient } from './client';
+import { PROPOSAL_LIST_QUERY_ARGS } from '@/lib/types/server-pages';
 
 export default async function ProposalsPage() {
-  await requireAuth();
+  await requireAuthPage();
 
   const [proposals, total] = await Promise.all([
-    prisma.proposal.findMany({
-      orderBy: { createdAt: 'desc' },
-      take: 20,
-      include: {
-        client: { select: { lastName: true, firstName: true } },
-        items: { select: { total: true } },
-      },
-    }),
+    prisma.proposal.findMany(PROPOSAL_LIST_QUERY_ARGS),
     prisma.proposal.count(),
   ]);
 
-  return (
-    <ProposalsClient
-      initialData={proposals as any[]}
-      initialTotal={total}
-    />
-  );
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return <ProposalsClient initialData={proposals as any[]} initialTotal={total} />;
 }

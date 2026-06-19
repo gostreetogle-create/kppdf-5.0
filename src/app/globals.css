@@ -1,5 +1,21 @@
 @import "tailwindcss";
 
+/*
+ * Tailwind v4 auto-content-detection scans project root for utility classes.
+ * Documentation files (audit-log.md, CLAUDE.md, AGENTS.md, README.md, etc.)
+ * contain placeholder literals like `bg-[var(--X)]` (or `var(--X)` examples)
+ * that would be misinterpreted as candidate class names and generate invalid
+ * CSS rules (`var(--X)` IS valid; any bare `var()` without `--` prefix is invalid).
+ *
+ * The `@source not` directive permanently excludes Markdown docs from the
+ * content scan. This is the structural defense; text-escaping documentation
+ * is cosmetic.
+ *
+ * IMPORTANT: `@source` paths are relative to this CSS file (src/app/globals.css).
+ * Project root is two levels up — `../../`.
+ */
+@source not "../../**/*.md";
+
 :root {
   --background: #fefaf2;
   --foreground: #2d2318;
@@ -43,6 +59,42 @@
   --z-modal: 400;
   --z-toast: 500;
   --z-tooltip: 600;
+
+  /* Status color palette (light theme)
+     Семантические цвета для бейджей статусов, иконок, предупреждений.
+     Каждая пара: -bg (мягкий фон), -text (насыщенный цвет для текста/бордеров).
+     Используются через Tailwind: bg-[var(--status-success-bg)] text-[var(--status-success-text)] */
+  --status-neutral-bg: #f3f4f6;
+  --status-neutral-text: #4b5563;
+  --status-success-bg: #dcfce7;
+  --status-success-text: #15803d;
+  --status-warning-bg: #fef9c3;
+  --status-warning-text: #a16207;
+  --status-danger-bg: #fee2e2;
+  --status-danger-text: #b91c1c;
+  --status-info-bg: #dbeafe;
+  --status-info-text: #1d4ed8;
+  --status-purple-bg: #f3e8ff;
+  --status-purple-text: #7e22ce;
+  --status-cyan-bg: #cffafe;
+  --status-cyan-text: #0e7490;
+  --status-orange-bg: #ffedd5;
+  --status-orange-text: #c2410c;
+  --status-emerald-bg: #d1fae5;
+  --status-emerald-text: #047857;
+  --status-indigo-bg: #e0e7ff;
+  --status-indigo-text: #4338ca;
+  --status-violet-bg: #ede9fe;
+  --status-violet-text: #6d28d9;
+  --status-amber-bg: #fef3c7;
+  --status-amber-text: #b45309;
+
+  /* Solid (vibrant) variants — для важных маркеров, иконок-кнопок, прогресс-баров.
+     Не зависят от темы: всегда насыщенный цвет, хорошо видно на любом фоне. */
+  --status-danger-solid: #dc2626;
+  --status-warning-solid: #d97706;
+  --status-success-solid: #16a34a;
+  --status-info-solid: #2563eb;
 }
 
 [data-theme="dark"] {
@@ -80,6 +132,39 @@
   --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.35), 0 2px 4px -2px rgb(0 0 0 / 0.35);
   --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.35), 0 4px 6px -4px rgb(0 0 0 / 0.35);
   --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.35), 0 8px 10px -6px rgb(0 0 0 / 0.35);
+
+  /* Status color palette (dark theme)
+     Тёмные аналоги: -bg полупрозрачный dark-900, -text — -300 */
+  --status-neutral-bg: rgba(17, 24, 39, 0.3);
+  --status-neutral-text: #d1d5db;
+  --status-success-bg: rgba(20, 83, 45, 0.3);
+  --status-success-text: #86efac;
+  --status-warning-bg: rgba(113, 63, 18, 0.3);
+  --status-warning-text: #fcd34d;
+  --status-danger-bg: rgba(127, 29, 29, 0.3);
+  --status-danger-text: #fca5a5;
+  --status-info-bg: rgba(30, 58, 138, 0.3);
+  --status-info-text: #93c5fd;
+  --status-purple-bg: rgba(88, 28, 135, 0.3);
+  --status-purple-text: #d8b4fe;
+  --status-cyan-bg: rgba(22, 78, 99, 0.3);
+  --status-cyan-text: #67e8f9;
+  --status-orange-bg: rgba(124, 45, 18, 0.3);
+  --status-orange-text: #fdba74;
+  --status-emerald-bg: rgba(6, 78, 59, 0.3);
+  --status-emerald-text: #6ee7b7;
+  --status-indigo-bg: rgba(49, 46, 129, 0.3);
+  --status-indigo-text: #a5b4fc;
+  --status-violet-bg: rgba(76, 29, 149, 0.3);
+  --status-violet-text: #c4b5fd;
+  --status-amber-bg: rgba(120, 53, 15, 0.3);
+  --status-amber-text: #fcd34d;
+
+  /* Solid variants остаются насыщенными и в тёмной теме */
+  --status-danger-solid: #ef4444;
+  --status-warning-solid: #f59e0b;
+  --status-success-solid: #22c55e;
+  --status-info-solid: #3b82f6;
 }
 
 @theme inline {

@@ -2,6 +2,8 @@ import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requireAuth, requireEditor } from '@/lib/auth';
 import { apiOk, apiError } from '@/lib/api-response';
+import { UpdateProductSchema } from '@/lib/validations/product';
+import { validateBody } from '@/lib/validations';
 
 export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -35,10 +37,12 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     await requireEditor();
     const { id } = await params;
     const body = await request.json();
-    const { modules, ...productData } = body;
+    const validation = validateBody(body, UpdateProductSchema);
+    if (!validation.success) return validation.error;
+    const { modules, ...productData } = validation.data;
 
     const item = await prisma.$transaction(async (tx) => {
-      const updated = await tx.product.update({ where: { id }, data: productData });
+      await tx.product.update({ where: { id }, data: productData });
 
       if (modules !== undefined) {
         await tx.moduleMaterial.deleteMany({ where: { module: { productId: id } } });

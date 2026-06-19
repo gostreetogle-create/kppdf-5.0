@@ -107,6 +107,7 @@ export function ProductsClient({ initialData, initialTotal, categories }: { init
     <CrudPage<Product>
       title="Товары"
       apiPath="/api/products"
+      searchId="search-tovary"
       initialData={initialData}
       initialTotal={initialTotal}
       columns={[

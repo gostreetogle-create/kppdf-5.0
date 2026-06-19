@@ -1,17 +1,3 @@
-export interface ApiResponse<T = unknown> {
-  success: boolean;
-  data: T;
-  message?: string;
-}
-
-export interface PaginatedData<T> {
-  items: T[];
-  total: number;
-  page: number;
-  limit: number;
-  totalPages: number;
-}
-
 export type UserRole = 'admin' | 'manager' | 'production' | 'storekeeper' | 'accountant' | 'viewer';
 
 export interface CurrentUser {

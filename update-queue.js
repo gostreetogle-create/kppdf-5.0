@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 const fs = require('fs');
 const q = JSON.parse(fs.readFileSync('agent-queue.json', 'utf-8'));
 

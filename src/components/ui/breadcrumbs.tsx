@@ -42,7 +42,7 @@ export function Breadcrumbs() {
   const items: { label: string; href: string }[] = [];
   let path = '';
 
-  segments.forEach((segment, i) => {
+  segments.forEach((segment) => {
     path += `/${segment}`;
     const label = LABELS[segment] || segment;
     items.push({ label, href: path });

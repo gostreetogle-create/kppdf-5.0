@@ -2,6 +2,8 @@ import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requireAuth, requireEditor } from '@/lib/auth';
 import { apiOk, apiError } from '@/lib/api-response';
+import { UpdateProductModuleSchema } from '@/lib/validations/product-module';
+import { validateBody } from '@/lib/validations';
 
 const include = {
   product: true,
@@ -28,7 +30,9 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     await requireEditor();
     const { id } = await params;
     const body = await request.json();
-    const { workTypes, materials, ...moduleData } = body;
+    const validation = validateBody(body, UpdateProductModuleSchema);
+    if (!validation.success) return validation.error;
+    const { workTypes, materials, ...moduleData } = validation.data;
 
     // Replace nested collections: delete old, create new
     if (workTypes !== undefined) {

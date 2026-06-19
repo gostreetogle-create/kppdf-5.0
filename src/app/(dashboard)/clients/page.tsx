@@ -1,22 +1,16 @@
 import { prisma } from '@/lib/db';
-import { requireAuth } from '@/lib/auth';
+import { requireAuthPage } from '@/lib/auth-page';
 import { ClientsClient } from './client';
+import { CLIENT_LIST_QUERY_ARGS } from '@/lib/types/server-pages';
 
 export default async function ClientsPage() {
-  await requireAuth();
+  await requireAuthPage();
 
-  const clients = await prisma.client.findMany({
-    orderBy: { createdAt: 'desc' },
-    take: 20,
-    include: { organization: { select: { name: true } } },
-  });
+  const [clients, total] = await Promise.all([
+    prisma.client.findMany(CLIENT_LIST_QUERY_ARGS),
+    prisma.client.count(),
+  ]);
 
-  const total = await prisma.client.count();
-
-  return (
-    <ClientsClient
-      initialData={clients as any[]}
-      initialTotal={total}
-    />
-  );
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return <ClientsClient initialData={clients as any[]} initialTotal={total} />;
 }

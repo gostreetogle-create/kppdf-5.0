@@ -1,4 +1,3 @@
-import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
 import { apiOk, apiError } from '@/lib/api-response';

@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { signAccessToken, signRefreshToken, verifyToken, type JwtPayload } from '../auth';
 
 describe('JWT token functions', () => {

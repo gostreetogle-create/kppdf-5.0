@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import { Tabs } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Trash2, Plus, ArrowLeft, Package, Ruler, Wrench, Boxes } from 'lucide-react';
@@ -56,7 +56,6 @@ interface Product {
 
 export default function ProductDetailPage() {
   const params = useParams();
-  const router = useRouter();
   const id = params.id as string;
 
   const [product, setProduct] = useState<Product | null>(null);
@@ -82,6 +81,7 @@ export default function ProductDetailPage() {
   }, [id]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadProduct();
     fetch('/api/work-types?limit=100')
       .then((r) => r.json())

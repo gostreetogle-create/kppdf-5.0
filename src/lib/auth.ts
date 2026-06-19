@@ -2,12 +2,12 @@ import jwt from 'jsonwebtoken';
 import { cookies } from 'next/headers';
 import { prisma } from './db';
 
-// В production JWT_SECRET обязан быть задан через process.env
+// JWT_SECRET обязан быть задан через process.env
 const JWT_SECRET = process.env.JWT_SECRET;
-if (!JWT_SECRET && process.env.NODE_ENV === 'production') {
-  throw new Error('JWT_SECRET must be set in production environment');
+if (!JWT_SECRET) {
+  throw new Error('JWT_SECRET must be set in environment variables');
 }
-const JWT_SECRET_FINAL = JWT_SECRET || 'kppdf-dev-secret-key-change-in-production';
+const JWT_SECRET_FINAL = JWT_SECRET;
 const ACCESS_TOKEN_EXPIRY = '24h';
 const REFRESH_TOKEN_EXPIRY = '7d';
 

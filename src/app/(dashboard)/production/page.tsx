@@ -1,23 +1,16 @@
 import { prisma } from '@/lib/db';
-import { requireAuth } from '@/lib/auth';
+import { requireAuthPage } from '@/lib/auth-page';
 import { ProductionClient } from './client';
+import { PRODUCTION_ORDER_LIST_QUERY_ARGS } from '@/lib/types/server-pages';
 
 export default async function ProductionPage() {
-  await requireAuth();
+  await requireAuthPage();
 
   const [orders, total] = await Promise.all([
-    prisma.productionOrder.findMany({
-      orderBy: { createdAt: 'desc' },
-      take: 20,
-      include: { workType: { select: { name: true } } },
-    }),
+    prisma.productionOrder.findMany(PRODUCTION_ORDER_LIST_QUERY_ARGS),
     prisma.productionOrder.count(),
   ]);
 
-  return (
-    <ProductionClient
-      initialData={orders as any[]}
-      initialTotal={total}
-    />
-  );
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return <ProductionClient initialData={orders as any[]} initialTotal={total} />;
 }

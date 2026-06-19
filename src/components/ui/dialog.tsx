@@ -1,7 +1,6 @@
 'use client';
 
 import { forwardRef, useEffect, useCallback, useState, type ReactNode, type HTMLAttributes } from 'react';
-import { Slot } from '@radix-ui/react-slot';
 import { X } from 'lucide-react';
 import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/lib/utils';
@@ -48,6 +47,7 @@ export function Dialog({
 
   useEffect(() => {
     if (open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setMounted(true);
       document.body.style.overflow = 'hidden';
     } else {
