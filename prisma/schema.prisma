@@ -465,6 +465,9 @@ model ProductionOrder {
   // Cycle 53 (B.1): обратная связь для InventoryMovement.productionOrder.
   inventoryMovements InventoryMovement[]
 
+  // Cycle 56 (B.5): reverse relation to OrderClosing (audit trail).
+  orderClosings OrderClosing[]
+
   @@index([number])
   @@index([status])
   @@index([contractId])
@@ -659,6 +662,14 @@ model OrderClosing {
   notes        String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+
+  // Cycle 56 (B.5): FK relation to ProductionOrder.
+  // Позволяет strict audit-trail "закрытие заказа" ↔ "производственный заказ".
+  // onDelete SetNull: при удалении заказа — closing сохраняется как historical record.
+  productionOrder   ProductionOrder? @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
+  @@index([orderId])
+  @@index([status])
 }
 
 model ReconciliationAct {
