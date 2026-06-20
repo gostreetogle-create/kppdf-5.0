@@ -4,17 +4,19 @@
 // Top compact header: title + cart count + 3 action buttons (PDF preview / PDF download / create proposal).
 
 import { Download, Eye, FileText, AlertCircle } from 'lucide-react';
-import { generateProposalPdf, downloadPdf, type ProposalPdfData } from '@/lib/pdf';
+import { generateProposalPdf, downloadPdf } from '@/lib/pdf';
 import { useProposalEditor } from './editor-provider';
 
 export function EditorHeader() {
   const { state, actions, computed } = useProposalEditor();
+  const data = computed.pdfData;
 
   const handleDownloadPdf = async () => {
-    const data = computed.pdfData();
     if (!data) return;
-    const doc = await generateProposalPdf(data as ProposalPdfData);
-    downloadPdf(doc, `КП-${Date.now()}.pdf`);
+    const doc = await generateProposalPdf(data);
+    // Cycle 45: use data.number (already contains timestamp) instead of fresh
+    // Date.now() to satisfy react-compiler "Cannot call impure function during render".
+    downloadPdf(doc, `${data.number}.pdf`);
   };
 
   return (

@@ -120,7 +120,10 @@ export function ConfigPanel() {
           <div className="absolute z-50 top-full mt-1 w-full bg-[var(--card)] border border-[var(--border)] rounded-md shadow-lg max-h-32 overflow-auto">
             <button
               onClick={() => {
-                actions.setSelectedTemplateId('');
+                // Cycle 45: resetTemplateSelection clears selectedTemplateId +
+                // selectedTemplateData + templateBlocks together (replaces the
+                // former setState-in-effect pattern in use-proposal-editor-state.ts).
+                actions.resetTemplateSelection();
                 actions.setShowTemplateDropdown(false);
               }}
               className="w-full px-2 py-1 text-xs text-left hover:bg-[var(--muted)]"

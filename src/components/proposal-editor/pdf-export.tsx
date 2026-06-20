@@ -4,16 +4,19 @@
 // Uses DocPreview (Tier D, mutable) to render HTML preview of pdf data prior to download/create.
 // Download button generates the real PDF via Tier B (frozen API) generateProposalPdf.
 
-import { generateProposalPdf, downloadPdf, type ProposalPdfData } from '@/lib/pdf';
+import { generateProposalPdf, downloadPdf } from '@/lib/pdf';
 import { DocPreview } from '@/components/ui/doc-preview';
 import { useProposalEditor } from './editor-provider';
 
 export function PdfExport() {
-  const { state, actions, computed } = useProposalEditor();
+  // Cycle 45: drop unused `actions` (was triggering @typescript-eslint/no-unused-vars);
+  // `computed.pdfData` is now a memoized value (was a `() => ...` function — Date.now()
+  // inside hit "Cannot call impure function during render" react-compiler rule).
+  const { state, computed } = useProposalEditor();
 
   if (!state.showPdfPreview) return null;
 
-  const data = computed.pdfData();
+  const data = computed.pdfData;
   if (!data) return null;
 
   const total = data.items.reduce((s, i) => s + i.total, 0);
@@ -23,8 +26,10 @@ export function PdfExport() {
 
   const handleDownload = async () => {
     if (!data) return;
-    const doc = await generateProposalPdf(data as ProposalPdfData);
-    downloadPdf(doc, `КП-${Date.now()}.pdf`);
+    const doc = await generateProposalPdf(data);
+    // Cycle 45: use data.number instead of Date.now() so react-compiler can preserve
+    // manual memoization (no impure function in render-path closure).
+    downloadPdf(doc, `${data.number}.pdf`);
   };
 
   return (

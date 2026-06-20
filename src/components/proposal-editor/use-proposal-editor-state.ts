@@ -12,10 +12,12 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { buildProposalBlocks, getTemplateBlocks } from '@/lib/proposal-block-builder';
+import type { ProposalPdfData } from '@/lib/pdf';
 import type {
   ProposalEditorState,
   ProposalEditorActions,
   ProposalEditorComputed,
+  ProposalEditorFinance,
   Product,
   Category,
   CartSession,
@@ -23,7 +25,6 @@ import type {
   Client,
   DocumentTemplateSummary,
   CartItem,
-  ProposalPdfDataLike,
 } from '@/types/proposal-editor';
 import type { DocBlock, DocumentTemplateData } from '@/types';
 
@@ -55,6 +56,7 @@ export function useProposalEditorState() {
   const [proposalTitle, setProposalTitle] = useState('');
   const [discountPercent, setDiscountPercent] = useState(0);
   const [ralCode, setRalCode] = useState('');
+
 
   // ===== UI flags =====
   const [showSettings, setShowSettings] = useState(false);
@@ -124,13 +126,12 @@ export function useProposalEditorState() {
     load();
   }, []);
 
+  // Cycle 45: empty-selection reset has been lifted to the `resetTemplateSelection`
+  // action (called from config-panel.tsx "— Без шаблона —" button) so the effect
+  // no longer calls setState directly. Effect now only loads data when a template
+  // is selected — fix for `react-hooks/set-state-in-effect`.
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (!selectedTemplateId) {
-      setSelectedTemplateData(null);
-      setTemplateBlocks([]);
-      return;
-    }
+    if (!selectedTemplateId) return;
     fetch(`/api/document-templates/${selectedTemplateId}`)
       .then((r) => r.json())
       .then((d) => {
@@ -150,6 +151,17 @@ export function useProposalEditorState() {
     setShowOrgDropdown(false);
     setShowClientDropdown(false);
     setShowTemplateDropdown(false);
+  }, []);
+
+  /**
+   * Cycle 45: replaces the inline setState-to-null ("— Без шаблона —" handler)
+   * that previously lived inside the template-load useEffect (banned by
+   * `react-hooks/set-state-in-effect`). Called from config-panel.tsx.
+   */
+  const resetTemplateSelection = useCallback(() => {
+    setSelectedTemplateId('');
+    setSelectedTemplateData(null);
+    setTemplateBlocks([]);
   }, []);
 
   const addToCart = useCallback(
@@ -279,6 +291,25 @@ export function useProposalEditorState() {
   );
   const grandTotal = totalAfterDiscount;
 
+  /**
+   * Cycle 45: derived financial bag. Previously each of these 6 numbers was
+   * listed individually in proposalBlocks & pdfData dep arrays (8-11 deps).
+   * Grouping into a single memoized object → proposalBlocks / pdfData drop to
+   * 4-5 deps, which eliminates the React Compiler "Could not preserve manual
+   * memoization" bailout that hit cycle 44.
+   */
+  const finance = useMemo<ProposalEditorFinance>(
+    () => ({
+      subtotal,
+      discountPercent,
+      discountAmount,
+      vatRate: selectedVatRate,
+      vatAmount,
+      grandTotal,
+    }),
+    [subtotal, discountPercent, discountAmount, selectedVatRate, vatAmount, grandTotal],
+  );
+
   const filteredProducts = useMemo(
     () =>
       products.filter((p) => {
@@ -292,45 +323,65 @@ export function useProposalEditorState() {
     [products, searchQuery, filterCategory],
   );
 
+  /**
+   * Cycle 45: proposalBlocks now uses the `finance` derived object (was 9 deps).
+   * Dep array shrunk: 9 → 4. cart?.items is captured as `cartItems` so React
+   * Compiler sees a stable reference instead of an optional chain expression.
+   */
+  const cartItems = cart?.items;
   const proposalBlocks = useMemo(() => {
-    if (templateBlocks.length === 0 || !cart?.items.length) return templateBlocks;
+    if (templateBlocks.length === 0 || !cartItems?.length) return templateBlocks;
     return buildProposalBlocks({
       templateBlocks,
-      cartItems: cart.items.map((item) => ({
+      cartItems: cartItems.map((item) => ({
         product: { name: item.product.name, sku: item.product.sku, unit: item.product.unit },
         quantity: item.quantity,
         priceSnapshot: item.priceSnapshot,
         markupPercent: item.markupPercent,
       })),
-      finance: {
-        subtotal,
-        discountPercent,
-        discountAmount,
-        vatRate: selectedVatRate,
-        vatAmount,
-        grandTotal,
-      },
+      finance,
       clientMarkup: selectedClient?.personalMarkupPercent,
     });
-  }, [templateBlocks, cart?.items, subtotal, discountPercent, discountAmount, selectedVatRate, vatAmount, grandTotal, selectedClient?.personalMarkupPercent]);
+  }, [templateBlocks, cartItems, finance, selectedClient?.personalMarkupPercent]);
 
-  const pdfData = useCallback((): ProposalPdfDataLike | null => {
+  /**
+   * Cycle 45: lazy useState initializer pattern. `Date.now()` and `new Date()`
+   * are flagged by `react-compiler/react-compiler` ("Impure function call
+   * during render"), but React invokes the initializer ONCE at mount outside
+   * the render body proper, so the date snapshot is captured here without
+   * forcing the compiler to bail out. The proposal number / createdAt are
+   * stable for the editor session (acceptable: matches the original monolith
+   * "fresh-on-mount" semantics — preview shows a snapshot timestamp).
+   */
+  const [proposalMeta] = useState(() => ({
+    number: 'ПРОЕКТ-' + String(Date.now()).slice(-6),
+    createdAt: new Date().toISOString(),
+  }));
+
+  /**
+   * Cycle 45: pdfData converted from `() => ProposalPdfDataLike | null`
+   * (function called during render with Date.now() impurity) to a memoized
+   * `ProposalPdfData | null` value.
+   *  - Date.now() / new Date() hoisted to proposalMeta (lazy useState initializer).
+   *  - Uses `selectedOrg` / `selectedClient` (already memoized) instead of
+   *    re-scanning `organizations` / `clients` arrays.
+   *  - Dep array shrunk: 11 → 7 (incl. stable proposalMeta refs).
+   */
+  const pdfData = useMemo<ProposalPdfData | null>(() => {
     if (!cart || cart.items.length === 0) return null;
-    const org = organizations.find((o) => o.id === selectedOrgId);
-    const client = clients.find((c) => c.id === selectedClientId);
     return {
-      number: 'ПРОЕКТ-' + String(Date.now()).slice(-6),
+      number: proposalMeta.number,
       title: proposalTitle || 'Коммерческое предложение',
       status: 'draft',
-      client: client
+      client: selectedClient
         ? {
-            lastName: client.lastName,
-            firstName: client.firstName,
-            patronymic: client.patronymic || undefined,
-            phone: client.phone,
+            lastName: selectedClient.lastName,
+            firstName: selectedClient.firstName,
+            patronymic: selectedClient.patronymic || undefined,
+            phone: selectedClient.phone,
           }
         : undefined,
-      organization: org ? { name: org.name, shortName: org.shortName } : undefined,
+      organization: selectedOrg ? { name: selectedOrg.name, shortName: selectedOrg.shortName } : undefined,
       items: cart.items.map((item) => ({
         name: item.product.name,
         quantity: item.quantity,
@@ -342,26 +393,14 @@ export function useProposalEditorState() {
         ),
       })),
       markupPercent: 0,
-      createdAt: new Date().toISOString(),
-      discountPercent,
-      discountAmount,
-      vatRate: selectedVatRate,
-      vatAmount,
-      grandTotal,
+      createdAt: proposalMeta.createdAt,
+      discountPercent: finance.discountPercent,
+      discountAmount: finance.discountAmount,
+      vatRate: finance.vatRate,
+      vatAmount: finance.vatAmount,
+      grandTotal: finance.grandTotal,
     };
-  }, [
-    cart,
-    organizations,
-    clients,
-    selectedOrgId,
-    selectedClientId,
-    proposalTitle,
-    discountPercent,
-    discountAmount,
-    selectedVatRate,
-    vatAmount,
-    grandTotal,
-  ]);
+  }, [cart, finance, selectedOrg, selectedClient, proposalTitle, proposalMeta.number, proposalMeta.createdAt]);
 
   // ========================================
   // Bundle
@@ -413,6 +452,7 @@ export function useProposalEditorState() {
     setShowClientDropdown,
     setShowTemplateDropdown,
     resetDropdowns,
+    resetTemplateSelection,
     addToCart,
     updateQuantity,
     removeItem,

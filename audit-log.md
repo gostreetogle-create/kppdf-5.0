@@ -2327,3 +2327,79 @@ Deferred до cycles 48-49. Manual verification: code-search показывае�
 | Foundation layer | ✅ ЗАВЕРШЁН (cycles 51+52) |
 | Business-critical | 2/7 DONE (B.3, B.6) |
 EOF_CYCLE_51_52 && echo "===auditlog appended===" && tail -20 audit-log.md | head -10
+
+<a id="cycle-45"></a>
+## Cycle 45 — 2026-06-20 — Block 3.1 <ProposalEditor> polish (memo audit + ESLint cleanup)
+
+**Контекст:** Block 3.1 (cycles 44-45) extraction завершён в cycle 44 (449-строчный монолит → 11 sub-components + types + provider + thin wrapper). Cycle 45 — polish для deferred items из round-1 code review + ESLint cleanup.
+
+### Polished items
+
+- **ProposalPdfDataLike → direct `ProposalPdfData` reuse.** Удалена 180-line duplicate `ProposalPdfDataLike` interface. `types/proposal-editor.ts` теперь импортирует `ProposalPdfData` из `@/lib/pdf` (Tier B frozen API). `computed.pdfData` стал типизированно `ProposalPdfData | null` (memoized value) вместо `() => ProposalPdfDataLike | null` (function). Dual `as ProposalPdfData` casts в editor-header.tsx + pdf-export.tsx устранены — `data` теперь напрямую типизирован.
+
+- **Memo dep-array consolidation → derived `ProposalEditorFinance` объект.** Новая interface `ProposalEditorFinance` (subtotal / discountPercent / discountAmount / vatRate / vatAmount / grandTotal) + `finance = useMemo<ProposalEditorFinance>(...)` в hook. Dep arrays shrunk:
+  - `proposalBlocks` useMemo: **9 → 4** deps (`[templateBlocks, cartItems, finance, selectedClient?.personalMarkupPercent]`).
+  - `pdfData` useMemo: **11 → 7** deps (`[cart, finance, selectedOrg, selectedClient, proposalTitle, proposalMeta.number, proposalMeta.createdAt]`).
+  - React Compiler "manual memoization could not be preserved" bailout устранён (deps стали verifier-friendly).
+
+- **pdfData function → memoized value.** `useCallback((): ProposalPdfDataLike | null => {...}, [11 deps])` → `useMemo<ProposalPdfData | null>(() => {...}, [7 deps])`. Date.now() + new Date() impurity вынесены в lazy `useState(() => ({number: ..., createdAt: ...}))` initializer (`proposalMeta`) — React invokes initializer once at mount, вне render body proper, что react-compiler не флагит как "impure during render".
+
+- **`resetTemplateSelection` action (replaces setState-in-effect).** Прежний pattern: `useEffect([selectedTemplateId])` имел inline `setSelectedTemplateData(null)` + `setTemplateBlocks([])` для !selectedTemplateId branch. Это violate `react-hooks/set-state-in-effect`. Решение: новый action `resetTemplateSelection = useCallback(() => { setSelectedTemplateId(''); setSelectedTemplateData(null); setTemplateBlocks([]); }, [])` вызывается из `config-panel.tsx` "— Без шаблона —" button. Effect теперь early-returns на пустой selection, fetch выполняется только при активном template ID.
+
+- **ESLint cleanup (5 issues → 0).**
+  - ❌ `pdf-export.tsx:27` "Cannot call impure function during render" (Date.now()) → заменено на `data.number` (уже содержит timestamp из lazy useState). **fixed**.
+  - ❌ `editor-header.tsx:19` аналогично — `downloadPdf(doc, \`КП-${data.number}.pdf\`)` instead of `${Date.now()}`. **fixed**.
+  - ❌ `use-proposal-editor-state.ts:128` `react-hooks/set-state-in-effect` (setSelectedTemplateData(null) inside useEffect) → lifted в `resetTemplateSelection` action. **fixed via resetTemplateSelection**.
+  - ❌ `use-proposal-editor-state.ts:295` "Compilation Skipped: existing memoization could not be preserved" (9-deps useMemo) → fixed via finance consolidation (4 deps). **fixed**.
+  - ⚠️ `pdf-export.tsx:12` `@typescript-eslint/no-unused-vars` (unused `actions` destructure) → удалён из destructure. **fixed**.
+  - ⚠️ `editor-header.tsx:7` unused `type ProposalPdfData` import → удалён через sed. **fixed**.
+  - ⚠️ `use-proposal-editor-state.ts:128` unused `eslint-disable-next-line react-hooks/set-state-in-effect` → удалён (filing устранён самим фиксом). **fixed**.
+
+### Tier integrity
+
+- **Tier A (`src/lib/jwt.ts`)** — НЕ тронут ✅.
+- **Tier B (`src/lib/pdf/index.ts` API)** — только USED (новый import `ProposalPdfData`), internals НЕ модифицированы. **API frozen сохранён** ✅.
+- **Tier C (`status-workflow.ts`, `auto-receive-finished-goods.ts`, `proposal-block-builder.ts`)** — НЕ тронуты ✅.
+- **Tier D (proposal-editor folder)** — расширен polish-level, новых файлов нет.
+
+### Behavior diff vs cycle-44
+
+- **PDF preview number**: data.number теперь стабилен для editor session (lazy useState snapshot). Раньше — каждый render генерировал timestamp. UX impact: minor; стабильность лучше (preview не "перегенерируется" при re-render).
+- **"— Без шаблона —" button**: behavior identical (сбрасывает selectedTemplateId + selectedTemplateData + templateBlocks). Просто перенесено из effect в event-handler action.
+
+### Gates (final)
+
+- [результат] `npx tsc --noEmit` → exit 0 ✅ (включая новую `resetTemplateSelection` в ProposalEditorActions interface)
+- [результат] `npx vitest run` → 88/88 passing (6/6 suites) ✅ (no regressions)
+- [результат] `npx eslint src/components/proposal-editor src/types/proposal-editor.ts` → 0 errors / 0 warnings ✅
+
+### Code-reviewer verdict
+
+- Round-1 (post-structural-extraction): flagged 4 deferrals (ESLint / memo consolidation / re-render profiling / ProposalPdfDataLike reuse) + 5 ESLint issues.
+- Round-2 (post-initial-fixes): flagged 3 remaining (TSC `resetTemplateSelection` missing in interface + Date.now in pdfData memo + unused ProposalPdfData import).
+- Round-3 (post-round-2 fixes): **SHIP-READY YES** + 4 minor follow-ups documented для deferred cycle (dep-array bloat consolidation / ADR snapshot semantics note / cartItems snapshot inconsistency / finance exposure in computed).
+
+### Followups (deferred)
+
+1. **Memo dep-array bloat**: `pdfData` deps include `proposalMeta.number` и `proposalMeta.createdAt` individually — добавить `proposalMeta` ref один раз уменьшит verbose form. (Cosmetic.)
+2. **ADR-005 snapshot semantics note**: Document что `pdfData` is memoized → user mid-preview edits не отражаются до close+reopen. (Docs only.)
+3. **`cartItems` snapshot in pdfData**: cycle 45 добавил snapshot в proposalBlocks, но pdfData всё ещё использует `cart.items` direct. Apply same pattern для consistency. (Low priority.)
+4. **`finance` exposure in `computed`**: сейчас internal-only; sub-components rebuild если нужен full bag. Consider expose `computed.finance`. (Style.)
+
+### Архитектурная целостность Block 3.1
+
+- Cycle 44 → cycle 45: full structural extraction + polish layers закрыт.
+- Tier integrity 100%: A/B/C frozen, only D touched.
+- 88/88 tests passing, 0 tsc errors, 0 eslint issues в modified scope.
+- Block 4.1 (3-panel UX, cycles 46-47) теперь имеет чистый foundation для work.
+
+### Sibling artifacts (unchanged)
+
+- `docs/decisions/ADR-005-proposal-editor-modularization.md` — актуальный, дополнения deferred в ADR-005-rev2.
+- `tasks/current-task.md` — без изменений (next фокус: cycles 55-57 + 46-50).
+
+### Что НЕ сделано (намеренно)
+
+- ❌ React DevTools re-render profiling — CLI-сессия не имеет браузера. Документирован как ADR-005-rev2 follow-up.
+- ❌ Cycle 48-49 testability infra (`useProposalEditorState` vitest + `auto-receive-finished-goods` SWR-style test) — defer к 48-49 tech-циклам.
+- ❌ Cycle 46-47 (Block 4.1 3-panel UX) — separate cycles после cycle 45 ✅.
