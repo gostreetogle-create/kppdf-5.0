@@ -25,7 +25,7 @@
 
 Перед изменением **любого файла** агент обязан:
 
-1. Открыть [`STABLE-MODULES.md`](../STABLE-MODULES.md).
+1. Открыть [`STABLE-MODULES.md`](./operations/STABLE-MODULES.md).
 2. Проверить, не находится ли файл в списке **Tier A (стабильные)**.
 3. Если файл в **Tier B (API frozen)** — соблюдать ограничения API (см. STABLE-MODULES.md).
 4. Если файл **не в списке** — это Tier C/D/обычный код, можно менять свободно.
@@ -249,13 +249,18 @@ git commit -m "cycle-42-43: Block 3.2 — Proposal versioning, part 2 (helper + 
 
 ## Связанные документы
 
-- [`STABLE-MODULES.md`](../STABLE-MODULES.md) — реестр стабильных модулей.
-- [`docs/decisions/ADR-001-architecture-boundaries.md`](decisions/ADR-001-architecture-boundaries.md) — фиксация tech stack.
-- [`audit-tasks.md`](../audit-tasks.md) — технический план (cycles 39-50).
-- [`audit-tasks-business.md`](../audit-tasks-business.md) — бизнес-план (cycles 51-58).
-- [`discussion.md`](../discussion.md) — техническая дискуссия агентов.
-- [`discussion-business-logic.md`](../discussion-business-logic.md) — бизнес-дискуссия.
-- [`CURRENT-CHECKLIST.md`](../CURRENT-CHECKLIST.md) — live статусы циклов.
+- [`STABLE-MODULES.md`](./operations/STABLE-MODULES.md) — реестр стабильных модулей.
+- [`docs/decisions/001-architecture-boundaries.md`](./decisions/001-architecture-boundaries.md) — фиксация tech stack (⚠️ имя файла без префикса `ADR-`).
+- [`audit-tasks.md`](./operations/audit-tasks.md) — технический план (cycles 39-50).
+- [`audit-tasks-business.md`](./operations/audit-tasks-business.md) — бизнес-план (cycles 51-58).
+- [`discussion.md`](./process/discussion.md) — техническая дискуссия агентов.
+- [`discussion-business-logic.md`](./process/discussion-business-logic.md) — бизнес-дискуссия.
+- [`CURRENT-CHECKLIST.md`](./operations/CURRENT-CHECKLIST.md) — live статусы циклов.
+- [`AUDIT-REVIEW.md`](./analysis/AUDIT-REVIEW.md) — полный аудит-отчёт.
+- [`BUSINESS-LOGIC.md`](./domain/BUSINESS-LOGIC.md) — бизнес-логика и workflow.
+- [`SPEC.md`](./spec/SPEC.md) — продуктовая спецификация.
+
+> 📚 **Навигация по всем документам** — [`docs/README.md`](./README.md) (одностраничный навигатор).
 
 ---
 
