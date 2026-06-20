@@ -16,11 +16,11 @@ interface InventorFile {
 }
 
 const FILE_ICONS: Record<string, { icon: React.ElementType; color: string }> = {
-  dwg: { icon: FileDown, color: 'text-blue-500' },
-  dxf: { icon: FileDown, color: 'text-green-500' },
-  pdf: { icon: FileText, color: 'text-red-500' },
-  ipt: { icon: FileImage, color: 'text-purple-500' },
-  iam: { icon: FileImage, color: 'text-orange-500' },
+  dwg: { icon: FileDown, color: 'text-info' },
+  dxf: { icon: FileDown, color: 'text-success' },
+  pdf: { icon: FileText, color: 'text-destructive' },
+  ipt: { icon: FileImage, color: 'text-primary' },
+  iam: { icon: FileImage, color: 'text-warning' },
 };
 
 export default function InventorFilesPage() {
@@ -144,7 +144,7 @@ export default function InventorFilesPage() {
             </thead>
             <tbody className="divide-y divide-[var(--border)]">
               {items.map((item) => {
-                const fileIcon = FILE_ICONS[item.fileType] || { icon: FileDown, color: 'text-gray-500' };
+                const fileIcon = FILE_ICONS[item.fileType] || { icon: FileDown, color: 'text-muted-foreground' };
                 const Icon = fileIcon.icon;
                 return (
                   <tr key={item.id} className="hover:bg-[var(--muted)]/20 transition-colors">
@@ -172,18 +172,18 @@ export default function InventorFilesPage() {
       </div>
 
       {showDialog && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={() => setShowDialog(false)}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center glass-overlay" onClick={() => setShowDialog(false)}>
           <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl shadow-xl p-6 w-full max-w-md mx-4" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-lg font-semibold mb-4">{editItem ? 'Редактировать' : 'Добавить'} файл</h3>
             {error && <div className="mb-3 p-2 rounded-lg bg-[var(--destructive)]/10 text-[var(--destructive)] text-sm">{error}</div>}
             <div className="space-y-3">
               <div>
                 <label className="text-xs font-medium text-[var(--muted-foreground)]">Имя файла *</label>
-                <input type="text" value={form.filename} onChange={(e) => setForm({ ...form, filename: e.target.value })} className="w-full h-9 px-3 mt-1 rounded-lg border border-[var(--input)] bg-[var(--background)] text-sm" />
+                <input type="text" value={form.filename} onChange={(e) => setForm({ ...form, filename: e.target.value })} className="w-full h-9 px-3 mt-1 rounded-lg border border-[var(--input)] bg-[var(--background)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ring)]" />
               </div>
               <div>
                 <label className="text-xs font-medium text-[var(--muted-foreground)]">Тип</label>
-                <select value={form.fileType} onChange={(e) => setForm({ ...form, fileType: e.target.value })} className="w-full h-9 px-3 mt-1 rounded-lg border border-[var(--input)] bg-[var(--background)] text-sm appearance-none">
+                <select value={form.fileType} onChange={(e) => setForm({ ...form, fileType: e.target.value })} className="w-full h-9 px-3 mt-1 rounded-lg border border-[var(--input)] bg-[var(--background)] text-sm appearance-none focus:outline-none focus:ring-2 focus:ring-[var(--ring)]">
                   <option value="dwg">DWG</option>
                   <option value="dxf">DXF</option>
                   <option value="pdf">PDF</option>
@@ -193,11 +193,11 @@ export default function InventorFilesPage() {
               </div>
               <div>
                 <label className="text-xs font-medium text-[var(--muted-foreground)]">URL</label>
-                <input type="text" value={form.url} onChange={(e) => setForm({ ...form, url: e.target.value })} placeholder="https://..." className="w-full h-9 px-3 mt-1 rounded-lg border border-[var(--input)] bg-[var(--background)] text-sm" />
+                <input type="text" value={form.url} onChange={(e) => setForm({ ...form, url: e.target.value })} placeholder="https://..." className="w-full h-9 px-3 mt-1 rounded-lg border border-[var(--input)] bg-[var(--background)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ring)]" />
               </div>
               <div>
                 <label className="text-xs font-medium text-[var(--muted-foreground)]">Описание</label>
-                <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={2} className="w-full px-3 py-2 mt-1 rounded-lg border border-[var(--input)] bg-[var(--background)] text-sm resize-none" />
+                <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={2} className="w-full px-3 py-2 mt-1 rounded-lg border border-[var(--input)] bg-[var(--background)] text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[var(--ring)]" />
               </div>
             </div>
             <div className="flex justify-end gap-2 mt-6">

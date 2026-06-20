@@ -129,7 +129,7 @@ export default function ContractDetailPage() {
   if (!contract) {
     return (
       <div className="text-center py-12">
-        <p className="text-gray-500">Договор не найден</p>
+        <p className="text-muted-foreground">Договор не найден</p>
         <button
           onClick={() => router.push('/contracts')}
           className="mt-4 text-[var(--primary)] hover:underline"
@@ -168,7 +168,7 @@ export default function ContractDetailPage() {
           </button>
           <div>
             <h1 className="text-2xl font-bold text-[var(--foreground)]">{contract.title}</h1>
-            <p className="text-sm text-gray-500">№ {contract.number}</p>
+            <p className="text-sm text-muted-foreground">№ {contract.number}</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -205,20 +205,20 @@ export default function ContractDetailPage() {
         <div className="bg-[var(--status-emerald-bg)] border border-[var(--status-emerald-text)] rounded-xl p-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-full bg-[var(--status-emerald-bg)] flex items-center justify-center">
-              <Factory size={16} className="text-emerald-600 dark:text-emerald-400" />
+              <Factory size={16} className="text-success" />
             </div>
             <div>
-              <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">
+              <p className="text-sm font-semibold text-success">
                 Производственный заказ №{convertedOrder.number} создан
               </p>
-              <p className="text-xs text-emerald-600 dark:text-emerald-400">
+              <p className="text-xs text-success">
                 Заказ передан в производство. Статус договора обновлён на «Активно».
               </p>
             </div>
           </div>
           <button
             onClick={() => router.push('/production')}
-            className="flex items-center gap-1.5 h-8 px-4 rounded-lg bg-emerald-600 text-white text-xs font-semibold hover:bg-emerald-700 transition-colors"
+            className="flex items-center gap-1.5 h-8 px-4 rounded-lg bg-success text-success-foreground text-xs font-semibold hover:opacity-90 transition-colors"
           >
             Открыть заказы
           </button>
@@ -228,8 +228,8 @@ export default function ContractDetailPage() {
       {/* Error banner */}
       {convertError && (
         <div className="bg-[var(--status-danger-bg)] border border-[var(--status-danger-text)] rounded-xl p-3 flex items-center gap-2">
-          <span className="text-sm text-red-600 dark:text-red-400">{convertError}</span>
-          <button onClick={() => setConvertError('')} className="ml-auto text-red-400 hover:text-red-600">×</button>
+          <span className="text-sm text-destructive">{convertError}</span>
+          <button onClick={() => setConvertError('')} className="ml-auto text-muted-foreground hover:text-destructive">×</button>
         </div>
       )}
 
@@ -239,7 +239,7 @@ export default function ContractDetailPage() {
             <h2 className="text-lg font-semibold mb-4">Информация</h2>
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
-                <p className="text-gray-500">Заказчик</p>
+                <p className="text-muted-foreground">Заказчик</p>
                 <p className="font-medium">
                   {contract.client
                     ? `${contract.client.lastName} ${contract.client.firstName}`
@@ -247,18 +247,18 @@ export default function ContractDetailPage() {
                 </p>
               </div>
               <div>
-                <p className="text-gray-500">Сумма</p>
+                <p className="text-muted-foreground">Сумма</p>
                 <p className="font-medium">{contract.totalAmount.toLocaleString('ru-RU')} ₽</p>
               </div>
               <div>
-                <p className="text-gray-500">Создан</p>
+                <p className="text-muted-foreground">Создан</p>
                 <p className="font-medium">
                   {new Date(contract.createdAt).toLocaleDateString('ru-RU')}
                 </p>
               </div>
               {contract.signedAt && (
                 <div>
-                  <p className="text-gray-500">Подписан</p>
+                  <p className="text-muted-foreground">Подписан</p>
                   <p className="font-medium">
                     {new Date(contract.signedAt).toLocaleDateString('ru-RU')}
                   </p>
@@ -266,7 +266,7 @@ export default function ContractDetailPage() {
               )}
               {contract.expiresAt && (
                 <div>
-                  <p className="text-gray-500">Действует до</p>
+                  <p className="text-muted-foreground">Действует до</p>
                   <p className="font-medium">
                     {new Date(contract.expiresAt).toLocaleDateString('ru-RU')}
                   </p>
@@ -275,7 +275,7 @@ export default function ContractDetailPage() {
             </div>
             {contract.notes && (
               <div className="mt-4 pt-4 border-t border-[var(--border)]">
-                <p className="text-gray-500 text-sm">Примечания</p>
+                <p className="text-muted-foreground text-sm">Примечания</p>
                 <p className="mt-1 text-sm">{contract.notes}</p>
               </div>
             )}
@@ -295,7 +295,7 @@ export default function ContractDetailPage() {
                 </thead>
                 <tbody>
                   {contract.items.map((item, index) => (
-                    <tr key={index} className="border-b border-[var(--border)] last:border-0">
+                    <tr key={index} className="border-b border-[var(--border)] last:border-0 hover:bg-[var(--muted)]/20 transition-colors">
                       <td className="py-2">{item.name}</td>
                       <td className="text-right py-2">{item.quantity} {item.unit || 'шт'}</td>
                       <td className="text-right py-2">{item.unitPrice.toLocaleString('ru-RU')} ₽</td>

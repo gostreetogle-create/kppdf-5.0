@@ -179,7 +179,7 @@ export default function GanttPage() {
                 <div className="space-y-3">
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-lg bg-[var(--status-purple-bg)] flex items-center justify-center">
-                      <Calendar size={14} className="text-purple-600 dark:text-purple-400" />
+                      <Calendar size={14} className="text-primary" />
                     </div>
                     <div>
                       <div className="text-[10px] text-[var(--muted-foreground)]">Плановое начало</div>
@@ -188,7 +188,7 @@ export default function GanttPage() {
                   </div>
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-lg bg-[var(--status-info-bg)] flex items-center justify-center">
-                      <Calendar size={14} className="text-blue-600 dark:text-blue-400" />
+                      <Calendar size={14} className="text-info" />
                     </div>
                     <div>
                       <div className="text-[10px] text-[var(--muted-foreground)]">Плановое окончание</div>
@@ -198,7 +198,7 @@ export default function GanttPage() {
                   {selectedItem.actualStart && (
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-lg bg-[var(--status-success-bg)] flex items-center justify-center">
-                        <Clock size={14} className="text-green-600 dark:text-green-400" />
+                        <Clock size={14} className="text-success" />
                       </div>
                       <div>
                         <div className="text-[10px] text-[var(--muted-foreground)]">Фактическое начало</div>
@@ -209,7 +209,7 @@ export default function GanttPage() {
                   {selectedItem.actualEnd && (
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-lg bg-[var(--status-success-bg)] flex items-center justify-center">
-                        <Clock size={14} className="text-green-600 dark:text-green-400" />
+                        <Clock size={14} className="text-success" />
                       </div>
                       <div>
                         <div className="text-[10px] text-[var(--muted-foreground)]">Фактическое окончание</div>
@@ -248,7 +248,7 @@ export default function GanttPage() {
                   {selectedItem.assignee && (
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-lg bg-[var(--status-warning-bg)] flex items-center justify-center">
-                        <User size={14} className="text-amber-600 dark:text-amber-400" />
+                        <User size={14} className="text-warning" />
                       </div>
                       <div>
                         <div className="text-[10px] text-[var(--muted-foreground)]">Исполнитель</div>
@@ -259,7 +259,7 @@ export default function GanttPage() {
                   {selectedItem.workCenter && (
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-lg bg-[var(--status-violet-bg)] flex items-center justify-center">
-                        <MapPin size={14} className="text-violet-600 dark:text-violet-400" />
+                        <MapPin size={14} className="text-primary" />
                       </div>
                       <div>
                         <div className="text-[10px] text-[var(--muted-foreground)]">Рабочий центр</div>
@@ -269,8 +269,8 @@ export default function GanttPage() {
                   )}
                   {selectedItem.workType && (
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-teal-100 dark:bg-teal-900/30 flex items-center justify-center">
-                        <FileText size={14} className="text-teal-600 dark:text-teal-400" />
+                      <div className="w-8 h-8 rounded-lg bg-[var(--status-info-bg)] flex items-center justify-center">
+                        <FileText size={14} className="text-info" />
                       </div>
                       <div>
                         <div className="text-[10px] text-[var(--muted-foreground)]">Тип работы</div>
@@ -281,7 +281,7 @@ export default function GanttPage() {
                   {selectedItem.priority !== undefined && selectedItem.priority > 0 && (
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-lg bg-[var(--status-danger-bg)] flex items-center justify-center">
-                        <span className="text-xs font-bold text-red-600 dark:text-red-400">!</span>
+                        <span className="text-xs font-bold text-destructive">!</span>
                       </div>
                       <div>
                         <div className="text-[10px] text-[var(--muted-foreground)]">Приоритет</div>

@@ -110,7 +110,7 @@ export default function ProposalDetailPage() {
   if (!proposal) {
     return (
       <div className="text-center py-12">
-        <p className="text-gray-500">Предложение не найдено</p>
+        <p className="text-muted-foreground">Предложение не найдено</p>
         <button
           onClick={() => router.push('/proposals')}
           className="mt-4 text-[var(--primary)] hover:underline"
@@ -170,7 +170,7 @@ export default function ProposalDetailPage() {
           </button>
           <div>
             <h1 className="text-2xl font-bold text-[var(--foreground)]">{proposal.title}</h1>
-            <p className="text-sm text-gray-500 flex items-center gap-2">
+            <p className="text-sm text-muted-foreground flex items-center gap-2">
               № {proposal.number}
               {/* Cycle 43 — version badge */}
               {proposal.version > 1 && (
@@ -229,7 +229,7 @@ export default function ProposalDetailPage() {
             <h2 className="text-lg font-semibold mb-4">Информация</h2>
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
-                <p className="text-gray-500">Клиент</p>
+                <p className="text-muted-foreground">Клиент</p>
                 <p className="font-medium">
                   {proposal.client
                     ? `${proposal.client.lastName} ${proposal.client.firstName}`
@@ -237,18 +237,18 @@ export default function ProposalDetailPage() {
                 </p>
               </div>
               <div>
-                <p className="text-gray-500">Наценка</p>
+                <p className="text-muted-foreground">Наценка</p>
                 <p className="font-medium">{proposal.markupPercent || 0}%</p>
               </div>
               <div>
-                <p className="text-gray-500">Создано</p>
+                <p className="text-muted-foreground">Создано</p>
                 <p className="font-medium">
                   {new Date(proposal.createdAt).toLocaleDateString('ru-RU')}
                 </p>
               </div>
               {proposal.validUntil && (
                 <div>
-                  <p className="text-gray-500">Действует до</p>
+                  <p className="text-muted-foreground">Действует до</p>
                   <p className="font-medium">
                     {new Date(proposal.validUntil).toLocaleDateString('ru-RU')}
                   </p>
@@ -257,7 +257,7 @@ export default function ProposalDetailPage() {
             </div>
             {proposal.notes && (
               <div className="mt-4 pt-4 border-t border-[var(--border)]">
-                <p className="text-gray-500 text-sm">Примечания</p>
+                <p className="text-muted-foreground text-sm">Примечания</p>
                 <p className="mt-1 text-sm">{proposal.notes}</p>
               </div>
             )}
@@ -277,7 +277,7 @@ export default function ProposalDetailPage() {
                 </thead>
                 <tbody>
                   {proposal.items.map((item, index) => (
-                    <tr key={index} className="border-b border-[var(--border)] last:border-0">
+                    <tr key={index} className="border-b border-[var(--border)] last:border-0 hover:bg-[var(--muted)]/50 transition-colors">
                       <td className="py-2">{item.name}</td>
                       <td className="text-right py-2">{item.quantity} {item.unit || 'шт'}</td>
                       <td className="text-right py-2">{item.unitPrice.toLocaleString('ru-RU')} ₽</td>

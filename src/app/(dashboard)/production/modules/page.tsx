@@ -196,7 +196,7 @@ function ModuleForm({ item, onClose }: { item: ProductModule | null; onClose: ()
                 setWorkTypes(updated);
               }} className="w-full px-2 py-1.5 rounded border border-[var(--input)] bg-[var(--background)] text-[var(--foreground)] text-xs focus:outline-none focus:ring-1 focus:ring-[var(--ring)]" min={0} step="0.5" />
             </div>
-            <button type="button" onClick={() => removeWorkType(idx)} className="p-1.5 text-[var(--muted-foreground)] hover:text-red-500 transition-colors">
+            <button type="button" onClick={() => removeWorkType(idx)} className="p-1.5 text-[var(--muted-foreground)] hover:text-destructive transition-colors">
               <Trash2 className="h-4 w-4" />
             </button>
           </div>
@@ -247,7 +247,7 @@ function ModuleForm({ item, onClose }: { item: ProductModule | null; onClose: ()
                 setMaterials(updated);
               }} className="w-4 h-4 rounded border-[var(--input)] text-[var(--primary)] focus:ring-[var(--ring)]" />
             </label>
-            <button type="button" onClick={() => removeMaterial(idx)} className="p-1 text-[var(--muted-foreground)] hover:text-red-500 transition-colors">
+            <button type="button" onClick={() => removeMaterial(idx)} className="p-1 text-[var(--muted-foreground)] hover:text-destructive transition-colors">
               <Trash2 className="h-3.5 w-3.5" />
             </button>
           </div>

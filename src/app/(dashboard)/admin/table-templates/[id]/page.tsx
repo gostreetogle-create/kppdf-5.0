@@ -311,9 +311,9 @@ function SortableColumnChip({
               <div className="text-[10px] text-[var(--muted-foreground)] mb-2">Значение по умолчанию:</div>
               <div className="h-9 px-3 rounded-xl bg-[var(--muted)] flex items-center text-sm" style={{ textAlign: col.align || 'left' }}>
                 <span className={
-                  col.type === 'currency' ? 'text-emerald-600 dark:text-emerald-400 font-semibold' :
-                  col.type === 'number' ? 'text-blue-600 dark:text-blue-400 font-mono' :
-                  col.type === 'date' ? 'text-violet-600 dark:text-violet-400' :
+                  col.type === 'currency' ? 'text-success font-semibold' :
+                  col.type === 'number' ? 'text-info font-mono' :
+                  col.type === 'date' ? 'text-primary' :
                   'text-[var(--foreground)]'
                 }>
                   {col.type === 'currency' ? '1 234,00 ₽' :
@@ -355,6 +355,16 @@ export default function TableTemplateEditorPage() {
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
   );
+
+  // Индикатор общей ширины колонок vs A4 content (блок 1.3b):
+  // A4 = 210mm ≈ 794px @96dpi; контентная область = 794 - 2×38px(margins) ≈ 718px
+  const A4_CONTENT_WIDTH_PX = 718;
+  const totalColumnsWidthPx = columns.reduce((sum, c) => {
+    const num = parseFloat(c.width || '0');
+    return sum + (isNaN(num) ? 0 : num);
+  }, 0);
+  const a4WidthPercent = Math.round((totalColumnsWidthPx / A4_CONTENT_WIDTH_PX) * 100);
+  const a4WidthWarning = totalColumnsWidthPx > A4_CONTENT_WIDTH_PX;
 
   // Drag-resize state
   const resizeRef = useRef<{
@@ -534,7 +544,7 @@ export default function TableTemplateEditorPage() {
       fieldName: first?.value || 'name',
       label: first?.label || '',
       width: '150px',
-      type: (first?.type || 'text') as 'text' | 'number' | 'date' | 'currency',
+      type: (first?.type || 'text') as 'text' | 'number' | 'date' | 'currency' | 'image',
       order: columns.length,
       visible: true,
       align: (first?.align || 'left') as 'left' | 'center' | 'right',
@@ -631,7 +641,7 @@ export default function TableTemplateEditorPage() {
                   tableName: src,
                   fieldName: first?.value || 'name',
                   label: first?.label || '',
-                  type: (first?.type || 'text') as 'text' | 'number' | 'date' | 'currency',
+                  type: (first?.type || 'text') as 'text' | 'number' | 'date' | 'currency' | 'image',
                   align: (first?.align || 'left') as 'left' | 'center' | 'right',
                 })));
               }
@@ -676,6 +686,13 @@ export default function TableTemplateEditorPage() {
               {columns.length} {columns.length === 1 ? 'колонка' : columns.length < 5 ? 'колонки' : 'колонок'}
               {columns.filter(c => c.visible === false).length > 0 &&
                 ` · ${columns.filter(c => c.visible === false).length} скрыто`}
+            </span>
+            <span
+              className={`text-xs px-2 py-0.5 rounded-md font-medium ${a4WidthWarning ? 'bg-[var(--status-amber-bg)] text-[var(--status-amber-text)]' : 'bg-[var(--muted)] text-[var(--muted-foreground)]'}`}
+              title="Суммарная ширина колонок относительно A4 (210 мм — поля 20 мм = 718 px при 96 dpi). Если больше 100% — таблица перелезет за край листа."
+            >
+              \u03a3 {totalColumnsWidthPx}px · {a4WidthPercent}% A4
+              {a4WidthWarning && ' ⚠'}
             </span>
           </div>
           <button
@@ -838,9 +855,9 @@ export default function TableTemplateEditorPage() {
                           style={{ textAlign: col.align || 'left', fontWeight: col.bold ? 700 : 400, fontStyle: col.italic ? 'italic' : 'normal' }}
                         >
                           <span className={
-                            col.type === 'currency' ? 'text-emerald-600 dark:text-emerald-400 font-semibold' :
-                            col.type === 'number' ? 'text-blue-600 dark:text-blue-400 font-mono' :
-                            col.type === 'date' ? 'text-violet-600 dark:text-violet-400' :
+                            col.type === 'currency' ? 'text-success font-semibold' :
+                            col.type === 'number' ? 'text-info font-mono' :
+                            col.type === 'date' ? 'text-primary' :
                             'text-[var(--foreground)]'
                           }>
                             {col.type === 'currency' ? '1 234,56 ₽' :
@@ -862,8 +879,8 @@ export default function TableTemplateEditorPage() {
                           style={{ textAlign: col.align || 'left', fontWeight: col.bold ? 700 : 600, fontStyle: col.italic ? 'italic' : 'normal' }}
                         >
                           <span className={
-                            col.type === 'currency' ? 'text-emerald-600 dark:text-emerald-400' :
-                            col.type === 'number' ? 'text-blue-600 dark:text-blue-400 font-mono' :
+                            col.type === 'currency' ? 'text-success' :
+                            col.type === 'number' ? 'text-info font-mono' :
                             'text-[var(--muted-foreground)]'
                           }>
                             {col.type === 'currency' ? '12 345,00 ₽' :

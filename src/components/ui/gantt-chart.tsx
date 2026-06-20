@@ -564,7 +564,7 @@ export function GanttChart({ items, loading = false, onItemClick, onItemUpdate }
           <div className="px-4 py-1 border-b border-[var(--border)] bg-[var(--status-danger-bg)]">
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-[var(--status-danger-solid)]" />
-              <span className="text-[10px] font-semibold text-red-600 dark:text-red-400">
+              <span className="text-[10px] font-semibold text-destructive">
                 Сегодня — {today.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })}
               </span>
             </div>

@@ -156,7 +156,7 @@ function OrderClosingForm({ item, onClose }: { item: OrderClosing | null; onClos
                   <span className="text-xs text-[var(--muted-foreground)]">{selectedOrder.title}</span>
                 </div>
                 <button type="button" onClick={() => { setSelectedOrder(null); setForm(f => ({ ...f, orderId: '', totalAmount: 0, notes: '' })); }}
-                  className="text-xs text-[var(--muted-foreground)] hover:text-red-500 transition-colors">
+                  className="text-xs text-[var(--muted-foreground)] hover:text-destructive transition-colors">
                   Убрать
                 </button>
               </div>

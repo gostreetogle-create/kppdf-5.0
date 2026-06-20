@@ -373,7 +373,7 @@ export default function ShippingPage() {
                       Заказ #{formOrderId.substring(0, 8)}...
                     </span>
                     <button type="button" onClick={() => { setFormOrderId(''); setFormItems([]); }}
-                      className="text-xs text-[var(--muted-foreground)] hover:text-red-500 transition-colors shrink-0">
+                      className="text-xs text-[var(--muted-foreground)] hover:text-destructive transition-colors shrink-0">
                       Убрать
                     </button>
                   </div>
@@ -439,7 +439,7 @@ export default function ShippingPage() {
                       <div key={idx} className="relative group">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src={photo.url} alt={photo.caption || 'Фото'}
-                          className="w-20 h-20 object-cover rounded-lg border border-[var(--border)]" />
+                          className="w-20 h-20 object-contain rounded-lg border border-[var(--border)] bg-[var(--muted)]/20" />
                         <button type="button" onClick={() => removePhoto(idx)}
                           className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-[var(--status-danger-solid)] text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                           <X className="h-3 w-3" />

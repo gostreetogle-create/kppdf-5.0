@@ -197,15 +197,15 @@ export default function MyTasksPage() {
       {/* Error */}
       {error && (
         <div className="flex items-center gap-3 p-4 rounded-xl bg-[var(--status-danger-bg)] border border-[var(--status-danger-text)]">
-          <AlertTriangle className="h-5 w-5 text-red-500" />
-          <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
+          <AlertTriangle className="h-5 w-5 text-destructive" />
+          <p className="text-sm text-destructive">{error}</p>
         </div>
       )}
 
       {/* Task list */}
       {data && data.tasks.length === 0 && !loading && (
         <div className="flex flex-col items-center justify-center py-16 text-[var(--muted-foreground)]">
-          <CheckCircle className="h-12 w-12 mb-3 text-green-500" />
+          <CheckCircle className="h-12 w-12 mb-3 text-success" />
           <p className="text-lg font-medium">
             {data.worker ? 'Нет задач' : 'Выберите работника'}
           </p>
@@ -239,7 +239,7 @@ export default function MyTasksPage() {
                 key={task.id}
                 className={`bg-[var(--card)] border rounded-xl p-4 transition-all ${
                   task.status === 'completed'
-                    ? 'border-green-200 dark:border-green-800 opacity-75'
+                    ? 'border-success/30 opacity-75'
                     : 'border-[var(--border)] hover:shadow-sm'
                 }`}
               >

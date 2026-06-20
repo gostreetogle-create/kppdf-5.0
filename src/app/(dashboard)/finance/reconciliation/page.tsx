@@ -60,39 +60,39 @@ function ReconciliationForm({ item, onClose }: { item: ReconciliationAct | null;
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium mb-1">Номер</label>
-          <input type="text" value={form.number} onChange={(e) => setForm({ ...form, number: e.target.value })} className="w-full px-3 py-2 rounded-lg border text-sm" required readOnly={!!item} placeholder={item ? undefined : 'Авто-генерация...'} />
+          <input type="text" value={form.number} onChange={(e) => setForm({ ...form, number: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-[var(--input)] bg-[var(--background)] text-[var(--foreground)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ring)]" required readOnly={!!item} placeholder={item ? undefined : 'Авто-генерация...'} />
         </div>
         <div>
           <label className="block text-sm font-medium mb-1">ID организации</label>
-          <input type="text" value={form.organizationId} onChange={(e) => setForm({ ...form, organizationId: e.target.value })} className="w-full px-3 py-2 rounded-lg border text-sm" />
+          <input type="text" value={form.organizationId} onChange={(e) => setForm({ ...form, organizationId: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-[var(--input)] bg-[var(--background)] text-[var(--foreground)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ring)]" />
         </div>
         <div>
           <label className="block text-sm font-medium mb-1">Начало периода</label>
-          <input type="date" value={form.periodStart} onChange={(e) => setForm({ ...form, periodStart: e.target.value })} className="w-full px-3 py-2 rounded-lg border text-sm" required />
+          <input type="date" value={form.periodStart} onChange={(e) => setForm({ ...form, periodStart: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-[var(--input)] bg-[var(--background)] text-[var(--foreground)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ring)]" required />
         </div>
         <div>
           <label className="block text-sm font-medium mb-1">Конец периода</label>
-          <input type="date" value={form.periodEnd} onChange={(e) => setForm({ ...form, periodEnd: e.target.value })} className="w-full px-3 py-2 rounded-lg border text-sm" required />
+          <input type="date" value={form.periodEnd} onChange={(e) => setForm({ ...form, periodEnd: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-[var(--input)] bg-[var(--background)] text-[var(--foreground)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ring)]" required />
         </div>
         <div>
           <label className="block text-sm font-medium mb-1">Дебет</label>
-          <input type="number" value={form.totalDebit} onChange={(e) => setForm({ ...form, totalDebit: Number(e.target.value) })} className="w-full px-3 py-2 rounded-lg border text-sm" />
+          <input type="number" value={form.totalDebit} onChange={(e) => setForm({ ...form, totalDebit: Number(e.target.value) })} className="w-full px-3 py-2 rounded-lg border border-[var(--input)] bg-[var(--background)] text-[var(--foreground)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ring)]" />
         </div>
         <div>
           <label className="block text-sm font-medium mb-1">Кредит</label>
-          <input type="number" value={form.totalCredit} onChange={(e) => setForm({ ...form, totalCredit: Number(e.target.value) })} className="w-full px-3 py-2 rounded-lg border text-sm" />
+          <input type="number" value={form.totalCredit} onChange={(e) => setForm({ ...form, totalCredit: Number(e.target.value) })} className="w-full px-3 py-2 rounded-lg border border-[var(--input)] bg-[var(--background)] text-[var(--foreground)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ring)]" />
         </div>
         <div>
           <label className="block text-sm font-medium mb-1">Статус</label>
-          <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })} className="w-full px-3 py-2 rounded-lg border text-sm">
+          <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-[var(--input)] bg-[var(--background)] text-[var(--foreground)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ring)]">
             <option value="draft">Черновик</option>
             <option value="signed">Подписан</option>
           </select>
         </div>
       </div>
       <div className="flex justify-end gap-2 pt-4 border-t">
-        <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg border text-sm">Отмена</button>
-        <button type="submit" disabled={saving} className="px-4 py-2 rounded-lg bg-[var(--primary)] text-white text-sm">{saving ? 'Сохранение...' : 'Сохранить'}</button>
+        <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg border border-[var(--border)] text-sm hover:bg-[var(--muted)] transition-colors">Отмена</button>
+        <button type="submit" disabled={saving} className="px-4 py-2 rounded-lg bg-[var(--primary)] text-[var(--primary-foreground)] text-sm hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed">{saving ? 'Сохранение...' : 'Сохранить'}</button>
       </div>
     </form>
   );

@@ -97,7 +97,7 @@ export default function ProcurementPage() {
   };
 
   const deficitClass = (deficit: number) =>
-    deficit > 0 ? 'text-red-600 dark:text-red-400 font-semibold' : 'text-green-600 dark:text-green-400';
+    deficit > 0 ? 'text-destructive font-semibold' : 'text-success';
 
   return (
     <div className="space-y-6">
@@ -139,15 +139,15 @@ export default function ProcurementPage() {
       {/* Error */}
       {error && (
         <div className="flex items-center gap-3 p-4 rounded-xl bg-[var(--status-danger-bg)] border border-[var(--status-danger-text)]">
-          <AlertTriangle className="h-5 w-5 text-red-500" />
-          <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
+          <AlertTriangle className="h-5 w-5 text-destructive" />
+          <p className="text-sm text-destructive">{error}</p>
         </div>
       )}
 
       {/* Empty */}
       {data && data.items.length === 0 && (
         <div className="flex flex-col items-center justify-center py-16 text-[var(--muted-foreground)]">
-          <CheckCircle className="h-12 w-12 mb-3 text-green-500" />
+          <CheckCircle className="h-12 w-12 mb-3 text-success" />
           <p className="text-lg font-medium">Нет потребностей в закупках</p>
           <p className="text-sm mt-1">Все материалы активных заказов либо не требуют закупки, либо модули не настроены</p>
         </div>
@@ -260,7 +260,7 @@ export default function ProcurementPage() {
           <p className="text-xs text-[var(--muted-foreground)]">
             <span className="mr-1">📋</span>
             Потребности формируются из модулей товаров, сверяются с остатками на складе.
-            <span className="text-red-600 dark:text-red-400"> Красным</span> — позиции с дефицитом.
+            <span className="text-destructive"> Красным</span> — позиции с дефицитом.
             Кнопка <strong>+ Заявка</strong> создаёт заявку только на дефицитные позиции.
           </p>
         </div>
