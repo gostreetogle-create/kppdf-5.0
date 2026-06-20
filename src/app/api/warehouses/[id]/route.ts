@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/db';
-import {requireAuth, requireEditor, requireRole} from '@/lib/auth';
+import { requireAuth, requireEditor } from '@/lib/auth';
 import { apiOk, apiError } from '@/lib/api-response';
 import { UpdateWarehouseSchema } from '@/lib/validations/warehouse';
 import { validateBody } from '@/lib/validations';

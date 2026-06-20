@@ -34,7 +34,6 @@ export async function recordActivity(opts: ActivityOptions): Promise<void> {
     });
   } catch (error) {
     // Best-effort: activity log не должен ломать основной user request.
-    // eslint-disable-next-line no-console
     console.error('[activity-log] failed to record activity:', error);
   }
 }

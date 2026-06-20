@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function DELETE(request: NextRequest) {
+export async function DELETE(_request: NextRequest) {
   // Cycle 57 (B.7): record logout activity before clearing cookies.
   // Use getCurrentUser (does NOT throw on missing cookie) so logout from
   // anonymous clients still succeeds. recordActivity itself is best-effort
@@ -105,7 +105,6 @@ export async function DELETE(request: NextRequest) {
       });
     }
   } catch (err) {
-    // eslint-disable-next-line no-console
     console.error('[logout] failed to record activity:', err);
   }
   const response = apiOk(null);
