@@ -3,48 +3,8 @@ import bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/db';
 import { signAccessToken, signRefreshToken } from '@/lib/auth';
 import { apiOk, apiError } from '@/lib/api-response';
-
-// ── Rate limiter ─────────────────────────────────────────────────────────────
-// 5 attempts per 5 minutes per IP+username. In-memory — resets on server restart.
-const MAX_ATTEMPTS = 5;
-const WINDOW_MS = 5 * 60 * 1000; // 5 minutes
-
-const attempts = new Map<string, { count: number; resetAt: number }>();
-
-function checkRateLimit(ip: string, username: string): boolean {
-  const key = `${ip}:${username}`;
-  const now = Date.now();
-  const entry = attempts.get(key);
-
-  if (!entry || now > entry.resetAt) {
-    attempts.set(key, { count: 1, resetAt: now + WINDOW_MS });
-    return true;
-  }
-
-  if (entry.count >= MAX_ATTEMPTS) {
-    return false;
-  }
-
-  entry.count++;
-  return true;
-}
-
-function recordFailure(ip: string, username: string) {
-  const key = `${ip}:${username}`;
-  const now = Date.now();
-  const entry = attempts.get(key);
-
-  if (!entry || now > entry.resetAt) {
-    attempts.set(key, { count: 1, resetAt: now + WINDOW_MS });
-  } else {
-    entry.count++;
-  }
-}
-
-function resetAttempts(ip: string, username: string) {
-  attempts.delete(`${ip}:${username}`);
-}
-// ─────────────────────────────────────────────────────────────────────────────
+import { checkRateLimit, recordFailure, resetAttempts } from '@/lib/rate-limit';
+import { isProd } from '@/lib/env';
 
 export async function POST(request: NextRequest) {
   try {
@@ -58,24 +18,24 @@ export async function POST(request: NextRequest) {
       || request.headers.get('x-real-ip')
       || 'unknown';
 
-    if (!checkRateLimit(ip, username)) {
+    if (!(await checkRateLimit(ip, username))) {
       return apiError('Слишком много попыток. Попробуйте через 5 минут.', 429);
     }
 
     const user = await prisma.user.findUnique({ where: { username } });
 
     if (!user || !user.isActive) {
-      recordFailure(ip, username);
+      await recordFailure(ip, username);
       return apiError('Неверный логин или пароль', 401);
     }
 
     const valid = await bcrypt.compare(password, user.password);
     if (!valid) {
-      recordFailure(ip, username);
+      await recordFailure(ip, username);
       return apiError('Неверный логин или пароль', 401);
     }
 
-    resetAttempts(ip, username);
+    await resetAttempts(ip, username);
 
     const payload = { userId: user.id, username: user.username, role: user.role };
     const accessToken = signAccessToken(payload);
@@ -96,7 +56,7 @@ export async function POST(request: NextRequest) {
 
     response.cookies.set('accessToken', accessToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: isProd,
       sameSite: 'lax',
       maxAge: 60 * 60 * 24,
       path: '/',
@@ -104,7 +64,7 @@ export async function POST(request: NextRequest) {
 
     response.cookies.set('refreshToken', refreshToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: isProd,
       sameSite: 'lax',
       maxAge: 60 * 60 * 24 * 7,
       path: '/',

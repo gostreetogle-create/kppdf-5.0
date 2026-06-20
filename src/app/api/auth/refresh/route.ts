@@ -2,6 +2,7 @@ import { cookies } from 'next/headers';
 import { verifyToken, signAccessToken, signRefreshToken } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { apiOk, apiError } from '@/lib/api-response';
+import { isProd } from '@/lib/env';
 
 export async function POST() {
   try {
@@ -46,7 +47,7 @@ export async function POST() {
 
     response.cookies.set('accessToken', accessToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: isProd,
       sameSite: 'lax',
       maxAge: 60 * 60 * 24,
       path: '/',
@@ -55,7 +56,7 @@ export async function POST() {
     // Устанавливаем новый refresh token (старый становится невалидным)
     response.cookies.set('refreshToken', newRefreshToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: isProd,
       sameSite: 'lax',
       maxAge: 60 * 60 * 24 * 7,
       path: '/',
