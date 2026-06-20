@@ -1,5 +1,13 @@
-import { describe, it, expect } from 'vitest';
-import { signAccessToken, signRefreshToken, verifyToken, type JwtPayload } from '../auth';
+import { describe, it, expect, beforeAll } from 'vitest';
+
+// Цикл 39 (M5 развязка): импортируем JWT-функции напрямую из `../jwt`,
+// минуя `../auth` (который импортирует `prisma` через `./db` и имеет
+// orchestration-side-effects). Это разрывает side-effect import chain.
+beforeAll(() => {
+  process.env.JWT_SECRET = process.env.JWT_SECRET ?? 'test-secret-for-unit-tests';
+});
+
+import { signAccessToken, signRefreshToken, verifyToken, type JwtPayload } from '../jwt';
 
 describe('JWT token functions', () => {
   const payload: JwtPayload = {

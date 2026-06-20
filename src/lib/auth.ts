@@ -1,39 +1,18 @@
-import jwt from 'jsonwebtoken';
 import { cookies } from 'next/headers';
 import { prisma } from './db';
 
-// JWT_SECRET обязан быть задан через process.env
-const JWT_SECRET = process.env.JWT_SECRET;
-if (!JWT_SECRET) {
-  throw new Error('JWT_SECRET must be set in environment variables');
-}
-const JWT_SECRET_FINAL = JWT_SECRET;
-const ACCESS_TOKEN_EXPIRY = '24h';
-const REFRESH_TOKEN_EXPIRY = '7d';
-
-export interface JwtPayload {
-  userId: string;
-  username: string;
-  role: string;
-  tokenVersion?: number;
-}
-
-export function signAccessToken(payload: JwtPayload): string {
-  return jwt.sign(payload, JWT_SECRET_FINAL, { expiresIn: ACCESS_TOKEN_EXPIRY });
-}
-
-export function signRefreshToken(payload: JwtPayload): string {
-  // Включаем tokenVersion для возможности инвалидации старых refresh-токенов
-  return jwt.sign({ ...payload, tokenVersion: payload.tokenVersion || 0 }, JWT_SECRET_FINAL, { expiresIn: REFRESH_TOKEN_EXPIRY });
-}
-
-export function verifyToken(token: string): JwtPayload | null {
-  try {
-    return jwt.verify(token, JWT_SECRET_FINAL) as JwtPayload;
-  } catch {
-    return null;
-  }
-}
+// Цикл 39 (M5 развязка): JWT-логика вынесена в `./jwt.ts` чтобы:
+//   1) избежать импорта `prisma` при юнит-тестировании чистых JWT-функций;
+//   2) убрать top-level throw на JWT_SECRET (теперь lazy в jwt.ts);
+//   3) сохранить backwards-compatible re-export.
+// Цикл 39 (M5 развязка): JWT-логика вынесена в `./jwt.ts` чтобы:
+//   1) избежать импорта `prisma` при юнит-тестировании чистых JWT-функций;
+//   2) убрать top-level throw на JWT_SECRET (теперь lazy в jwt.ts);
+import { signAccessToken, signRefreshToken, verifyToken, type JwtPayload } from './jwt';
+//   3) сохранить backwards-compatible API для внешних потребителей auth.ts.
+// Двойной re-export: в TS strict/verbatimModuleSyntax (Next.js 16) простой
+// import не реэкспортирует — нужен явный export statement.
+export { signAccessToken, signRefreshToken, verifyToken, type JwtPayload } from './jwt';
 
 export async function getCurrentUser() {
   const cookieStore = await cookies();
