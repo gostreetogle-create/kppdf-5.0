@@ -5,8 +5,20 @@ import bcrypt from 'bcryptjs';
 
 export async function POST() {
   try {
-    await requireAuth();
-    await requireRole(['admin']);
+    // Bootstrap escape hatch (Option A, per advisor review):
+    // Если в БД нет ни одного admin-user, открываем seed без авторизации
+    // (разово, идемпотентно). После первого запуска adminCount > 0 → последующие
+    // вызовы ОБЯЗАНЫ быть с действующей admin-сессией. Это снимает
+    // chicken-and-egg deadlock: чтобы создать admin, нужно было admin-логиниться.
+    // Safe в проде (Zero-day init) И в dev (старт dev-сервера без пред-настройки).
+    const adminCount = await prisma.user.count({ where: { role: 'admin' } });
+    if (adminCount === 0) {
+      console.warn('[seed] BOOTSTRAP MODE: no admins in DB, allowing unauthenticated seed');
+    } else {
+      await requireAuth();
+      await requireRole(['admin']);
+    }
+
     // Users
     const adminPass = await bcrypt.hash('admin123', 10);
     const managerPass = await bcrypt.hash('manager123', 10);
