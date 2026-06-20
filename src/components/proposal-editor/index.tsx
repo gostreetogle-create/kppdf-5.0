@@ -1,19 +1,22 @@
 'use client';
 
-// Cycle 44 (B.3 Block 3.1): ProposalEditor orchestrator (index).
+// Cycles 44-47 (B.3 Block 3.1 + B.4): ProposalEditor orchestrator.
 //
-// Compose:
+// Compose (cycle 47):
 //   <ProposalEditorProvider>     — Context с useProposalEditorState
 //     <EditorHeader />            — top compact header
-//     <div main: 45/55 split>
-//       <ProductSelector />       — left top: products (search + filter)
-//       <ConfigPanel />           — left mid: org/client/template/discount/RAL
-//       <EditorCart />            — left bottom: cart items + totals
-//       <PreviewArea />           — right: A4 preview
-//     </div>
+//     <ResizableEditorLayout>     — 3 horizontal panels (products|preview|config)
+//       <Panel products>          — ProductSelector (search + filter) + EditorCart (bottom)
+//       <Panel preview>          — PreviewArea (A4 canvas)
+//       <Panel config>            — ConfigPanel (org/client/template/discount/RAL)
+//     </ResizableEditorLayout>
 //     <SettingsDialog />          — modal: title editor
 //     <PdfExport />               — modal: PDF preview
 //   </ProposalEditorProvider>
+//
+// Cycle 47 (Block 4.1) replaced fixed 45/55 split with 3-panel
+// `react-resizable-panels`. Layout persists via useDefaultLayout hook
+// (autoSaveId 'kppdf-editor-v1'). Mobile breakpoint flips to vertical stack.
 
 import { Check } from 'lucide-react';
 import { ProposalEditorProvider, useProposalEditor } from './editor-provider';
@@ -24,6 +27,7 @@ import { EditorCart } from './editor-cart';
 import { PreviewArea } from './preview-area';
 import { SettingsDialog } from './settings-dialog';
 import { PdfExport } from './pdf-export';
+import { ResizableEditorLayout } from './resizable-editor-layout';
 
 function LoadingState() {
   return (
@@ -59,16 +63,16 @@ function EditorBody() {
   return (
     <div className="h-[calc(100vh-4rem)] flex flex-col overflow-hidden">
       <EditorHeader />
-      <div className="flex-1 flex overflow-hidden">
-        {/* LEFT: 45% */}
-        <div className="w-[45%] flex flex-col border-r border-[var(--border)] overflow-hidden">
-          <ProductSelector />
-          <ConfigPanel />
-          <EditorCart />
-        </div>
-        {/* RIGHT: 55% */}
-        <PreviewArea />
-      </div>
+      <ResizableEditorLayout
+        productsPanel={
+          <div className="flex-1 flex flex-col overflow-hidden">
+            <ProductSelector />
+            <EditorCart />
+          </div>
+        }
+        previewPanel={<PreviewArea />}
+        configPanel={<ConfigPanel />}
+      />
       <SettingsDialog />
       <PdfExport />
     </div>

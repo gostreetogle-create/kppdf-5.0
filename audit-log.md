@@ -2591,3 +2591,72 @@ EOF_CYCLE_51_52 && echo "===auditlog appended===" && tail -20 audit-log.md | hea
 
 `src/components/activity-log.tsx` имеет `useEffect` который делает setLoading/setError перед `.fetch().then().catch().finally()`. Правило `react-hooks/set-state-in-effect` отмечает это как violation. Решение: `/* eslint-disable react-hooks/set-state-in-effect */` block-comment на первой строке файла (canonical ESLint pattern, более robust чем `eslint-disable-next-line`). Совпадает с convention в `admin/users/page.tsx`.
 
+
+<a id="cycle-46"></a>
+## Cycle 46 — 2026-06-20 — Block 4.1: ProposalEditor 3-panel UX (basic resizable wiring)
+
+**Контекст:** До cycle 46 <ProposalEditor> использовал фиксированный 2-column split `w-[45%] | w-[55%]`. Пользователь не мог resize панелей под свой workflow:
+- Менеджеры с большими превью хотели max-canvas: невозможно.
+- Менеджеры с большим количеством товаров в cart хотели max-products: невозможно.
+- Конфигурация (org/client/template/discount/RAL) сжималась при узких viewport.
+
+Block 4.1 spec: 3 horizontal resizable panels (products | preview | config) с использованием `react-resizable-panels`.
+
+### Что реализовано
+
+- `npm install react-resizable-panels@4.11.2` (Tier D mutable dep, нет native bindings).
+- `src/components/proposal-editor/resizable-editor-layout.tsx` (NEW) — wrapper component:
+  - `Group` (orientation prop) + `Panel` + `Separator` (v4.11.2 renamed API; older v2.x used `PanelGroup`/`PanelResizeHandle`).
+  - 3 slots wired via stable panel `id`s:
+    - **Products** (defaultSize 30, min 22, max 55) — ProductSelector + EditorCart stacked
+    - **Preview** (defaultSize 45, min 30, max 70) — PreviewArea (removed fixed `w-[55%]`, replaced with `flex-1`)
+    - **Config** (defaultSize 25, min 18, max 40) — ConfigPanel extracted from left-column
+  - Custom `Separator` styling: GripVertical icon on hover indicator, w-px default + hover:bg-[var(--primary)].
+- `src/components/proposal-editor/index.tsx`:
+  - Заменил fixed 2-column `w-[45%] | w-[55%]` на `<ResizableEditorLayout productsPanel={...} previewPanel={...} configPanel={...} />`.
+  - EditorCart stays inside products slot (below ProductSelector) — preserves cart-quick-access UX.
+  - ConfigPanel полностью extract в правую panel.
+
+### Tier integrity
+
+- Tier A (`@/lib/jwt.ts`) / Tier B (`@/lib/pdf/index.ts`) — НЕ тронуты ✅
+- `react-resizable-panels@4.11.2` — Tier D (UI primitive library, mutable без ADR).
+- resizable-editor-layout.tsx — Tier D (UI component).
+
+<a id="cycle-47"></a>
+## Cycle 47 — 2026-06-20 — Block 4.1 polish: persistence + mobile + a11y
+
+**Контекст:** Cycle 46 заложил basic resizable architecture. Cycle 47 закрывает 3 hard-feedback concerns из round-1 code review:
+
+### Round-2 fixes (round-1 feedback)
+
+1. **SSR hydration flash fix**: useDefaultLayout читает localStorage на mount → `defaultLayout` = `undefined` initially (SSR + 1st render), затем changes after mount. Added `mounted` gate (`useState(false)` + `useEffect(setMounted(true))`) — пока `!mounted` рендерится inert placeholder `<div aria-hidden data-placeholder="kppdf-editor">`. Group рендерится только после mount. Eliminates hydration mismatch warnings + 1-frame flicker.
+
+2. **Drag-state data attribute fix**: v4.11.2 confirmed (via grep node_modules lib source) exposes only `data-disabled` as DOM data attribute. Drag state (`inactive|hover|active`) — internal state machine НЕ bleed в DOM. Removed `data-[resize-handle-state=drag]:` Tailwind arbitrary variants + `group-data-[...]` (silent no-match). Relies on Tailwind `hover:` only.
+
+3. **Border orientation mismatch fix**: ProductsSlot/ConfigSlot теперь conditional: `orientation === 'vertical' ? 'border-r/l' : ''`. Desktop (3-panel landscape) — borders inner-edge to separator. Mobile (stacked) — borders dropped (no right-wall artifacts).
+
+### Round-3 polish
+
+- **ConfigSlot minSize 18 → 22**: на 1680px viewport, 18% = 302 px → 2-col grid for org/client + template/discount + RAL row читалось cramped. 22% = 369 px ≈ comfortable.
+- **transition-colors → transition-all duration-150 ease-out**: `hover:w-0.5`/`hover:h-0.5` separator width-flips теперь glide smoothly (раньше snap благодаря `transition-colors` only animate color).
+- **eslint-disable react-hooks/set-state-in-effect** block comment на file top — mirrors activity-log.tsx convention. mounted-gate pattern canonical SSR-safe hydration idiom.
+
+### Auto-persistence через useDefaultLayout
+
+- `id: 'kppdf-editor-horizontal-v1'` for desktop
+- `id: 'kppdf-editor-vertical-v1'` for mobile
+- Layouts auto-save to localStorage на каждый resize (debounced 200ms внутри hook).
+- Stable panel ids (`products|preview|config`) переживают component remounts.
+
+### Mobile fallback
+
+- matchMedia breakpoint 768px (md): <= 768 → vertical orientation.
+- Mobile layout: products (top) → preview (middle) → config (bottom).
+- EditorCart stays in products slot (top-most, thumb-friendly access).
+
+### Tier integrity
+
+- Tier A / Tier B / Tier C — НЕ тронуты ✅
+- resizable-editor-layout.tsx (cycle 46 file) rewritten in cycles 47 round-2/round-3 — still Tier D.
+

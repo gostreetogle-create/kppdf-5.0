@@ -14,7 +14,7 @@ export function PreviewArea() {
   const { state, actions, computed } = useProposalEditor();
 
   return (
-    <div className="w-[55%] overflow-auto bg-[var(--muted)]/30 flex items-start justify-center p-4">
+    <div className="flex-1 overflow-auto bg-[var(--muted)]/30 flex items-start justify-center p-4">
       {state.selectedTemplateData && computed.proposalBlocks.length > 0 ? (
         <A4Canvas
           blocks={computed.proposalBlocks}
