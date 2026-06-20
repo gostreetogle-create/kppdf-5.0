@@ -135,7 +135,9 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
 
       <aside
         className={cn(
-          'fixed left-0 top-0 z-40 h-screen w-64 bg-[var(--sidebar)] border-r border-[var(--border)]',
+          /* v3 glass surface — sidebar теперь light в light theme (исправлено из #1a1510),
+           полупрозрачный /95 + backdrop-blur-2xl для full-glassmorphism эффекта. */
+        'fixed left-0 top-0 z-40 h-screen w-64 bg-[var(--sidebar)]/95 backdrop-blur-2xl border-r border-[var(--border)]/60',
           'transition-transform duration-200 ease-in-out',
           'lg:translate-x-0',
           isOpen ? 'translate-x-0' : '-translate-x-full',

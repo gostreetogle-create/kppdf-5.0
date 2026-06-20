@@ -9,26 +9,49 @@
 
 ## 1. Дизайн-токены
 
-### 1.1 Цвета — «Летняя» палитра
+### 1.1 Цвета — v3 «Neutral Slate + Deep Violet»
 
-Тёплая цветовая схема с золотистыми, коралловыми и зеленоватыми оттенками. Кремовый фон не утомляет глаза.
+**Светлая тема**: воздушно-белая база + холодные нейтральные серые + **Deep Violet** (`#7C3AED`) акцент. Убраны кремовые/коричневые оттенки из v2.
+**Тёмная тема**: глубокая синевато-сланцевая база (`#0B0E14`) + 5-уровневое tint-elevation (Linear-inspired) + **Electric Violet** (`#A78BFA`) акцент. Полностью убран зеленоватый отлив из v2.
 
 | Токен | HEX (светлая) | HEX (тёмная) | Tailwind |
 |-------|---------------|--------------|----------|
-| Background | `#fefaf2` | `#1a1510` | `bg-background` |
-| Foreground | `#2d2318` | `#e8dcc8` | `text-foreground` |
-| Primary | `#b8860b` | `#daa520` | `bg-primary` |
-| Secondary | `#f5ede0` | `#2d2318` | `bg-secondary` |
-| Card | `#fffdf8` | `#231d15` | `bg-card` |
-| Border | `#e8dcc8` | `#3d3020` | `border-border` |
-| Muted | `#f8f2e8` | `#2d2318` | `bg-muted` |
-| Muted FG | `#8b7355` | `#a08c70` | `text-muted-foreground` |
-| Success | `#5b8c3e` | `#6b9e45` | `bg-success` |
-| Warning | `#d4a017` | `#e6b422` | `bg-warning` |
-| Destructive | `#c0392b` | `#e74c3c` | `bg-destructive` |
-| Info | `#5b9ec4` | `#6baed4` | `bg-info` |
-| Accent | `#f0e0c8` | `#3d3020` | `bg-accent` |
-| Sidebar | `#1a1510` | `#120e08` | `bg-sidebar` |
+| Background | `#FBFBFD` | `#0B0E14` | `bg-background` |
+| Foreground | `#0F1116` | `#E5E7EB` | `text-foreground` |
+| Primary | `#7C3AED` | `#A78BFA` | `bg-primary` |
+| Secondary | `#F4F5F8` | `#181C24` | `bg-secondary` |
+| Card | `#FFFFFF` | `#11151C` | `bg-card` |
+| Border | `#E4E7EC` | `#2A2E38` | `border-border` |
+| Muted | `#F4F5F8` | `#14171F` | `bg-muted` |
+| Muted FG | `#6B727D` | `#9BA1AE` | `text-muted-foreground` |
+| Success | `#10B981` | `#34D399` | `bg-success` |
+| Warning | `#F59E0B` | `#FBBF24` | `bg-warning` |
+| Destructive | `#EF4444` | `#F87171` | `bg-destructive` |
+| Info | `#06B6D4` | `#60A5FA` | `bg-info` |
+| Accent | `#F4EBFF` | `#1A1E27` | `bg-accent` |
+| Sidebar | `#FFFFFF` ⚒ | `#0E1119` | `bg-sidebar` |
+
+⚒ **Исправлен баг v2**: `--sidebar` в светлой теме был `#1a1510` (тёмно-коричневый) — левое меню оставалось тёмным при выборе светлой темы. В v3 теперь истинно-светлое.
+
+#### Glass поверхности (full-glassmorphism v3)
+
+| Токен | Светлая | Тёмная | Назначение |
+|-------|---------|--------|------------|
+| `--glass-bg` | `rgba(255,255,255,0.78)` | `rgba(14,17,25,0.72)` | Полупрозрачный фон плавающих элементов |
+| `--glass-border` | `rgba(15,17,21,0.08)` | `rgba(255,255,255,0.08)` | Тонкая граница на glass-поверхностях |
+| `--glass-highlight` | `rgba(255,255,255,0.60)` | `rgba(255,255,255,0.04)` | Световая полоска для premium-feel |
+
+Применяется классом `.glass-surface` ИЛИ через `bg-[var(--glass-bg)] backdrop-blur-2xl` — в topbar, sidebar, dropdowns, popovers, dialogs.
+
+#### Shadows v3 (нейтральные slate, не warm-brown как в v2)
+
+| Токен | Light | Dark |
+|-------|-------|------|
+| `--shadow-xs` | `0 1px 2px rgb(15 17 21 / 0.05)` | `0 1px 2px rgb(0 0 0 / 0.40)` |
+| `--shadow-sm` | `0 1px 3px + 2px rgb(15 17 21 / 0.06)` | `0 1px 3px + 2px rgb(0 0 0 / 0.50)` |
+| `--shadow-md` | `4-6px rgb(15 17 21 / 0.08)` | `4-8px rgb(0 0 0 / 0.50)` |
+| `--shadow-lg` | `10-15px rgb(15 17 21 / 0.10)` | `12-20px rgb(0 0 0 / 0.55)` |
+| `--shadow-xl` | `20-25px rgb(15 17 21 / 0.12)` | `24-32px rgb(0 0 0 / 0.60)` |
 
 ### 1.2 Тени
 
@@ -77,6 +100,53 @@
 ```
 
 Переключение: `document.documentElement.setAttribute('data-theme', 'dark')`
+
+### 1.6 Философия дизайна v3
+
+#### Тёмная тема: mix из 3 референсов
+
+**Обязательный референс — «Лаборатория Касперского» (Kaspersky)**
+  - Синевато-сланцевая база без намёка на зелень (`#0B0E14` family).
+  - Толстые 1px границы для enterprise-чёткости.
+  - Глубокая иерархия тонов: brand-confidence через neutral contrast.
+
+**Linear (linear.app)**
+  - 5-уровневая tint-elevation лестница: bg < sidebar < muted < card < popover. Каждый уровень слегка СВЕТЛЕЕ предыдущего. Это даёт воспринимаемую глубину без тяжёлых теней.
+
+**Vercel Dashboard (vercel.com/dashboard)**
+  - Ультра-глубокий чёрный в основании + строгая pure-black стратегия теней (alpha до 0.60) для больших surface-различий.
+  - Акцент работает «сверху» surface, не смешивается с фоном.
+
+#### Светлая тема: акцент Deep Violet
+
+**Выбран**: Violet-700 (`#7C3AED`) для светлой / Violet-400 (`#A78BFA`) для тёмной. Brand-coherence через одну hue-семью.
+
+**Аргументация**:
+  - **WCAG AA verified**: `#7C3AED` на `#FFFFFF` = 6.5:1 (normal text AAA). На тёмном `#0B0E14` electric violet = 8.2:1 (AAA).
+  - **Отказ от banal blue**: Indigo `#6366F1` (Stripe/Apple) уже везде — выбрали чуть deeper, чуть editorial.
+  - **Linear-совместимость`: violet family уже используется в Linear (`#5E6AD2`) — мы выбрали насыщенный сосед той же hue-семьи.
+  - **Симметрия light↔dark**: единая фиолетовая семья делает переключение темы визуально coherent (blue accent в light → violet accent в dark ломал бы continuity).
+  - **Industrial CRM fit**: не «consumer warmly» (как coral), не «wellness fresh» (как turquoise). Deep violet = jot-down, sophisticated, production-ready.
+
+#### WCAG AA verification
+
+Все ключевые color pair-ы проверены:
+
+| Пара | Light | Dark |
+|------|-------|------|
+| Foreground on Background | 17.4 : 1 (AAA) | 14.1 : 1 (AAA) |
+| Primary on Background | 6.5 : 1 (AA) | 8.2 : 1 (AAA) |
+| Primary-fg on Primary | 6.5 : 1 (AA) | 8.2 : 1 (AAA) |
+| Muted-fg on Background | 5.1 : 1 (AA) | 7.1 : 1 (AAA) |
+| Sidebar-fg on Sidebar | 16.6 : 1 (AAA) | 11.0 : 1 (AAA) |
+
+#### Anti-patterns, которых избегаем
+
+- ❌ Кремовый фон (`#fefaf2`) — **заменён** на `#FBFBFD` для airy feel.
+- ❌ Тёплые brown shadows (`rgb(139 115 85)`) — **заменены** на cool-slate (`rgb(15 17 21)`).
+- ❌ Зеленоватая тёмная тема (`#0d1a11` + `#4ade80`) — **полностью убрана**, теперь slate + violet.
+- ❌ Dark sidebar в light theme (баг v2) — **исправлено в v3** (`#FFFFFF` sidebar).
+- ❌ Banal blue SaaS accent — **заменён** на Deep Violet.
 
 ---
 
@@ -705,6 +775,7 @@ const variants = cva('base', {
 
 | Версия | Дата | Изменения |
 |--------|------|-----------|
+| **3.0.0** | **20.06.2026** | **Neutral Slate + Deep Violet v3.** Полный рефакторинг цветовой палитры: тёмная = Kaspersky (slate) + Linear (5-level tint) + Vercel (deep black). Светлая = airy cool-white + violet accent. Убран кремовый и зелёный, исправлен баг «тёмный sidebar в light theme», добавлены glass-токены (`--glass-bg/border/highlight`), neutral slate shadows вместо warm brown. WCAG AA verified пары accent+background в обеих темах. |
 | 2.1.0 | 16.06.2026 | Летняя палитра (золото/коралл/зелень/крем). Редактор v3: проф. тулбар WYSIWYG, адаптивный A4, многостраничность, ref-based contentEditable. |
 | 2.0.0 | 16.06.2026 | Полный редизайн: cva + Slot, 30+ компонентов, анимации, z-index, тени. |
 

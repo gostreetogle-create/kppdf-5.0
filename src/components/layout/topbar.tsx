@@ -15,7 +15,11 @@ export function Topbar({ onMenuClick }: TopbarProps) {
   const [showUserMenu, setShowUserMenu] = useState(false);
 
   return (
-    <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-[var(--border)] bg-[var(--background)]/80 backdrop-blur-sm px-4 lg:px-6">
+    <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-[var(--border)]/60 bg-[var(--background)]/75 backdrop-blur-2xl px-4 lg:px-6 relative">
+
+      {/* v3 glass surface — accent gradient line at top edge */}
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[var(--primary)]/40 to-transparent" />
+
       <div className="flex items-center gap-3">
         <button
           onClick={onMenuClick}
@@ -57,7 +61,7 @@ export function Topbar({ onMenuClick }: TopbarProps) {
             {showUserMenu && (
               <>
                 <div className="fixed inset-0 z-40" onClick={() => setShowUserMenu(false)} />
-                <div className="absolute right-0 top-full mt-2 w-48 bg-[var(--card)] border border-[var(--border)] rounded-lg shadow-lg z-50 py-1">
+                <div className="absolute right-0 top-full mt-2 w-56 bg-[var(--card)]/85 backdrop-blur-xl border border-[var(--border)]/60 rounded-xl shadow-lg z-50 py-1 overflow-hidden">
                   <div className="px-3 py-2 border-b border-[var(--border)]">
                     <p className="text-sm font-medium">{user.displayName || user.username}</p>
                     <p className="text-xs text-[var(--muted-foreground)]">{user.role}</p>
