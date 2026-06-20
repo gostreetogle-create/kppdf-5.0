@@ -108,8 +108,22 @@ model OrgRole {
   proposals             Proposal[]
   contracts             Contract[]
 
+  // Cycle 54 (B.2): B2B client support = юрлица (legal entities).
+  // type discriminator: 'individual' (по умолчанию для backward-compat) | 'legal'.
+  // Существующие клиенты автоматически получат type='individual' через
+  // DB DEFAULT в миграции — никаких данных не теряем.
+  type                  String    @default("individual") // individual | legal
+  companyName           String?
+  legalForm             String?    // ООО | ОАО | ИП | ЗАО | ПАО
+  kpp                   String?    // 9 цифр для legal
+  ogrn                  String?    // 13 цифр для ООО/ОАО/etc, 15 — ИП
+  legalAddress          String?    // полный юр. адрес
+
   @@index([lastName])
   @@index([phone])
+  @@index([type])        // Cycle 54: filter by type
+  @@index([companyName]) // Cycle 54: search by company
+  @@index([inn])         // Cycle 54: search by INN
 }
 
 // ========================================

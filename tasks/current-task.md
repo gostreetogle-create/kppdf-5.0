@@ -1,4 +1,36 @@
-# Cycles 51 + 52 — Foundation layer: B.3 StatusWorkflow + B.6 Roles
+# Cycles 53 + 54 — Business-Critical Layer: B.1 Finished Goods + B.2 Client юрлица
+
+**Дата старта**: 2026-06-20 (после completion of foundation layer cycles 51+52 ✅).
+**Параллельные циклы** (разные models/routes, могут идти одновременно):
+- **Cycle 53 — B.1 Производство → Склад** (auto-finished-goods IN при status='completed').
+- **Cycle 54 — B.2 Client модель для юрлиц (B2B)** (`type` discriminator + новые поля).
+
+**Источник**: [`audit-tasks-business.md`](../audit-tasks-business.md) v2.2 + [`business-tasks.md`](../business-tasks.md) + [`ADR-004-business-critical-layer.md`](../docs/decisions/ADR-004-business-critical-layer.md).
+**Зависимости**: ✅ Foundation layer (cycles 51+52 — StatusWorkflow + Roles).
+
+---
+
+## Следующие циклы (55+56+57)
+
+- **Cycle 55 (B.4 Защита номеров документов)** — frozen-statuses per doc + `assertNumberImmutable(proposal|contract|...)`. Зависимость: B.3 ✓ (StatusWorkflow живой → frozen transitions enforceable). Сложность: S. Можно parallel с B.5+B.7.
+- **Cycle 56 (B.5 OrderClosing FK relation)** — formal FK `OrderClosing.order: ProductionOrder?` with `SetNull` cascade + audit других soft-reference fields (`Shipment.orderId String?`). Независим. Сложность: S.
+- **Cycle 57 (B.7 UserActivity UI)** — компонент `<ActivityLog entity entityId />` + `GET /api/activity-log` + tab «История» в viewers предложений/договоров/заказов. Независим. Сложность: M.
+
+---
+
+## === РЕЗУЛЬТАТ === (2026-06-20)
+
+### Cycle 53 (B.1) — Committed `3132dc2`
+
+Подробности — см. **ADR-004 + коммит `3132dc2`**. См. также **Cycle 53 раздел в [`audit-tasks-business.md`](../audit-tasks-business.md)**.
+
+### Cycle 54 (B.2) — Committed (cycle-54)
+
+Подробности — см. **ADR-004 + коммит `cycle-54`**. См. также **Cycle 54 раздел в [`audit-tasks-business.md`](../audit-tasks-business.md)**.
+
+---
+
+# OLD archives: Cycles 51 + 52 — Foundation layer: B.3 StatusWorkflow + B.6 Roles
 
 **Дата старта**: 2026-06-20
 **Параллельные циклы** (разные файлы, могут идти одновременно):

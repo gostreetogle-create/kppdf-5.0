@@ -11,6 +11,5 @@ export default async function ClientsPage() {
     prisma.client.count(),
   ]);
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return <ClientsClient initialData={clients as any[]} initialTotal={total} />;
+  return <ClientsClient initialData={clients} initialTotal={total} />;
 }

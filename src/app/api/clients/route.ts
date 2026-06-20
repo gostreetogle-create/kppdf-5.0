@@ -13,7 +13,17 @@ export async function GET(request: NextRequest) {
 
     const where: Record<string, unknown> = {};
     if (search) {
-      where.OR = ['lastName', 'firstName', 'phone', 'email'].map((f) => ({ [f]: { contains: search } }));
+      // Cycle 54: search расширен companyName + inn для юрлица.
+      // mode: 'insensitive' — case-insensitive поиск по всем полям (Postgres feature).
+      // Без mode Cyrillic search "ооо" не находит "ООО СтройМонтаж".
+      where.OR = [
+        { lastName: { contains: search, mode: 'insensitive' } },
+        { firstName: { contains: search, mode: 'insensitive' } },
+        { phone: { contains: search, mode: 'insensitive' } },
+        { email: { contains: search, mode: 'insensitive' } },
+        { companyName: { contains: search, mode: 'insensitive' } },
+        { inn: { contains: search, mode: 'insensitive' } },
+      ];
     }
 
     const orderBy: Record<string, string> = {};
@@ -42,6 +52,13 @@ export async function POST(request: NextRequest) {
   try {
     await requireAuth();
     const body = await request.json();
+    // Cycle 54 (B.2): backward compat — если клиент не передал type,
+    // устанавливаем 'individual' перед Zod-валидацией. Это позволяет
+    // существующим API-консьюмерам, отправляющим только lastName/firstName,
+    // продолжить работу без изменений.
+    if (!body.type) {
+      body.type = 'individual';
+    }
     const validation = validateBody(body, CreateClientSchema);
     if (!validation.success) return validation.error;
     const item = await prisma.client.create({ data: validation.data, include: { organization: true } });

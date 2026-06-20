@@ -24,16 +24,16 @@
 | 50 | 7.1 — Zustand refresh TTL + silent refresh preempt | технический | Low | 📋 planned |
 | **51** | **B.3 — StatusWorkflow live query + seed-миграция** | **бизнес** | **🔴 Critical (foundation)** | ✅ **DONE** |
 | **52** | **B.6 — Роли в API guards (`requireRole`)** | **бизнес** | **🔴 Critical (foundation)** | ✅ **DONE** |
-| 53 | B.1 — Производство → Склад (finished goods IN, auto) | бизнес | 🔴 Critical | 📋 planned (можно стартовать) |
-| 54 | B.2 — Client модель для юрлиц (B2B) | бизнес | 🔴 Critical | 📋 planned (можно стартовать) |
+| **53** | **B.1 — Производство → Склад (finished goods IN, auto)** | **бизнес** | **🔴 Critical** | ✅ **DONE** (2026-06-20) |
+| **54** | **B.2 — Client модель для юрлиц (B2B)** | **бизнес** | **🔴 Critical** | ✅ **DONE** (2026-06-20) |
 | 55 | B.4 — Защита номеров документов после sent/active/paid | бизнес | 🟡 High | 📋 planned |
 | 56 | B.5 — OrderClosing FK relation (audit-trail strict) | бизнес | 🟡 High | 📋 planned |
 | 57 | B.7 — UserActivity UI (история для всех сущностей) | бизнес | 🟢 Low | 📋 planned |
 
 **Завершено технических**: 4/8 (50%).
-**Завершено бизнес**: 2/7 **foundation layer** (B.3 + B.6). Cycles 53+54 теперь **разблокированы**.
+**Завершено бизнес**: 4/7 **foundation + business-critical layers** (B.3 + B.6 + B.1 + B.2).
 **Бизнес план v2**: 7 блоков (cycles 51-57), против исходного draft 8 блоков (cycles 51-58). B.7 и B.8 объединены в один блок B.7 (см. Round 2 консенсус).
-**Порядок**: foundation layer (51+52 DONE параллельно) → business-critical (53+54 next, parallel) → high/low business.
+**Порядок**: foundation layer (51+52 ✅) → business-critical layer (53+54 ✅) → high/low business (55+56+57 next — параллельно; cycle 50+44-49 тех — независимые).
 
 ---
 
@@ -66,14 +66,38 @@
 
 ---
 
+## ✅ Выполненные бизнес-блоки (cycles 53+54)
+
+### ✅ Cycle 53 — B.1 Finished Goods auto-IN (производство → склад)
+
+**Файл**: `audit-tasks.md` ➜ cycle 53
+**Commit**: `3132dc2` (cycle-53).
+**Architectural decision**: [`docs/decisions/ADR-004-business-critical-layer.md`](./docs/decisions/ADR-004-business-critical-layer.md).
+
+**Что было сделано**:
+- `prisma/schema.prisma` — `InventoryMovement` получил nullable `productionOrderId` + FK relation `ProductionOrder? inventoryMovements[]` (onDelete SetNull) + `@@unique([productionOrderId, storageItemId, type])` для race protection + `@@index([storageItemId])` + `@@index([productionOrderId])`.
+- `prisma/migrations/20260620130000_add_inventory_movement_production_order_id/migration.sql` (new) — `ALTER TABLE` adds column + FK + UNIQUE composite index.
+- `src/lib/warehouse/auto-receive-finished-goods.ts` (new) — exports `autoReceiveFinishedGoods(orderId)` returning `{created, skipped, errors, log: string[]}`. Per-product pipeline: pre-check via `findFirst` (idempotent), затем `$transaction` с `StorageItem.upsert` + `InventoryMovement.create` + `StorageItem` increment. Catches P2002 unique violation → `skipped` для race safety.
+- `src/app/api/production-orders/[id]/status/route.ts` PATCH — `autoReceiveFinishedGoods(id)` вызывается на transition в `completed` после success `prisma.productionOrder.update`. Исключения logged но НЕ fail update — deliberate trade-off (business > inventory perfect-sync).
+
+### ✅ Cycle 54 — B.2 Client модель для юрлиц (B2B)
+
+**Файл**: `audit-tasks.md` ➜ cycle 54
+**Architectural decision**: [`docs/decisions/ADR-004-business-critical-layer.md`](./docs/decisions/ADR-004-business-critical-layer.md).
+
+**Что было сделано**:
+- `prisma/schema.prisma` — `model Client` получил 5 новых полей: `type String @default("individual")` discriminator `individual | legal`, `companyName String?`, `legalForm String?` (ООО/ОАО/ИП/ЗАО/ПАО), `kpp String?` (9 цифр для legal), `ogrn String?` (13 для ООО/ОАО/etc, 15 для ИП), `legalAddress String?` (полный юр. адрес). Plus `@@index([type])` + `@@index([companyName])` + `@@index([inn])`.
+- `prisma/migrations/20260620130005_add_client_legal_entity_fields/migration.sql` (new) — `ALTER TABLE ADD COLUMN` для всех 5 новых полей + indexes. Backward-compat через `DEFAULT 'individual'` (existing rows не ломаются).
+- `src/lib/validations/client.ts` (rewrote) — `CreateClientSchema` = `z.discriminatedUnion('type', [IndividualClientSchema, LegalClientSchema])`. Type-specific `superRefine`:
+  - **Individual**: required lastName/firstName. `inn` validation: 10 цифр (юрлицо) OR 12 цифр (ИП) — optional.
+  - **Legal**: required companyName + `inn` (10 цифр) + kpp (9 цифр) + legalAddress. lastName/firstName auto-defaulted to '' via `.default('')` для backward-compat display.
+  - `UpdateClientSchema` — flat `.partial()` всех полей для простых PUT-обновлений.
+- `src/app/api/clients/route.ts` POST/PUT — автоматический `body.type ?? 'individual'` backward-compat. GET — расширен search: `lastName | firstName | phone | companyName | inn` — все `contains: { mode: 'insensitive' }` для Cyrillic parity.
+- `src/app/(dashboard)/clients/client.tsx` (rewrote) — radio «Тип клиента» в `ClientForm` (individual/legal) + conditional fields display.
+
 ## 🔴 Бизнес-блоки ВЫСОКОГО приоритета
 
-### 🔴 B.1 — Производство → Склад (auto-finished-goods IN)
-
-**Приоритет**: 🔴 Critical
-**Сложность**: M
-**Цикл**: 53 (next — после cycle 51+52 ✓)
-**Зависимости**: B.6 ✓ (роли enforced — auto-IN будет работать только для manager/production).
+## 🔴 Бизнес-блоки ВЫСОКОГО приоритета (DEFERRED — см. ✅ Выполненные business-critical cycles 53+54 выше)
 
 **Проблема**:
 - `autoDeductMaterials()` уже списывает материалы со склада (OUT) при `planned → in_progress` ✓.
@@ -236,7 +260,14 @@ model OrderClosing {
 - B.6 placement: с позиции 6 на позицию 2 (foundation layer).
 - B.8 removed (merged with B.7).
 
-**Foundation layer completion (cycles 51+52)** открывает возможность параллельного старта B.1 (cycle 53) + B.2 (cycle 54) — теперь оба безопасно могут писать с правильной RBAC и единым workflow engine.
+**Foundation layer ЗАВЕРШЁН** (cycles 51+52 ✅). **Business-critical layer ЗАВЕРШЁН** (cycles 53+54 ✅).
+
+**Следующие блоки** (cycles 55+56+57 — могут стартовать параллельно после ADR-004):
+- **Cycle 55 (B.4 Защита номеров документов)** — frozen-statuses per doc + `assertNumberImmutable`.
+- **Cycle 56 (B.5 OrderClosing FK relation)** — formal FK + SetNull cascade.
+- **Cycle 57 (B.7 UserActivity UI)** — timeline component + `GET /api/activity-log`.
+
+Cross-cutting правила: Tier A (`src/lib/jwt.ts`) не трогать. Tier B (`src/lib/pdf/index.ts`) API frozen. Новый helper `src/lib/warehouse/auto-receive-finished-goods.ts` — Tier C CANDIDATE (см. `STABLE-MODULES.md`).
 
 ---
 

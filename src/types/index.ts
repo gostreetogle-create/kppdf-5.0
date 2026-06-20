@@ -79,8 +79,8 @@ export interface TableColumn {
   label: string;
   /** Ширина колонки (CSS: "100px", "20%", "auto") */
   width?: string;
-  /** Тип данных для форматирования */
-  type?: 'text' | 'number' | 'date' | 'currency';
+  /** Тип данных для форматирования (image — рендер URL как <img> в preview, doc.addImage в PDF) */
+  type?: 'text' | 'number' | 'date' | 'currency' | 'image';
   /** Порядок сортировки */
   order: number;
   /** Показать/скрыть колонку */

@@ -20,8 +20,10 @@
 
 | Цикл | Блок | Статус | Spec | Notes |
 |------|------|--------|------|-------|
-| **51** | **B.3 — StatusWorkflow live query + seed migration** | ✅ **DONE** (2026-06-20) | [`tasks/current-task.md`](tasks/current-task.md) | Foundation layer — `src/lib/status-workflow.ts` (new) + seed migration SQL + 5 PATCH route refactors. ADR-003 формализован. Commit pending. |
-| **52** | **B.6 — Роли в API guards** | ✅ **DONE** (2026-06-20) | см. cycle 51 spec | Foundation layer — механическая замена `requireAuth` → `requireRole([...])` в 5 critical entity routes. 30+ routes ещё mechanical-replace, deferred. Commit pending. |
+| **51** | **B.3 — StatusWorkflow live query + seed migration** | ✅ **DONE** (2026-06-20) | [`tasks/current-task.md`](tasks/current-task.md) | Foundation layer — `src/lib/status-workflow.ts` (new) + seed migration SQL + 5 PATCH route refactors. ADR-003 формализован. Commit `cycle-51` (1b9c836). |
+| **52** | **B.6 — Роли в API guards** | ✅ **DONE** (2026-06-20) | см. cycle 51 spec | Foundation layer — механическая замена `requireAuth` → `requireRole([...])` в 5 critical entity routes. Commit `cycle-52` (f0a5583). |
+| **53 — завершён** (см. ниже в business-секции) | | | | | | |
+| **54 — завершён** (см. ниже в business-секции) | | | | | | |
 
 **Foundation layer стартовал параллельно** — разные файлы, готовит B.1+B.2.
 
@@ -40,8 +42,8 @@
 |------|------|--------|-------------|
 | 51 | B.3 StatusWorkflow live query | ✅ done (2026-06-20) | — (foundation) |
 | 52 | B.6 Roles API guards | ✅ done (2026-06-20) | — (foundation) |
-| 53 | B.1 Finished Goods auto-IN | 📋 planned **(ready after foundation ✓)** | После B.6 ✓ — теперь возможна с enforced RBAC |
-| 54 | B.2 Client модель для юрлиц | 📋 planned **(ready after foundation ✓)** | После B.6 ✓ — теперь возможна с enforced RBAC |
+| **53** | **B.1 Finished Goods auto-IN** | ✅ **DONE** (2026-06-20) | [`tasks/current-task.md`](tasks/current-task.md) cycle-53 | См. ADR-004 | Commit `cycle-53` | tsc 0, vitest 88/88 |
+| **54** | **B.2 Client модель для юрлиц (B2B)** | ✅ **DONE** (2026-06-20) | [`tasks/current-task.md`](tasks/current-task.md) cycle-54 | См. ADR-004 | Commit pending | tsc 0, vitest 88/88 |
 | 55 | B.4 Защита номеров | 📋 planned | После B.3 |
 | 56 | B.5 OrderClosing FK | 📋 planned | независим |
 | 57 | B.7 UserActivity UI | 📋 planned | независим |
@@ -52,7 +54,9 @@
 
 **Foundation layer ЗАВЕРШЁН** (cycles 51 + 52 done 2026-06-20). B.3 (StatusWorkflow live query) + B.6 (Roles API guards) — оба ✅ DONE.
 
-**Next**: cycles 53 (B.1 Finished Goods auto-IN) + 54 (B.2 Client юрлица) теперь **разблокированы** для parallel старта — оба могут писать с уже enforced RBAC (cycle 52) + единым workflow engine (cycle 51).
+**Business-critical layer ЗАВЕРШЁН** (cycles 53 + 54 done 2026-06-20). B.1 (Finished Goods auto-IN) + B.2 (Client юрлица B2B) — оба ✅ DONE.
+
+**Next**: cycles 55 (B.4 Защита номеров) + 56 (B.5 OrderClosing FK) + 57 (B.7 UserActivity UI) — все три теперь могут стартовать параллельно после business-critical layer. Тех-циклы 44-50 — независимые.
 
 **Подробности cycle 51+52**:
 - Cycle 51 — substantive: new helper `src/lib/status-workflow.ts` + cache + seed migration SQL + 5 PATCH route refactors (hardcoded VALID_TRANSITIONS → assertTransitionAllowed).
