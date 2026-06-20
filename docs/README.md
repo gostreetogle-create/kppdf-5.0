@@ -60,11 +60,6 @@ docs/
 │
 ├── _archive/                       ← Устаревшее (см. _archive/README.md)
 │   └── ...
-│
-└── _cleanup/                       ← Мета-отчёты текущей уборки (Phase 0-4 cycle)
-    ├── AUDIT_REPORT.md
-    ├── PROPOSED_STRUCTURE.md
-    └── CLEANUP_FINAL_REPORT.md
 ```
 
 ---
@@ -112,7 +107,8 @@ docs/
 
 | Дата | Событие |
 |------|---------|
-| 2026-06-20 | **Cycle 41: docs cleanup (Phase 0–4)** — корневой `.md` сокращён с 33 до 3 файлов, единая точка входа через `docs/README.md`. См. [`_cleanup/CLEANUP_FINAL_REPORT.md`](./_cleanup/CLEANUP_FINAL_REPORT.md). |
+| 2026-06-20 | **Cycle 41: docs cleanup (Phase 0–4)** — корневой `.md` сокращён с 33 до 3 файлов, единая точка входа через `docs/README.md`. Детали уборки — git: commit `a729b3c`. |
+| 2026-06-20 | **Cycle v3.3**: удалены временные мета-отчёты `docs/_cleanup/` (AUDIT_REPORT / PROPOSED_STRUCTURE / CLEANUP_FINAL_REPORT); в активных документах ссылок на них больше нет — детали сохранены в git. |
 
 ---
 

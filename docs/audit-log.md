@@ -2860,3 +2860,26 @@ preserved unstaged per Rule 5.
 
 ### Next
 - v3.3 — TBD (depends on user)
+
+---
+
+## Cycle v3.3 (2026-06-20) — cleanup meta-reports deletion
+
+### Theme
+Удалить временные мета-отчёты `docs/_cleanup/`, оставшиеся после cycle 41. Эти три файла (AUDIT_REPORT.md, PROPOSED_STRUCTURE.md, CLEANUP_FINAL_REPORT.md) были рабочими артефактами Phase 0–4 уборки docs/; теперь структура `docs/` самодокументирована (`docs/README.md` + `docs/GLOSSARY.md` + `docs/_archive/README.md`) и временные мета-отчёты больше не нужны. Все три файла были закоммичены в `a729b3c`, поэтому удаление — без потери информации: история уборки доступна через `git log a729b3c -- docs/_cleanup/`.
+
+### Stats
+- **Removed**: 3 файла в `docs/_cleanup/` (общим объёмом ~45 KB):
+  - `AUDIT_REPORT.md` (Phase 0 inventory ~16 KB)
+  - `PROPOSED_STRUCTURE.md` (Phase 1/2 ~15 KB)
+  - `CLEANUP_FINAL_REPORT.md` (Phase 3/4 final ~14 KB)
+- **Edited**: `docs/README.md` (folder-tree: удалён блок `_cleanup/` + 3 sub-files; history table: добавлена строка v3.3 + ссылка на git commit вместо сломанной ссылки).
+- **Untouched**: cycle 41 запись в `docs/audit-log.md` оставлена как историческая (append-only log per CONTRIBUTING.md Rule); новая v3.3 запись добавлена ниже.
+
+### Compliance
+- CONTRIBUTING.md Rule 6 (single commit per cycle): ✓ один atomic commit.
+- CONTRIBUTING.md Rule 7 (active docs must remain current): ✓ `docs/README.md` nav обновлён, ссылок на удалённые файлы больше нет.
+- CONTRIBUTING.md Rule (append-only audit-log): ✓ cycle 41 entry immutable; v3.3 entry добавлена в append-only стиле.
+
+### Rationale
+Удаление `docs/_cleanup/` — финал большой операции «Генеральная уборка docs/». Временные файлы сделали своё дело и больше не нужны в active tree. Если когда-нибудь понадобится восстановить — `git show a729b3c:docs/_cleanup/AUDIT_REPORT.md` (и аналоги для двух других).
