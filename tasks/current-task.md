@@ -499,3 +499,61 @@ npx prisma migrate dev --name add_proposal_versioning
 - `src/app/api/proposals/route.ts` (edit)
 - `src/app/(dashboard)/proposals/[id]/page.tsx` (edit)
 
+---
+
+## === РЕЗУЛЬТАТ === (выполнено Агентом A, 2026-06-20, cycle 41)
+
+### Что сделано
+
+**`src/lib/pdf/index.ts`** — 779 → ~840 строк. **Единственный изменённый файл** (0 новых файлов, 0 prisma schema, 0 API routes).
+
+| AC | Изменение |
+|----|-----------|
+| `PAGE_H` constant | Добавлена константа `PAGE_H = 297` (A4 height, mm) на module-level рядом с `MARGIN` и `PAGE_W`. Доступна во всех 3 генераторах |
+| Page-break hook | В **3 autoTable** (proposal/contract/invoice): `margin: { top: 10, bottom: MARGIN, left: MARGIN, right: MARGIN }` (placeholder 10mm под баннер), `showHead: 'everyPage'` (повтор заголовка на стр. 2+), `didDrawPage: (data: AutoTablePageData) =>` hook рисующий «Продолжение таблицы (стр. N)» справа сверху |
+| Header repeat | `showHead: 'everyPage'` — заголовок таблицы повторяется на каждой странице (compliance для длинных КП/договоров/счетов) |
+| Overflow legalAddress (proposal) | Defensive: уже имел `splitTextToSize`, добавлен только overflow check + `doc.addPage()` |
+| Overflow legalAddress (contract/invoice) | **Critical pre-cycle-41 bug**: addresses рендерились одним `doc.text(\`Адрес: ${...}\`, ...)` — horizontal overflow при >200 char. Добавлен `splitTextToSize` + overflow check + `addPage()` |
+| TypeScript polish | Добавлен inline `interface AutoTablePageData { pageNumber; pageCount; cursor: {x,y}; settings }`, иначе 3 implicit-any errors на callback параметре |
+
+### Gates
+
+| Проверка | Результат |
+|----------|-----------|
+| `npx tsc --noEmit` | ✅ **0 ошибок** |
+| `npx vitest run` | ✅ **88/88 (6/6 suites)** |
+| `npx eslint src --max-warnings=999` | ✅ 0 ошибок (3 cosmetic warnings pre-existing в `src/lib/auth.ts`) |
+| Code-reviewer-minimax-m3 | ✅ PASS с эстетическими nit-полировками, все применены (см. ниже) |
+
+### Дизайн валидирован thinker-with-files-gemini
+
+- `didDrawPage` (не `willDrawPage`) — autoTable handles font state per-cell, нет нужды сбрасывать.
+- `margin.top = 10mm` — placeholder под баннер сверху на стр. 2+.
+- `showHead: 'everyPage'` — обязательное для коммерческих документов.
+- Manual row loop fallback — **отвергнут** как anti-pattern (autoTable battle-tested).
+
+### Промежуточные фиксы (code-reviewer nit-полировка)
+
+1. **3 tsc implicit-any errors** на `(data) =>` callback параметрах — решены inline `interface AutoTablePageData` + аннотация `(data: AutoTablePageData) =>`.
+2. **Banner Y position**: `MARGIN + 3 = 7mm` слишком близко к верхнему краю — bumped до `MARGIN + 5 = 9mm` для лучшего optical separation от auto-generated header row на стр. 2+.
+3. **`setTextColor(0)` → `setTextColor(0, 0, 0)`** — consistency с 3-arg form используемой в других местах файла.
+
+### Pre/post bug comparison
+
+| Поведение | До cycle 41 | После cycle 41 |
+|-----------|-------------|----------------|
+| КП с 30+ позициями | autoTable переносит на новую страницу, но **заголовок таблицы дублируется только при `showHead: 'everyPage'`** (отсутствовало) | Header повторяется, banner «Продолжение таблицы (стр. N)» сверху |
+| Contract с длинным юрадресом | Горизонтальный overflow за правым краем страницы (обрезано) | `splitTextToSize` + multi-line адрес + новая страница если не помещается |
+| Invoice с длинным юрадресом | Тот же баг | Тот же фикс |
+| Title block на длинном PDF | OK (text не expand вертикально) | OK |
+
+### Файлы окончательно изменены
+
+- `src/lib/pdf/index.ts` (edit, единственный production файл)
+- `audit-tasks.md` (mark ✅ DONE, прогресс 3/9 → 4/9)
+- `tasks/current-task.md` (этот раздел)
+- `audit-log.md` (cycle 41 запись)
+
+### Commit
+
+`db5586f cycle-41: Block 5.1+5.2 — PDF page-break (didDrawPage+showHead) + legalAddress overflow protection`
