@@ -747,6 +747,9 @@ model StatusWorkflow {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  // Cycle 51 (B.3): unique constraint enforces idempotent seed migration
+  // + prevents duplicate (entity, fromStatus, toStatus) rows.
+  @@unique([entity, fromStatus, toStatus])
   @@index([entity, fromStatus])
 }
 

@@ -4,6 +4,8 @@ import { requireAuth, requireRole } from '@/lib/auth';
 import { apiOk, apiError, apiPaginated, parseSearchParams } from '@/lib/api-response';
 import { CreateStatusWorkflowSchema } from '@/lib/validations/status-workflow';
 import { validateBody } from '@/lib/validations';
+// Cycle 51 (B.3): invalidate cache после admin mutation в workflow.
+import { invalidateStatusWorkflowCache } from '@/lib/status-workflow';
 
 export async function GET(request: NextRequest) {
   try {
@@ -39,6 +41,8 @@ export async function POST(request: NextRequest) {
     const validation = validateBody(body, CreateStatusWorkflowSchema);
     if (!validation.success) return validation.error;
     const item = await prisma.statusWorkflow.create({ data: validation.data });
+    // Cycle 51 (B.3): новое правило применяется немедленно (cache TTL bypass).
+    invalidateStatusWorkflowCache();
     return apiOk(item);
   } catch (error) {
     if (error instanceof Error && error.message === 'UNAUTHORIZED') return apiError('Не авторизован', 401);

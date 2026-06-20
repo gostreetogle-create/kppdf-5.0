@@ -84,6 +84,7 @@
 |--------|------|-----|--------|-----|-------|---------|
 | `src/lib/env.ts` | 40 | ✅ 0 | ❌ нет тестов | implicit (Block 1.3) | ✅ manual | **CANDIDATE** — требует тестов из cycle 48-49 |
 | `src/lib/proposals/clone-items.ts` | 43 | ✅ 0 | ❌ нет тестов | pending (Round 3 discussion) | ✅ manual | **CANDIDATE** — требует тестов из cycle 48-49 |
+| `src/lib/status-workflow.ts` | 51 | ✅ 0 | ❌ нет тестов | ADR-003 (accepted) | ✅ manual | **CANDIDATE** — требует тестов из cycle 48-49 (cache + 5 PATCH routes integration) |
 
 **Promotion criterion (Tier C → Tier A)**:
 - Должны появиться vitest тесты с покрытием всех экспортируемых функций.
@@ -135,3 +136,4 @@
 | Дата | Изменение | Цикл |
 |------|-----------|------|
 | 2026-06-20 | Initial creation: STABLE-MODULES.md создан, Tier A: jwt.ts, Tier B: pdf/index.ts API frozen, Tier C: env.ts + clone-items.ts candidates | 41 |
+| 2026-06-20 | Tier C expansion: status-workflow.ts (NEW helper, cycle 51) — lib for B.3 workflow engine. Tier A/B unchanged (jwt.ts, pdf/index.ts NOT touched). | 51+52 |
