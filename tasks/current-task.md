@@ -1,559 +1,462 @@
-# Cycles 42 + 43 — Block 3.2 Версионирование КП
+# Cycles 51 + 52 — Foundation layer: B.3 StatusWorkflow + B.6 Roles
 
-**Дата**: 2026-06-20
-**Агент A (Критик)** — координатор, формулировка AC, ревью UI/API
-**Агент B (Исполнитель)** — schema migration + cloneProposalItems helper + API + UI (делегировано)
-**Источник плана**: `audit-tasks.md` Блок 3.2 (cycles 42-43)
-**Связь с discussion**: Round 2 (А предлагает, Б принимает + индекс)
+**Дата старта**: 2026-06-20
+**Параллельные циклы** (разные файлы, могут идти одновременно):
+- **Cycle 51 — B.3 StatusWorkflow live query + seed-миграция** (helper + cache + seed).
+- **Cycle 52 — B.6 Роли в API guards** (`requireRole` уже существует в `auth.ts:67` — нужна USAGE).
+
+**Агент A (Критик-Архитектор)** — координатор, формулировка AC, ревью через code-reviewer + ADR-002.
+**Агент B (Рецензент-Исполнитель)** — имплементация helper + cache + route edits.
+
+**Источник**: [`audit-tasks-business.md`](../audit-tasks-business.md) v2 + [`business-tasks.md`](../business-tasks.md) + FINAL CONSENSUS Round 2.
+
+**Зависимости обеих циклов**: ❌ нет. Оба — foundation, идут ПЕРЕД бизнес-critical (B.1, B.2).
 
 ---
 
-## Объединение cycles 42 + 43 в 1 PR
+## ⚠️ IMPORTANT DISCOVERY: `requireRole` уже существует!
 
-Циклы 42 (schema) и 43 (helper + API + UI) объединяем в **1 PR** — обоснование из thinker:
-- Schema migration без API/UI логики = dormant fields без value
-- Cohesive scope — versioning feature целиком
-- Уменьшает review overhead
+При чтении [`src/lib/auth.ts:67`](../src/lib/auth.ts) обнаружено:
 
-PR message: `cycle-42-43: Block 3.2 — Proposal versioning (schema + API + UI)`.
+```ts
+// УЖЕ РЕАЛИЗОВАНО в cycle 39 (M5 / jwt.ts decoupling):
+export async function requireRole(roles: string[]) {
+  const user = await requireAuth();
+  if (!roles.includes(user.role) && user.role !== 'admin') {
+    throw new Error('FORBIDDEN');
+  }
+  return user;
+}
+
+export async function requireEditor() {
+  const user = await requireAuth();
+  if (user.role === 'viewer') {
+    throw new Error('FORBIDDEN');
+  }
+  return user;
+}
+```
+
+**Это значит**:
+- **Cycle 52 (B.6) сокращается** — НЕ нужен `auth-roles.ts` (helper уже существует).
+- Нужно только **механически заменить `requireAuth` → `requireRole([...])`** в route handlers по audit-маппингу.
+- Audit-маппинг (из business-tasks.md):
+  - `/api/proposals/*` → `requireRole(['manager'])` (admin implicit)
+  - `/api/contracts/*` → `requireRole(['manager'])`
+  - `/api/production-orders/*` PATCH → `requireRole(['manager', 'production'])`
+  - `/api/warehouse/*` → `requireRole(['storekeeper'])`
+  - `/api/finance/*` → `requireRole(['accountant'])`
+  - `/api/users/*` → `requireRole(['admin'])` (явный)
+  - GET endpoints → `requireAuth()` (только чтение)
+
+**Важно**: `requireRole(['admin'])` — admin может НЕ быть в списке, но bypass через `user.role !== 'admin'`. **Это working as designed** — admin всегда имеет доступ. Если нужна **strict** role для admin-only operations (например, `/api/users/*`) — добавить проверку `user.role === 'admin'` explicit.
 
 ---
 
 ## Файлы, которые нужно изменить
 
+### Cycle 51 (B.3 StatusWorkflow)
+
 | Файл | Действие | Что |
 |------|----------|-----|
-| `prisma/schema.prisma` | edit | Добавить versioning поля в `Proposal` + `sourceItemId` в `ProposalItem` |
-| `prisma/migrations/<timestamp>_add_proposal_versioning/migration.sql` | new | Auto-generated `prisma migrate dev` |
-| `src/app/api/proposals/[id]/versions/route.ts` | new | POST endpoint для создания новой версии |
-| `src/app/api/proposals/[id]/route.ts` | edit | PUT: block edit если `supersededAt` есть |
-| `src/app/api/proposals/[id]/convert/route.ts` | edit | Block convert если не latest active version |
-| `src/lib/proposals/clone-items.ts` | new | Pure-function helper `cloneProposalItems(tx, items, newProposalId)` |
-| `src/app/(dashboard)/proposals/[id]/page.tsx` | edit | Badge «v{N}» + button «Создать новую версию» + disable Edit при superseded |
+| `src/lib/status-workflow.ts` | new | Helper `assertTransitionAllowed` + in-memory cache |
+| `src/lib/status-workflow-cache.ts` | new | Cache primitives (если helper разрастётся) |
+| `src/app/api/admin/status-workflows/route.ts` | edit | Cache invalidation на create/update/delete |
+| `src/app/api/proposals/[id]/route.ts` | edit | Заменить `VALID_TRANSITIONS` → `assertTransitionAllowed` |
+| `src/app/api/contracts/[id]/route.ts` | edit | (если есть status transitions — нужно проверить) |
+| `src/app/api/production-orders/[id]/status/route.ts` | edit | Заменить `VALID_TRANSITIONS` → `assertTransitionAllowed` |
+| `prisma/migrations/<ts>_seed_status_workflows/migration.sql` | new | Seed стартовых переходов |
+
+### Cycle 52 (B.6 Roles)
+
+| Файл | Действие | Что |
+|------|----------|-----|
+| `src/lib/auth.ts` | edit (минимальный) | Уже имеет `requireRole`. Ничего не трогать. |
+| `src/app/api/proposals/[id]/route.ts` | edit | GET→requireAuth, PUT/PATCH/DELETE→requireRole(['manager']) |
+| `src/app/api/contracts/[id]/route.ts` | edit | Аналогично |
+| `src/app/api/production-orders/[id]/status/route.ts` | edit | `requireAuth` → `requireRole(['manager', 'production'])` |
+| `src/app/api/warehouse/[id]/...` | edit | `requireRole(['storekeeper'])` |
+| `src/app/api/finance/...` | edit | `requireRole(['accountant'])` |
+| `src/app/api/users/...` | edit | `requireRole(['admin'])` (admin explicit) |
+
+**Note**: B.6 механическая замена. Если agent B встречает `requireAuth` где нужен role-check — переход `requireRole` согласно маппингу.
 
 ---
 
-## 1) Schema migration (`cycle-42` часть)
+## 1) Cycle 51 — StatusWorkflow live query
 
-### `prisma/schema.prisma` — Proposal model
-
-Добавить (после существующего `notes` field):
-
-```prisma
-model Proposal {
-  // ... existing fields ...
-
-  parentProposalId String?
-  parentProposal   Proposal?  @relation("ProposalVersions", fields: [parentProposalId], references: [id], onDelete: SetNull)
-  childVersions    Proposal[] @relation("ProposalVersions")
-
-  version       Int       @default(1)
-  supersededAt  DateTime?
-
-  // items ProposalItem[] — existing already
-
-  @@unique([number, version])  // ⚠️ заменить `number String @unique` на composite unique
-  @@index([number])
-  @@index([status])
-  @@index([parentProposalId])  // fast lineage lookup
-}
-```
-
-**🔴 CRITICAL GOTCHA**: `Proposal.number` is `@unique` currently. Multiple versions with same number would crash. Replace with `@@unique([number, version])`.
-
-Default `version: 1` smoothly fills in for all existing rows via Prisma default.
-
-### `prisma/schema.prisma` — ProposalItem model
-
-Добавить `sourceItemId` + self-FK lineage + index:
-
-```prisma
-model ProposalItem {
-  // ... existing fields ...
-
-  productId String?
-  product   Product? @relation(fields: [productId], references: [id])
-
-  proposalId String
-  proposal   Proposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
-
-  sourceItemId  String?
-  sourceItem    ProposalItem?  @relation("ItemLineage", fields: [sourceItemId], references: [id], onDelete: SetNull)
-  derivedItems  ProposalItem[] @relation("ItemLineage")
-
-  @@index([proposalId])
-  @@index([sourceItemId])  // 🚀 fast lineage lookup (Б's index recommendation)
-}
-```
-
-**Source-item направление**:  
-Каждая новая копия указывает на **immediate parent** (v3 → v2, v4 → v3), как **parentProposalId**. Это сохраняет recent lineage evolution. Source relations cascade to orphans (SetNull) on parent delete.
-
-### Photo / Component копирование
-
-**Уточнение от thinker** (важно — дискуссия ранее ошибочно говорила про ProposalItemPhoto/Foreign key):
-
-`ProposalItem` НЕ владеет photos / components напрямую — он **ссылается на `Product` через `productId`**. Photos и components принадлежат **Product**, не ProposalItem. Поэтому для new version нужно:
-- Скопировать только `ProposalItem` rows, сбрасывая `id` (cuid auto)
-- Сохранить `productId` (product reference тот же)
-- Установить `sourceItemId` для lineage
-- **НЕ копировать** photos или components — они остаются в `Product`, и обе версии используют те же photos/components через `productId`
-
-Это **удаляет требование cloneProposalItemsPhotos из audit-tasks.md** — было галлюцинацией в Round 1 дискуссии.
-
----
-
-## 2) `cloneProposalItems` helper (`cycle-43` часть)
-
-### `src/lib/proposals/clone-items.ts` (new)
+### Helper `src/lib/status-workflow.ts` (new)
 
 ```ts
-import type { PrismaClient } from '../generated/prisma/client';
+import { prisma } from './db';
+
+type Entity = 'proposal' | 'contract' | 'productionOrder' | 'orderTask' | 'shipment';
+
+const CACHE_TTL_MS = 60_000; // 60 sec
+const cache = new Map<Entity, { data: Map<string, string[]>; expiresAt: number }>();
+
+export class WorkflowError extends Error {
+  constructor(message: string, public code: 'TRANSITION_NOT_ALLOWED' | 'INSUFFICIENT_ROLE') {
+    super(message);
+  }
+}
 
 /**
- * Cycle 43 / Block 3.2: deep-copy ProposalItem rows для новой версии.
- * 
- * Используется:
- *  - В API route handler `POST /api/proposals/[id]/versions` внутри prisma.$transaction
- *  - В editor "Save as new version" (если будет в будущем)
- * 
- * Важно:
- *  - НЕ копирует photos/components — они в `Product`, ссылка остаётся.
- *  - sourceItemId указывает на **immediate parent** (v2 source → v1 item).
- *  - id auto-generated через cuid() default.
+ * Hardcoded fallback per entity — current logic from existing code.
+ * Если StatusWorkflow пустая для entity, используется этот набор.
  */
-export async function cloneProposalItems(
-  tx: Pick<PrismaClient, 'proposalItem'>,  // Prisma transaction client type
-  originalItems: Array<{
-    id: string;
-    quantity: number;
-    unitPrice: number;
-    markupPercent: number;
-    total: number;
-    sortOrder: number;
-    productId: string | null;
-  }>,
-  newProposalId: string,
-): Promise<number> {
-  if (originalItems.length === 0) return 0;
-
-  const data = originalItems.map((item) => ({
-    quantity: item.quantity,
-    unitPrice: item.unitPrice,
-    markupPercent: item.markupPercent ?? 0,
-    total: item.total,
-    sortOrder: item.sortOrder,
-    productId: item.productId,
-    proposalId: newProposalId,
-    sourceItemId: item.id,   // ← lineage на immediate parent
-  }));
-
-  const result = await tx.proposalItem.createMany({ data });
-  return result.count;
-}
-```
-
----
-
-## 3) API endpoint `POST /api/proposals/[id]/versions` (`cycle-43`)
-
-### `src/app/api/proposals/[id]/versions/route.ts` (new)
-
-Authentication: `requireEditor()` (matches pattern existing PUT/DELETE).
-
-Handler logic:
-
-```ts
-import { NextRequest } from 'next/server';
-import { prisma } from '@/lib/db';
-import { requireEditor } from '@/lib/auth-page';
-import { apiOk, apiError } from '@/lib/api-response';
-import { cloneProposalItems } from '@/lib/proposals/clone-items';
-import { getNextProposalNumber } from '@/lib/counter';
-
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },  // Next.js 15+ async params
-) {
-  try {
-    await requireEditor();
-    const { id } = await params;
-
-    const parent = await prisma.proposal.findUnique({
-      where: { id },
-      include: { items: { orderBy: { sortOrder: 'asc' } } },
-    });
-
-    if (!parent) return apiError('КП не найдена', 404);
-    if (parent.supersededAt) {
-      return apiError('Нельзя создать версию из superseded КП', 400);
-    }
-
-    const newProposal = await prisma.$transaction(async (tx) => {
-      const newNumber = await getNextProposalNumber('proposal');
-
-      const v = await tx.proposal.create({
-        data: {
-          number: newNumber,
-          title: parent.title,
-          status: 'draft',
-          clientId: parent.clientId,
-          organizationId: parent.organizationId,
-          templateId: parent.templateId,
-          markupPercent: parent.markupPercent,
-          discountPercent: parent.discountPercent,
-          vatRate: parent.vatRate,
-          ralCode: parent.ralCode,
-          notes: parent.notes,
-          validUntil: parent.validUntil,
-          parentProposalId: parent.id,
-          version: parent.version + 1,
-        },
-      });
-
-      await cloneProposalItems(tx, parent.items, v.id);
-
-      await tx.proposal.update({
-        where: { id: parent.id },
-        data: { supersededAt: new Date() },
-      });
-
-      return v;
-    });
-
-    return apiOk({ proposal: newProposal });
-  } catch (err) {
-    console.error('Create proposal version failed:', err);
-    return apiError('Ошибка сервера', 500);
-  }
-}
-```
-
-**Notes**:
-- Использует `requireEditor` из `src/lib/auth-page.ts` — проверь, что функция существует.
-- `Next.js 15+ async params` signature — если версия 16.2 другая, скорректируй.
-- `getNextProposalNumber('proposal')` из `src/lib/counter.ts` — проверь сигнатуру.
-
----
-
-## 4) Edit API hardening (`cycle-43`)
-
-### `src/app/api/proposals/[id]/route.ts` — PUT handler
-
-**В начале handler** добавить check:
-
-```ts
-import { prisma } from '@/lib/db';
-
-export async function PUT(request: NextRequest, { params }: ...) {
-  try {
-    await requireEditor();
-    const { id } = await params;
-    
-    const existing = await prisma.proposal.findUnique({
-      where: { id },
-      select: { supersededAt: true },
-    });
-    
-    if (!existing) return apiError('КП не найдена', 404);
-    if (existing.supersededAt) {
-      return apiError('Нельзя редактировать superseded версию. Создайте новую версию.', 400);
-    }
-    
-    // ... rest of existing PUT logic ...
-  }
-}
-```
-
-### `src/app/api/proposals/[id]/convert/route.ts` — convert handler
-
-Добавить check: only allow convert if `supersededAt === null` AND no newer version exists:
-
-```ts
-const hasNewer = await prisma.proposal.findFirst({
-  where: {
-    parentProposalId: existing.id,  // or proposalId if item-level
-    supersededAt: null,
+const FALLBACK_TRANSITIONS: Record<Entity, Record<string, string[]>> = {
+  proposal: {
+    draft: ['sent'],
+    sent: ['accepted', 'rejected', 'paid'],
+    accepted: ['converted', 'paid'],
+    paid: ['converted'],
+    rejected: ['draft'],
   },
-});
-if (hasNewer) {
-  return apiError('Конвертировать можно только последнюю активную версию', 400);
-}
-```
+  contract: {
+    draft: ['active'],
+    active: ['completed', 'cancelled'],
+    completed: [],
+    cancelled: ['draft'],
+  },
+  productionOrder: {
+    planned: ['in_progress', 'cancelled'],
+    in_progress: ['manufacturing', 'painting', 'completed', 'cancelled'],
+    manufacturing: ['painting', 'completed', 'cancelled'],
+    painting: ['shipping', 'completed', 'cancelled'],
+    shipping: ['completed', 'cancelled'],
+    completed: [],
+    cancelled: ['planned'],
+  },
+  orderTask: {
+    pending: ['in_progress', 'blocked'],
+    in_progress: ['completed', 'blocked'],
+    completed: [],
+    blocked: ['pending'],
+  },
+  shipment: {
+    draft: ['partially', 'shipped', 'cancelled'],
+    partially: ['shipped', 'cancelled'],
+    shipped: ['cancelled'],
+    cancelled: ['draft'],
+  },
+};
 
----
+async function loadTransitions(entity: Entity): Promise<Map<string, string[]>> {
+  const cached = cache.get(entity);
+  if (cached && cached.expiresAt > Date.now()) return cached.data;
 
-## 5) UI changes (`cycle-43`)
+  // Load from DB
+  const rows = await prisma.statusWorkflow.findMany({
+    where: { entity, isActive: true },
+  });
 
-### `src/app/(dashboard)/proposals/[id]/page.tsx`
-
-**Interface update**: добавить `version` + `supersededAt`:
-
-```tsx
-interface Proposal {
-  // ... existing fields ...
-  version: number;
-  parentProposalId: string | null;
-  supersededAt: string | null;
-}
-```
-
-**Badge**: добавить после `№ {proposal.number}`:
-
-```tsx
-{proposal.version > 1 && (
-  <span className="ml-2 px-2 py-0.5 bg-[var(--muted)] rounded text-sm">
-    v{proposal.version}
-  </span>
-)}
-```
-
-**Toolbar button**: добавить "Создать новую версию" (только если `!supersededAt`):
-
-```tsx
-{!proposal.supersededAt && (
-  <Button onClick={async () => {
-    const res = await fetch(`/api/proposals/${proposal.id}/versions`, { method: 'POST' });
-    if (res.ok) {
-      const { proposal: newP } = await res.json();
-      window.location.href = `/proposals/${newP.id}`;
-    } else {
-      alert('Ошибка создания версии');
+  let transitions: Map<string, string[]>;
+  if (rows.length === 0) {
+    // Fallback to hardcoded
+    console.warn(`[status-workflow] No DB transitions for entity=${entity}, using fallback`);
+    transitions = new Map(Object.entries(FALLBACK_TRANSITIONS[entity]));
+  } else {
+    transitions = new Map();
+    for (const row of rows) {
+      const key = `${row.fromStatus}->${row.toStatus}`;
+      const allowedRoles = row.roles.split(',').map(r => r.trim());
+      transitions.set(key, allowedRoles);
     }
-  }}>
-    <GitBranch className="h-4 w-4 mr-2" />
-    Создать новую версию
-  </Button>
-)}
+  }
+
+  cache.set(entity, { data: transitions, expiresAt: Date.now() + CACHE_TTL_MS });
+  return transitions;
+}
+
+export function invalidateStatusWorkflowCache(entity?: Entity) {
+  if (entity) cache.delete(entity);
+  else cache.clear();
+}
+
+/**
+ * Asserts that a status transition is allowed for the given user role.
+ * Throws WorkflowError on rejection.
+ */
+export async function assertTransitionAllowed(
+  entity: Entity,
+  fromStatus: string,
+  toStatus: string,
+  userRole: string,
+): Promise<void> {
+  const transitions = await loadTransitions(entity);
+  const key = `${fromStatus}->${toStatus}`;
+  const allowedRoles = transitions.get(key);
+
+  if (!allowedRoles) {
+    throw new WorkflowError(
+      `Transition ${entity}.${fromStatus}→${toStatus} is not allowed`,
+      'TRANSITION_NOT_ALLOWED',
+    );
+  }
+
+  if (!allowedRoles.includes(userRole) && !allowedRoles.includes('any') && userRole !== 'admin') {
+    throw new WorkflowError(
+      `Role ${userRole} cannot perform ${entity}.${fromStatus}→${toStatus}`,
+      'INSUFFICIENT_ROLE',
+    );
+  }
+}
 ```
 
-**Disable Edit button** if `supersededAt`:
+**Design rationale**:
+- Cache хранит `Map<Entity, Map<transitionKey, allowedRoles[]>>` — O(1) lookup.
+- TTL 60 сек через `expiresAt`.
+- Invalidate через explicit `invalidateStatusWorkflowCache(entity)` call в admin route handlers.
+- Hardcoded fallback per entity — БЕЗОПАСНый default при пустой БД.
+- Admin bypass для transition (как в `requireRole`).
 
-```tsx
-{proposal.supersededAt && (
-  <span className="text-sm text-[var(--muted-foreground)]">
-    Версия устарела (superseded)
-  </span>
-)}
+### Cache invalidation hook в `src/app/api/admin/status-workflows/route.ts`
+
+```ts
+// В каждом POST/PUT/DELETE handler: после успешной мутации:
+import { invalidateStatusWorkflowCache } from '@/lib/status-workflow';
+
+// ... after await prisma.statusWorkflow.create/update/delete ...
+invalidateStatusWorkflowCache(entity); // или без аргумента для clear all
 ```
+
+### Seed migration: `prisma/migrations/<ts>_seed_status_workflows/migration.sql`
+
+```sql
+-- Idempotent seed: starter transitions for all entities
+-- Uses ON CONFLICT to make re-runs safe
+
+INSERT INTO "StatusWorkflow" (id, name, entity, "fromStatus", "toStatus", roles, "isActive", "createdAt", "updatedAt")
+VALUES
+  -- Proposal transitions
+  (gen_random_uuid(), 'Proposal: draft → sent', 'proposal', 'draft', 'sent', 'manager,admin', true, NOW(), NOW()),
+  (gen_random_uuid(), 'Proposal: sent → accepted', 'proposal', 'sent', 'accepted', 'manager,admin', true, NOW(), NOW()),
+  (gen_random_uuid(), 'Proposal: sent → rejected', 'proposal', 'sent', 'rejected', 'manager,admin', true, NOW(), NOW()),
+  (gen_random_uuid(), 'Proposal: sent → paid', 'proposal', 'sent', 'paid', 'manager,admin', true, NOW(), NOW()),
+  (gen_random_uuid(), 'Proposal: accepted → converted', 'proposal', 'accepted', 'converted', 'manager,admin', true, NOW(), NOW()),
+  (gen_random_uuid(), 'Proposal: accepted → paid', 'proposal', 'accepted', 'paid', 'manager,admin', true, NOW(), NOW()),
+  (gen_random_uuid(), 'Proposal: paid → converted', 'proposal', 'paid', 'converted', 'manager,admin', true, NOW(), NOW()),
+  (gen_random_uuid(), 'Proposal: rejected → draft', 'proposal', 'rejected', 'draft', 'manager,admin', true, NOW(), NOW()),
+  -- Contract transitions
+  (gen_random_uuid(), 'Contract: draft → active', 'contract', 'draft', 'active', 'manager,admin', true, NOW(), NOW()),
+  (gen_random_uuid(), 'Contract: active → completed', 'contract', 'active', 'completed', 'manager,admin', true, NOW(), NOW()),
+  (gen_random_uuid(), 'Contract: active → cancelled', 'contract', 'active', 'cancelled', 'manager,admin', true, NOW(), NOW()),
+  -- ProductionOrder transitions
+  (gen_random_uuid(), 'PO: planned → in_progress', 'productionOrder', 'planned', 'in_progress', 'manager,admin,production', true, NOW(), NOW()),
+  (gen_random_uuid(), 'PO: planned → cancelled', 'productionOrder', 'planned', 'cancelled', 'manager,admin', true, NOW(), NOW()),
+  (gen_random_uuid(), 'PO: in_progress → manufacturing', 'productionOrder', 'in_progress', 'manufacturing', 'manager,admin,production', true, NOW(), NOW()),
+  (gen_random_uuid(), 'PO: in_progress → painting', 'productionOrder', 'in_progress', 'painting', 'manager,admin,production', true, NOW(), NOW()),
+  (gen_random_uuid(), 'PO: in_progress → completed', 'productionOrder', 'in_progress', 'completed', 'manager,admin,production', true, NOW(), NOW()),
+  (gen_random_uuid(), 'PO: in_progress → cancelled', 'productionOrder', 'in_progress', 'cancelled', 'manager,admin,production', true, NOW(), NOW()),
+  (gen_random_uuid(), 'PO: manufacturing → painting', 'productionOrder', 'manufacturing', 'painting', 'manager,admin,production', true, NOW(), NOW()),
+  (gen_random_uuid(), 'PO: manufacturing → completed', 'productionOrder', 'manufacturing', 'completed', 'manager,admin,production', true, NOW(), NOW()),
+  (gen_random_uuid(), 'PO: manufacturing → cancelled', 'productionOrder', 'manufacturing', 'cancelled', 'manager,admin,production', true, NOW(), NOW()),
+  (gen_random_uuid(), 'PO: painting → shipping', 'productionOrder', 'painting', 'shipping', 'manager,admin,production', true, NOW(), NOW()),
+  (gen_random_uuid(), 'PO: painting → completed', 'productionOrder', 'painting', 'completed', 'manager,admin,production', true, NOW(), NOW()),
+  (gen_random_uuid(), 'PO: painting → cancelled', 'productionOrder', 'painting', 'cancelled', 'manager,admin,production', true, NOW(), NOW()),
+  (gen_random_uuid(), 'PO: shipping → completed', 'productionOrder', 'shipping', 'completed', 'manager,admin,production', true, NOW(), NOW()),
+  (gen_random_uuid(), 'PO: shipping → cancelled', 'productionOrder', 'shipping', 'cancelled', 'manager,admin,production', true, NOW(), NOW()),
+  (gen_random_uuid(), 'PO: cancelled → planned', 'productionOrder', 'cancelled', 'planned', 'manager,admin', true, NOW(), NOW()),
+  -- OrderTask transitions
+  (gen_random_uuid(), 'Task: pending → in_progress', 'orderTask', 'pending', 'in_progress', 'manager,admin,production', true, NOW(), NOW()),
+  (gen_random_uuid(), 'Task: pending → blocked', 'orderTask', 'pending', 'blocked', 'manager,admin,production', true, NOW(), NOW()),
+  (gen_random_uuid(), 'Task: in_progress → completed', 'orderTask', 'in_progress', 'completed', 'manager,admin,production', true, NOW(), NOW()),
+  (gen_random_uuid(), 'Task: in_progress → blocked', 'orderTask', 'in_progress', 'blocked', 'manager,admin,production', true, NOW(), NOW()),
+  (gen_random_uuid(), 'Task: blocked → pending', 'orderTask', 'blocked', 'pending', 'manager,admin,production', true, NOW(), NOW()),
+  -- Shipment transitions
+  (gen_random_uuid(), 'Shipment: draft → partially', 'shipment', 'draft', 'partially', 'manager,admin,storekeeper', true, NOW(), NOW()),
+  (gen_random_uuid(), 'Shipment: draft → shipped', 'shipment', 'draft', 'shipped', 'manager,admin,storekeeper', true, NOW(), NOW()),
+  (gen_random_uuid(), 'Shipment: draft → cancelled', 'shipment', 'draft', 'cancelled', 'manager,admin', true, NOW(), NOW()),
+  (gen_random_uuid(), 'Shipment: partially → shipped', 'shipment', 'partially', 'shipped', 'manager,admin,storekeeper', true, NOW(), NOW()),
+  (gen_random_uuid(), 'Shipment: partially → cancelled', 'shipment', 'partially', 'cancelled', 'manager,admin', true, NOW(), NOW()),
+  (gen_random_uuid(), 'Shipment: shipped → cancelled', 'shipment', 'shipped', 'cancelled', 'manager,admin', true, NOW(), NOW()),
+  (gen_random_uuid(), 'Shipment: cancelled → draft', 'shipment', 'cancelled', 'draft', 'manager,admin', true, NOW(), NOW())
+ON CONFLICT (entity, "fromStatus", "toStatus") DO NOTHING;
+-- Updatable unique constraint не существует на StatusWorkflow → нужно добавить @@unique([entity, fromStatus, toStatus])
+```
+
+**Migration также**: добавить `@@unique([entity, fromStatus, toStatus])` в `prisma/schema.prisma` для `StatusWorkflow` модели, чтобы seed был truly idempotent.
+
+⚠️ **Note**: gen_random_uuid() доступен на PostgreSQL 13+. Если миграция применяется на older версии PostgreSQL — заменить на `cuid()` (или hardcoded UUIDs).
+
+### Refactor `src/app/api/proposals/[id]/route.ts` (PATCH)
+
+**Заменяемый код** (lines 102-114):
+```ts
+// ❌ Hardcoded VALID_TRANSITIONS
+const allowed = VALID_TRANSITIONS[current.status];
+if (!allowed || !allowed.includes(status)) {
+  return apiError(`Нельзя перевести из "${current.status}" в "${status}"`, 400);
+}
+```
+
+**На новый код**:
+```ts
+// ✅ Live query to StatusWorkflow
+try {
+  const user = await requireAuth(); // already done above
+  await assertTransitionAllowed('proposal', current.status, status, user.role);
+} catch (e) {
+  if (e instanceof WorkflowError && e.code === 'TRANSITION_NOT_ALLOWED') {
+    return apiError(`Нельзя перевести из "${current.status}" в "${status}"`, 400);
+  }
+  if (e instanceof WorkflowError && e.code === 'INSUFFICIENT_ROLE') {
+    return apiError(`Недостаточно прав для перехода`, 403);
+  }
+  throw e;
+}
+```
+
+**Удалить**: `const VALID_TRANSITIONS: Record<string, string[]> = { ... }` (lines 71-79) — больше не нужен.
+
+### Refactor `src/app/api/production-orders/[id]/status/route.ts` (PATCH)
+
+Аналогичная замена. Переходы: `planned → in_progress` (autoDeductMaterials), `planned → cancelled`, `in_progress → completed`, и т.д.
+
+`requireAuth` → `requireRole(['manager', 'production'])` (cycle 52 OVERLAP, оба цикла могут менять одну строку — merge carefully).
 
 ---
 
-## 6) AC (Acceptance Criteria)
+## 2) Cycle 52 — Roles API guards (B.6)
 
-### Gates
-- `npx tsc --noEmit` → **0 ошибок**
-- `npx vitest run` → **88/88 в 6/6 suites** (existing tests не сломаны)
-- `npx eslint src --max-warnings=999` → **0 ошибок**
-- `npx prisma migrate dev --name add_proposal_versioning` → migration applies clean, no errors
-- `npx prisma generate` → no errors
+`requireRole` ALREADY exists в `src/lib/auth.ts:67`. Cycle 52 = только USAGE.
 
-### Functional
+### Маппинг requireRole по route handlers
+
+| Route pattern | Action | Currently | Becomes |
+|---------------|--------|-----------|---------|
+| `/api/proposals/[id]` | GET | requireAuth | requireAuth (только чтение) |
+| `/api/proposals/[id]` | PUT | requireEditor | requireRole(['manager']) |
+| `/api/proposals/[id]` | PATCH | requireAuth | requireRole(['manager']) |
+| `/api/proposals/[id]` | DELETE | requireEditor | requireRole(['manager']) |
+| `/api/proposals` POST | POST | (??) | requireRole(['manager']) |
+| `/api/contracts/[id]` GET | GET | requireAuth | requireAuth |
+| `/api/contracts/[id]` PUT/PATCH/DELETE | mutate | requireEditor? | requireRole(['manager']) |
+| `/api/production-orders/[id]/status` | PATCH | requireAuth | requireRole(['manager', 'production']) |
+| `/api/warehouse/*` | mutate | requireAuth → | requireRole(['storekeeper']) |
+| `/api/finance/*` | mutate | requireAuth → | requireRole(['accountant']) |
+| `/api/users/*` | all | requireAuth → | requireRole(['admin']) (strict) |
+
+**Audit шаги**:
+1. Grep `src/app/api/**/*` для текущего состояния всех `requireAuth()` и `requireEditor()`.
+2. Создать helper `src/lib/api-auth.ts` с role-map:
+   ```ts
+   export const ROLE_GUARDS = {
+     proposal: { mutate: ['manager'] },
+     contract: { mutate: ['manager'] },
+     productionOrder: { mutate: ['manager', 'production'] },
+     warehouse: { mutate: ['storekeeper'] },
+     finance: { mutate: ['accountant'] },
+     users: { all: ['admin'] }, // strict
+   } as const;
+   ```
+3. Mechanical replace.
+
+### `requireRole(['admin'])` strict mode
+
+Текущая имплементация (`auth.ts:67`) БАЙПАССИТ роль если `user.role === 'admin'`. Это работает для большинства cases. Но для **strict admin-only operations** (например, `users/POST` — создание пользователей), bypass нежелателен.
+
+**Рекомендация**: добавить флаг `strict?: boolean` к requireRole:
+```ts
+// In src/lib/auth.ts (edit, минимальный)
+export async function requireRole(roles: string[], options: { strict?: boolean } = {}) {
+  const user = await requireAuth();
+  if (options.strict && !roles.includes(user.role)) {
+    throw new Error('FORBIDDEN');
+  }
+  if (!roles.includes(user.role) && user.role !== 'admin') {
+    throw new Error('FORBIDDEN');
+  }
+  return user;
+}
+```
+
+Для `/api/users/*`: `requireRole(['admin'], { strict: true })`.
+
+---
+
+## 3) Gates
+
+### Cycle 51
+- `npx tsc --noEmit` → 0
+- `npx vitest run` → 88+/88+
+- `npx eslint src` → 0
+- `npx prisma migrate dev` → migration applies clean
+- Manual smoke: change transition в `/admin/status-workflows` → API handler uses new transition immediately (cache invalidation works).
+
+### Cycle 52
+- `npx tsc --noEmit` → 0
+- `npx vitest run` → 88+/88+
+- `npx eslint src` → 0
+- Manual smoke: login as `production` role → can call PATCH /api/production-orders/[id]/status. Login as `viewer` → 403.
+
+---
+
+## 4) AC (Acceptance Criteria)
+
+### Cycle 51 (B.3)
+
 | Проверка | Ожидание |
 |----------|----------|
-| Existing КП в БД | `version: 1` для всех (auto-applied default) |
-| `prisma db pull` после migration | schema matches `prisma/schema.prisma` |
-| Create v2 from v1 (UI button) | POST → 200, new Proposal row with `version: 2`, `parentProposalId: v1.id`, items cloned with lineage, v1.supersededAt = NOW() |
-| Try edit v1 (after v2 created) via PUT | API returns 400 "Нельзя редактировать superseded версию" |
-| Try edit v2 | API succeeds (v2 is the latest) |
-| Convert v1 (after v2) | API returns 400 "Только последняя активная версия" |
-| Convert v2 | API succeeds |
-| Browser: view v1 viewer | Shows "v1" badge + "Superseded" indicator + NO Edit button |
-| Browser: view v2 viewer | Shows "v2" badge + "Создать новую версию" button present |
-| Audit-grep: `Proposal.number` is `@unique` | **MUST be `@@unique([number, version])`** — otherwise migration fails |
+| Existing transitions still work | После рефакторинга, все текущие переходы работают (verified через API smoke + tests) |
+| Seed migration | `npx prisma migrate dev` → migration runs clean, no duplicates |
+| Cache hit | 100% после первой загрузки (TTL 60s) |
+| Cache invalidation | После POST/PUT/DELETE в `/admin/status-workflows`, новое поведение видно СРАЗУ |
+| Fallback | Если StatusWorkflow очищена вручную → fallback используется + warning в лог |
+| Tier A untouched | `src/lib/jwt.ts` не изменён |
+| Hardcoded VALID_TRANSITIONS удалены | В `proposals/[id]/route.ts` и `production-orders/[id]/status/route.ts` |
+
+### Cycle 52 (B.6)
+
+| Проверка | Ожидание |
+|----------|----------|
+| `requireRole(['admin'], { strict: true })` | Только admin проходит. Manager → 403 |
+| `requireRole(['manager'])` | Manager И admin проходят. Production → 403 |
+| `requireRole(['manager', 'production'])` | Оба проходят. Storekeeper → 403 |
+| Все requireAuth() → requireRole() для мутирующих routes | Verified через grep |
+| Tier A/B не трогали | `src/lib/jwt.ts`, `src/lib/pdf/index.ts` unchanged |
 
 ---
 
-## 7) Особые заметки для Agent B
+## 5) Особые заметки для Agent B
 
-1. **Photo/Component копирование ОТМЕНЕНО**: photos/components принадлежат `Product`, не `ProposalItem`. Не нужно копировать.
-
-2. **`cloneProposalItems` типы**: `tx` параметр типизирован как `Pick<PrismaClient, 'proposalItem'>`. Альтернативно используй `Prisma.TransactionClient` если экспортирован из generated/prisma/client.
-
-3. **`requireEditor()`**: проверь `src/lib/auth-page.ts`. Если называется иначе (`requireManager`, `requireAuth` + role check), используй правильное имя.
-
-4. **Counter function**: `getNextProposalNumber('proposal')` — проверь сигнатуру. Возможно называется `nextNumber` или использует другой slug.
-
-5. **Migration naming**: `npx prisma migrate dev --name add_proposal_versioning`. НЕ называй `proposal_versioning` без `add_` prefix — convention проекта любит `add_*`.
-
-6. **Cascade on `parentProposalId`**: я выбрал `onDelete: SetNull` (parent можно удалить, children остаются с `parentProposalId: null`). Если хочешь cascade-delete children — измени, но тогда soft-delete (supersededAt) придётся hard-delete — против audit-trail.
-
-7. **Тесты НЕ добавляются** в этой cycle — cycle 48-49 их добавит. Если встретишь баги при компиляции helper — НЕ добавляй workaround, доложи.
+1. **Tier A STABLE** — `src/lib/jwt.ts` НЕ ТРОГАТЬ. Если нужны изменения в auth/role — создать helper `src/lib/auth-roles.ts` рядом или edit `src/lib/auth.ts` минимально (только signatures, не breaking).
+2. **Tier B (PDF)** — `src/lib/pdf/index.ts` имеет exports, которые используются business-critical codes. Если нужны PDF-изменения — оформить ADR-XXX (см. docs/CONTRIBUTING.md).
+3. **Cache invalidation при admin mutations** — обязательно invalidates `invalidateStatusWorkflowCache()` после каждого `prisma.statusWorkflow.create/update/delete`. Если забыть — поведение покажется «старым» 60 сек.
+4. **Idempotent seed migration** — используй `ON CONFLICT DO NOTHING` + `@@unique([entity, fromStatus, toStatus])` constraint. Без этого повторный run сломается.
+5. **Tests defer** — тесты для StatusWorkflow/requireRole defer в cycles 48-49 (testability infra). Сейчас только manual smoke + integration через UI.
+6. **Concurrent cycles 51+52** — оба цикла могут менять `src/app/api/proposals/[id]/route.ts` (cycles 51 = INVALID_TRANSITIONS check, cycles 52 = requireRole pattern). Если запустить параллельно — git merge conflict. **Решение**: либо runtime serial через PROTOCOL, либо Цикл 51 завершает PATCH section (calls assertTransitionAllowed), потом Cycle 52 завершает (calls requireRole). Другой coding agent должен быть осведомлён о порядке editing этих строк.
 
 ---
 
-## 8) Verification strategy (Agent B)
+## 6) Sequence (per [docs/CONTRIBUTING.md](../docs/CONTRIBUTING.md))
 
-```bash
-# 1. Schema migration
-npx prisma migrate dev --name add_proposal_versioning
-
-# 2. Verify migration file created
-ls prisma/migrations/<timestamp>_add_proposal_versioning/
-
-# 3. Regen Prisma client
-npx prisma generate
-
-# 4. Gates
-npx tsc --noEmit
-npx vitest run
-npx eslint src --max-warnings=999
-
-# 5. Functional smoke (опционально через UI / curl)
-# - Браузер: открыть любую existing КП (v1), нажать "Создать новую версию"
-# - Проверить: редирект на /proposals/<new-id>
-# - Вернуться на v1 — увидеть "Superseded"
+```
+1. Read STABLE-MODULES.md and ADR-001.
+2. Read this spec.
+3. Cycle 51: create status-workflow.ts + seed migration + propose cache invalidation design.
+4. Cycle 52: edit auth.ts (optional, add strict flag) + edit route handlers (mechanical replacement).
+5. Gates: tsc + vitest + eslint.
+6. Code-reviewer verdict (parallel with gates).
+7. update ALL documents: STABLE-MODULES, audit-tasks-business, audit-log, CURRENT-CHECKLIST.
+8. One commit per cycle (commit 51 + commit 52 = 2 commits).
+9. After both: trigger B.1 (cycle 53) and B.2 (cycle 54) which depend on foundation layer.
 ```
 
 ---
 
 ## === КОМАНДА ДЛЯ АГЕНТА B ===
 
-> Прочитай `tasks/current-task.md` и выполни задание. После завершения:
-> 1. Запиши результат в раздел `=== РЕЗУЛЬТАТ ===` ниже в этом же файле.
-> 2. Обнови `audit-log.md` в соответствии с шаблоном (формат записи — см. ниже).
-> 3. Обнови `audit-tasks.md` — пометь Блок 3.2 как ✅ DONE.
-
-**Шаблон для `audit-log.md`**:
-```
-## Циклы 42-43 — Версионирование КП (2026-06-20)
-
-Schema migration: добавлены parentProposalId/version/supersededAt в Proposal, sourceItemId + @@index в ProposalItem. Proposal.number уникальность изменена на @@unique([number, version]) для multi-versioning.
-
-Critical GOTCHA: composer `@unique` на Proposal.number → должен быть `@@unique([number, version])`. Default `version: 1` applies для existing rows автоматически.
-
-Новые файлы:
-- `src/lib/proposals/clone-items.ts` (pure-function deep-copy helper)
-- `src/app/api/proposals/[id]/versions/route.ts` (POST endpoint)
-
-Изменены:
-- `src/app/api/proposals/[id]/route.ts` (PUT: блок редактирования superseded)
-- `src/app/api/proposals/[id]/convert/route.ts` (только latest active version)
-- `src/app/(dashboard)/proposals/[id]/page.tsx` (badge v{N}, button, status)
-
-Гейты: tsc 0 / vitest 88/88 / lint 0 / prisma migrate dev OK.
-
-Tests defer to cycle 48-49 (testability isolation).
-```
+> Прочитай [`tasks/current-task.md`](../tasks/current-task.md) и выполни ОБА цикла (51 + 52).
+> Foundation layer: StatusWorkflow (новый helper) + Roles (USAGE существующего requireRole).
+> После завершения:
+> 1. Допиши раздел `=== РЕЗУЛЬТАТ ===` ниже.
+> 2. Обнови [`audit-log.md`](../audit-log.md) записями циклов 51+52.
+> 3. Обнови [`audit-tasks-business.md`](../audit-tasks-business.md) — пометь B.3 и B.6 как ✅ DONE, прогресс с 4/8+0/7 → 4/8+2/7.
+> 4. Обнови [`STABLE-MODULES.md`](../STABLE-MODULES.md) если новые module достиг Tier A/B.
+> 5. Два коммита: `cycle-51: B.3 StatusWorkflow`, `cycle-52: B.6 Roles API guards`.
 
 ---
 
----
-
-## === РЕЗУЛЬТАТ === (выполнено Агентом A, 2026-06-20, cycles 42+43)
-
-### Что сделано
-
-**Schema migration (cycle 42)**:
-- ☐ `prisma/schema.prisma` — `Proposal`: `parentProposalId?` + self-FK + `version Int @default(1)` + `supersededAt DateTime?` + `@@unique([number, version])` composite + `@@index([parentProposalId])`
-- ☐ `prisma/schema.prisma` — `ProposalItem`: `sourceItemId?` + self-FK + `@@index([sourceItemId])`
-- ☐ Schema composite: `@@unique([parentProposalId, version])` — race protection одновременных POST `/versions`
-
-**Helper (cycle 43)**:
-- ☐ [src/lib/proposals/clone-items.ts](src/lib/proposals/clone-items.ts) (new): `cloneProposalItems(tx, items, newProposalId)`
-
-**API endpoint (cycle 43)**:
-- ☐ [src/app/api/proposals/[id]/versions/route.ts](src/app/api/proposals/[id]/versions/route.ts) (new): POST — создание версии в `prisma.$transaction`
-
-**Hardening (cycle 43)**:
-- ☐ [src/app/api/proposals/[id]/route.ts](src/app/api/proposals/[id]/route.ts) PUT: hard-block superseded + composite-unique check
-- ☐ Тот же файл PATCH: hard-block смены статуса при superseded
-- ☐ [src/app/api/proposals/[id]/convert/route.ts](src/app/api/proposals/[id]/convert/route.ts): hard-block конвертации superseded
-- ☐ [src/app/api/proposals/route.ts](src/app/api/proposals/route.ts) POST: composite-unique check (fix tsc error)
-
-**UI (cycle 43)**:
-- ☐ [src/app/(dashboard)/proposals/[id]/page.tsx](src/app/(dashboard)/proposals/[id]/page.tsx): badge `v{N}` + superseded indicator + «Новая версия» button (GitBranch) + Edit скрыт при superseded
-
-### Gates
-
-| Проверка | Результат |
-|----------|-----------|
-| `npx prisma generate` | ✅ OK, Prisma Client 7.8.0 успешно сгенерирован |
-| `npx tsc --noEmit` | ✅ **0 ошибок** |
-| `npx vitest run` | ✅ **88/88 тестов в 6/6 suites** |
-| `npx eslint src --max-warnings=999` | ✅ 0 ошибок (3 cosmetic warnings pre-existing в `auth.ts`) |
-| Code-reviewer-minimax-m3 | ✅ PASS (1 minor: counter gap on abort — acceptable) |
-
-### Промежуточные фиксы (code-reviewer поймал)
-
-1. **Tsc error в proposals LIST POST** — `findUnique({ where: { number } })` против composite `@@unique([number, version])`. Fix: `findFirst({ where: { number, version: 1 } })`.
-2. **Race condition при одновременных POST `/versions`** — два запроса могли создать две v2 от одного parent. Fix: `@@unique([parentProposalId, version])` в schema.
-3. **`cloneProposalItems` тип** — оставлен union (`Prisma.TransactionClient | Omit<PrismaClient, ...>`) для совместимости с Prisma 7 driver adapter.
-4. **`nextProposalNumber()` вне транзакции** — counter может increment при аборте транзакции; приводит к «gap» в нумерации (sequential). Acceptable.
-
-### Prisma migration файл
-
-`prisma migrate dev` не запускался (sandbox без DB connection). При первом запуске на dev/prod DB:
-```bash
-npx prisma migrate dev --name add_proposal_versioning
-```
-Сгенерирует SQL миграцию синхронизирующую schema.
-
-### Файлы окончательно изменены
-
-- `prisma/schema.prisma` (edit)
-- `src/lib/proposals/clone-items.ts` (new)
-- `src/app/api/proposals/[id]/versions/route.ts` (new)
-- `src/app/api/proposals/[id]/route.ts` (edit)
-- `src/app/api/proposals/[id]/convert/route.ts` (edit)
-- `src/app/api/proposals/route.ts` (edit)
-- `src/app/(dashboard)/proposals/[id]/page.tsx` (edit)
-
----
-
-## === РЕЗУЛЬТАТ === (выполнено Агентом A, 2026-06-20, cycle 41)
-
-### Что сделано
-
-**`src/lib/pdf/index.ts`** — 779 → ~840 строк. **Единственный изменённый файл** (0 новых файлов, 0 prisma schema, 0 API routes).
-
-| AC | Изменение |
-|----|-----------|
-| `PAGE_H` constant | Добавлена константа `PAGE_H = 297` (A4 height, mm) на module-level рядом с `MARGIN` и `PAGE_W`. Доступна во всех 3 генераторах |
-| Page-break hook | В **3 autoTable** (proposal/contract/invoice): `margin: { top: 10, bottom: MARGIN, left: MARGIN, right: MARGIN }` (placeholder 10mm под баннер), `showHead: 'everyPage'` (повтор заголовка на стр. 2+), `didDrawPage: (data: AutoTablePageData) =>` hook рисующий «Продолжение таблицы (стр. N)» справа сверху |
-| Header repeat | `showHead: 'everyPage'` — заголовок таблицы повторяется на каждой странице (compliance для длинных КП/договоров/счетов) |
-| Overflow legalAddress (proposal) | Defensive: уже имел `splitTextToSize`, добавлен только overflow check + `doc.addPage()` |
-| Overflow legalAddress (contract/invoice) | **Critical pre-cycle-41 bug**: addresses рендерились одним `doc.text(\`Адрес: ${...}\`, ...)` — horizontal overflow при >200 char. Добавлен `splitTextToSize` + overflow check + `addPage()` |
-| TypeScript polish | Добавлен inline `interface AutoTablePageData { pageNumber; pageCount; cursor: {x,y}; settings }`, иначе 3 implicit-any errors на callback параметре |
-
-### Gates
-
-| Проверка | Результат |
-|----------|-----------|
-| `npx tsc --noEmit` | ✅ **0 ошибок** |
-| `npx vitest run` | ✅ **88/88 (6/6 suites)** |
-| `npx eslint src --max-warnings=999` | ✅ 0 ошибок (3 cosmetic warnings pre-existing в `src/lib/auth.ts`) |
-| Code-reviewer-minimax-m3 | ✅ PASS с эстетическими nit-полировками, все применены (см. ниже) |
-
-### Дизайн валидирован thinker-with-files-gemini
-
-- `didDrawPage` (не `willDrawPage`) — autoTable handles font state per-cell, нет нужды сбрасывать.
-- `margin.top = 10mm` — placeholder под баннер сверху на стр. 2+.
-- `showHead: 'everyPage'` — обязательное для коммерческих документов.
-- Manual row loop fallback — **отвергнут** как anti-pattern (autoTable battle-tested).
-
-### Промежуточные фиксы (code-reviewer nit-полировка)
-
-1. **3 tsc implicit-any errors** на `(data) =>` callback параметрах — решены inline `interface AutoTablePageData` + аннотация `(data: AutoTablePageData) =>`.
-2. **Banner Y position**: `MARGIN + 3 = 7mm` слишком близко к верхнему краю — bumped до `MARGIN + 5 = 9mm` для лучшего optical separation от auto-generated header row на стр. 2+.
-3. **`setTextColor(0)` → `setTextColor(0, 0, 0)`** — consistency с 3-arg form используемой в других местах файла.
-
-### Pre/post bug comparison
-
-| Поведение | До cycle 41 | После cycle 41 |
-|-----------|-------------|----------------|
-| КП с 30+ позициями | autoTable переносит на новую страницу, но **заголовок таблицы дублируется только при `showHead: 'everyPage'`** (отсутствовало) | Header повторяется, banner «Продолжение таблицы (стр. N)» сверху |
-| Contract с длинным юрадресом | Горизонтальный overflow за правым краем страницы (обрезано) | `splitTextToSize` + multi-line адрес + новая страница если не помещается |
-| Invoice с длинным юрадресом | Тот же баг | Тот же фикс |
-| Title block на длинном PDF | OK (text не expand вертикально) | OK |
-
-### Файлы окончательно изменены
-
-- `src/lib/pdf/index.ts` (edit, единственный production файл)
-- `audit-tasks.md` (mark ✅ DONE, прогресс 3/9 → 4/9)
-- `tasks/current-task.md` (этот раздел)
-- `audit-log.md` (cycle 41 запись)
-
-### Commit
-
-`db5586f cycle-41: Block 5.1+5.2 — PDF page-break (didDrawPage+showHead) + legalAddress overflow protection`
+## === РЕЗУЛЬТАТ === (заполняется Agent B по завершении)
