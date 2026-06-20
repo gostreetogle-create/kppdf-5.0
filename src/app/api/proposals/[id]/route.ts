@@ -5,6 +5,8 @@ import { apiOk, apiError } from '@/lib/api-response';
 import { nextProductionOrderNumber } from '@/lib/counter';
 // Cycle 51 (B.3): live workflow вместо VALID_TRANSITIONS.
 import { assertTransitionAllowed, WorkflowError } from '@/lib/status-workflow';
+// Cycle 55 (B.4): protection to frozen-statuses.
+import { assertNumberImmutable, NumberLockedError } from '@/lib/number-protection';
 
 const include = { items: { include: { product: true } }, client: true, organization: true };
 
@@ -32,10 +34,17 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       // Cycle 42: composite unique @@unique([number, version]) + block superseded
       const cur = await prisma.proposal.findUnique({
         where: { id },
-        select: { version: true, supersededAt: true },
+        select: { version: true, supersededAt: true, status: true, number: true },
       });
       if (!cur) return apiError('Не найдено', 404);
       if (cur.supersededAt) return apiError('Нельзя редактировать superseded версию. Создайте новую версию.', 400);
+      // Cycle 55 (B.4): freeze number for sent/accepted/converted/paid statuses.
+      try {
+        assertNumberImmutable('proposal', cur.status, body.number, cur.number);
+      } catch (e) {
+        if (e instanceof NumberLockedError) return apiError(e.message, 400);
+        throw e;
+      }
       const conflict = await prisma.proposal.findFirst({
         where: { number: body.number, version: cur.version },
         select: { id: true },

@@ -4,6 +4,8 @@ import { requireAuth, requireRole } from '@/lib/auth';
 import { apiOk, apiError } from '@/lib/api-response';
 // Cycle 51 (B.3): live workflow вместо VALID_TRANSITIONS.
 import { assertTransitionAllowed, WorkflowError } from '@/lib/status-workflow';
+// Cycle 55 (B.4): protection to frozen-statuses.
+import { assertNumberImmutable, NumberLockedError } from '@/lib/number-protection';
 
 const include = { items: true, client: true, organization: true, proposal: true };
 
@@ -28,6 +30,18 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     const { id } = await params;
     const body = await request.json();
     if (body.number) {
+      // Cycle 55 (B.4): freeze number for active/completed statuses.
+      const cur = await prisma.contract.findUnique({
+        where: { id },
+        select: { status: true, number: true },
+      });
+      if (!cur) return apiError('Не найдено', 404);
+      try {
+        assertNumberImmutable('contract', cur.status, body.number, cur.number);
+      } catch (e) {
+        if (e instanceof NumberLockedError) return apiError(e.message, 400);
+        throw e;
+      }
       const existing = await prisma.contract.findUnique({ where: { number: body.number } });
       if (existing && existing.id !== id) return apiError(`Документ с номером ${body.number} уже существует`, 400);
     }

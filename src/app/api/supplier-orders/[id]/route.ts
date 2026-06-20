@@ -6,6 +6,8 @@ import { UpdateSupplierOrderSchema } from '@/lib/validations/supplier-order';
 import { validateBody } from '@/lib/validations';
 // Cycle 51 (B.3): live workflow вместо VALID_TRANSITIONS.
 import { assertTransitionAllowed, WorkflowError } from '@/lib/status-workflow';
+// Cycle 55 (B.4): protection to frozen-statuses.
+import { assertNumberImmutable, NumberLockedError } from '@/lib/number-protection';
 
 const include = { items: true };
 
@@ -32,6 +34,18 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     const validation = validateBody(body, UpdateSupplierOrderSchema);
     if (!validation.success) return validation.error;
     if (validation.data.number) {
+      // Cycle 55 (B.4): freeze number for confirmed/shipped/delivered.
+      const cur = await prisma.supplierOrder.findUnique({
+        where: { id },
+        select: { status: true, number: true },
+      });
+      if (!cur) return apiError('Не найдено', 404);
+      try {
+        assertNumberImmutable('supplierOrder', cur.status, validation.data.number, cur.number);
+      } catch (e) {
+        if (e instanceof NumberLockedError) return apiError(e.message, 400);
+        throw e;
+      }
       const existing = await prisma.supplierOrder.findUnique({ where: { number: validation.data.number } });
       if (existing && existing.id !== id) return apiError(`Документ с номером ${validation.data.number} уже существует`, 400);
     }
