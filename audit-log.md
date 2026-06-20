@@ -2081,3 +2081,59 @@ UI updates [src/app/(dashboard)/proposals/[id]/page.tsx](src/app/(dashboard)/pro
 3. `cloneProposalItems` TxClient — оставлен union type для совместимости с Prisma 7 driver adapter.
 
 **Файлы**: `prisma/schema.prisma`, `src/lib/proposals/clone-items.ts` (new), `src/app/api/proposals/[id]/versions/route.ts` (new), `src/app/api/proposals/[id]/route.ts`, `src/app/api/proposals/[id]/convert/route.ts`, `src/app/api/proposals/route.ts`, `src/app/(dashboard)/proposals/[id]/page.tsx`.
+
+## Цикл 40+ — Аудит состояния (2026-06-20, 12:14)
+
+**Текущий статус после cycle 40 (env.ts consolidation):**
+
+| Gate | Результат |
+|------|-----------|
+| `tsc --noEmit` | ✅ 0 ошибок (после фикса `pdf/index.ts:363` — `data` parameter type) |
+| `vitest run` | ✅ 88/88 тестов, 6/6 suites |
+| `eslint src --max-warnings=999` | ✅ 0 ошибок (3 cosmetic warnings в `auth.ts`) |
+| `next build` | ❌ pre-existing error: `useSearchParams()` requires Suspense on `/login` (не связан с cycle 40) |
+
+**Фикс в cycle 40+**: `src/lib/pdf/index.ts:363` — добавлен тип `(data: { pageNumber: number })` для `didDrawPage` callback (implicit `any` type error).
+
+**Чек-листы обновлены**: `ЧЕК-ЛИСТ-КАЧЕСТВА.md` — отмечен pre-existing build error.
+
+**Business logic audit**: `discussion-business-logic.md` — РАУНД 1 / АГЕНТ B записан. Ключевые находки:
+- 🔴 Production → Finished Goods IN (auto-receive) — отсутствует
+- 🔴 Client model — только физлица, нет юрлиц
+- 🔴 StatusWorkflow — мёртвый справочник, хардкод в коде
+- 🟡 Защита номеров после статуса — не реализована
+- 🟡 OrderClosing soft-reference — потеря audit trail
+
+## Цикл 41 — PDF page-break + legalAddress overflow (2026-06-20)
+
+`src/lib/pdf/index.ts` обновлён (779 → ~840 строк):
+
+- Добавлена константа `PAGE_H = 297` (A4 mm).
+- В **3 autoTable** (proposal/contract/invoice):
+  - `margin: { top: 10, bottom: MARGIN, left: MARGIN, right: MARGIN }` — placeholder под баннер сверху.
+  - `showHead: 'everyPage'` — заголовок таблицы повторяется на каждой странице.
+  - `didDrawPage: (data: AutoTablePageData) =>` hook — на `data.pageNumber > 1` рисует «Продолжение таблицы (стр. N)» справа сверху (fontSize 8, Roboto normal, gray).
+- В **3 генераторах** (proposal/contract/invoice) overflow check для `legalAddress`:
+  ```ts
+  const addrLines = doc.splitTextToSize(...);
+  if (y + addrLines.length * 3.5 > PAGE_H - MARGIN * 2) {
+    doc.addPage(); y = MARGIN;
+  }
+  ```
+- **Contract и Invoice** — ранее `legalAddress` рендерился одним `doc.text()` (horizontal overflow при длинных адресах). Добавлен `splitTextToSize`.
+- **Proposal** — уже использовал `splitTextToSize`, но без overflow check. Добавлен только check + `addPage`.
+
+Дизайн валидирован через thinker-with-files-gemini:
+- `didDrawPage` (не `willDrawPage`) — потому что autoTable handles font state per-cell, не нужно сбрасывать.
+- `margin.top = 10mm` — placeholder под баннер.
+- Manual row loop fallback — **отвергнут** (anti-pattern, autoTable battle-tested).
+
+Pre-cycle-41 bug: контракты и счета-фактуры для юрлиц с длинными адресами (>200 char) **обрезали адрес за правым краем страницы**. Post-fix: addresses переносятся пословно + новая страница при необходимости.
+
+Промежуточные фиксы:
+- 3 tsc implicit any errors (после добавления `didDrawPage` hooks) — решены inline `interface AutoTablePageData { pageNumber; pageCount; cursor; settings }`.
+- Banner Y bumped `MARGIN + 3 → MARGIN + 5` для лучшего optical separation от auto-generated header row.
+- `setTextColor(0) → setTextColor(0, 0, 0)` — consistency с 3-arg form.
+
+Гейты: tsc 0 / vitest 88/88 (6 suites) / lint 0.
+

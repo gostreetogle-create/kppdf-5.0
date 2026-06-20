@@ -94,6 +94,22 @@ export interface ProposalPdfData {
     markupPercent?: number;
     total: number;
   }>;
+  /**
+   * Блок 1.2b/c: data-driven columns (если заданы). Используются превью и PDF autoTable
+   * для рендера image/text/number/currency колонок. Если не заданы — fallback
+   * на стандартный набор колонок в обоих consumers.
+   */
+  columns?: Array<{
+    id: string;
+    tableName: string;
+    fieldName: string;
+    label: string;
+    width?: string;
+    type?: 'text' | 'number' | 'date' | 'currency' | 'image';
+    order: number;
+    visible?: boolean;
+    align?: 'left' | 'center' | 'right';
+  }>;
   markupPercent?: number;
   notes?: string;
   validUntil?: string;
@@ -140,6 +156,17 @@ export interface ContractPdfData {
     unitPrice: number;
     total: number;
   }>;
+  columns?: Array<{
+    id: string;
+    tableName: string;
+    fieldName: string;
+    label: string;
+    width?: string;
+    type?: 'text' | 'number' | 'date' | 'currency' | 'image';
+    order: number;
+    visible?: boolean;
+    align?: 'left' | 'center' | 'right';
+  }>;
   totalAmount: number;
   signedAt?: string;
   expiresAt?: string;
@@ -178,6 +205,17 @@ export interface InvoicePdfData {
     unitPrice: number;
     total: number;
   }>;
+  columns?: Array<{
+    id: string;
+    tableName: string;
+    fieldName: string;
+    label: string;
+    width?: string;
+    type?: 'text' | 'number' | 'date' | 'currency' | 'image';
+    order: number;
+    visible?: boolean;
+    align?: 'left' | 'center' | 'right';
+  }>;
   totalAmount: number;
   notes?: string;
   createdAt: string;
@@ -208,6 +246,15 @@ export function formatDateShort(dateStr: string | Date): string {
 
 const MARGIN = 4;
 const PAGE_W = 210;
+const PAGE_H = 297; // A4 height in mm — для overflow check и page-break
+
+// Минимальный тип для параметра didDrawPage hook jspdf-autotable (нет public export).
+interface AutoTablePageData {
+  pageNumber: number;
+  pageCount: number;
+  cursor: { x: number; y: number };
+  settings: Record<string, unknown>;
+}
 
 /** Сгенерировать PDF для КП */
 export async function generateProposalPdf(data: ProposalPdfData): Promise<jsPDFType> {
@@ -234,6 +281,11 @@ export async function generateProposalPdf(data: ProposalPdfData): Promise<jsPDFT
     }
     if (org.legalAddress) {
       const addrLines = doc.splitTextToSize(org.legalAddress, contentW);
+      // Defensive: if address overflows page bottom, push to next page.
+      if (y + addrLines.length * 3.5 > PAGE_H - MARGIN * 2) {
+        doc.addPage();
+        y = MARGIN;
+      }
       doc.text(addrLines, MARGIN, y);
       y += addrLines.length * 3.5;
     }
@@ -306,7 +358,23 @@ export async function generateProposalPdf(data: ProposalPdfData): Promise<jsPDFT
       startY: y,
       head,
       body,
-      margin: { left: MARGIN, right: MARGIN },
+      margin: { top: 10, bottom: MARGIN, left: MARGIN, right: MARGIN },
+      showHead: 'everyPage',
+      didDrawPage: (data: AutoTablePageData) => {
+        // На стр. 2+ рисую баннер «Продолжение таблицы» сверху страницы.
+        if (data.pageNumber > 1) {
+          doc.setFontSize(8);
+          doc.setFont('Roboto', 'normal');
+          doc.setTextColor(100, 100, 100);
+          doc.text(
+            `Продолжение таблицы (стр. ${data.pageNumber})`,
+            PAGE_W - MARGIN,
+            MARGIN + 3,
+            { align: 'right' },
+          );
+          doc.setTextColor(0);
+        }
+      },
       styles: {
         fontSize: 8,
         cellPadding: 1.5,
@@ -442,8 +510,13 @@ export async function generateContractPdf(data: ContractPdfData): Promise<jsPDFT
       y += 5;
     }
     if (data.organization.legalAddress) {
-      doc.text(`Адрес: ${data.organization.legalAddress}`, MARGIN, y);
-      y += 5;
+      const addrLines = doc.splitTextToSize(`Адрес: ${data.organization.legalAddress}`, PAGE_W - MARGIN * 2);
+      if (y + addrLines.length * 3.5 > PAGE_H - MARGIN * 2) {
+        doc.addPage();
+        y = MARGIN;
+      }
+      doc.text(addrLines, MARGIN, y);
+      y += addrLines.length * 3.5;
     }
     y += 5;
   }
@@ -493,7 +566,22 @@ export async function generateContractPdf(data: ContractPdfData): Promise<jsPDFT
       startY: y,
       head,
       body,
-      margin: { left: MARGIN, right: MARGIN },
+      margin: { top: 10, bottom: MARGIN, left: MARGIN, right: MARGIN },
+      showHead: 'everyPage',
+      didDrawPage: (data: AutoTablePageData) => {
+        if (data.pageNumber > 1) {
+          doc.setFontSize(8);
+          doc.setFont('Roboto', 'normal');
+          doc.setTextColor(100, 100, 100);
+          doc.text(
+            `Продолжение таблицы (стр. ${data.pageNumber})`,
+            PAGE_W - MARGIN,
+            MARGIN + 5,
+            { align: 'right' },
+          );
+          doc.setTextColor(0, 0, 0);
+        }
+      },
       styles: { fontSize: 8, cellPadding: 1.5, lineColor: [200, 200, 200], lineWidth: 0.3 },
       headStyles: { fillColor: [41, 98, 255], textColor: 255, fontStyle: 'bold', fontSize: 8 },
       columnStyles: {
@@ -567,8 +655,13 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<jsPDFTyp
       y += 5;
     }
     if (data.organization.legalAddress) {
-      doc.text(`Адрес: ${data.organization.legalAddress}`, MARGIN, y);
-      y += 5;
+      const addrLines = doc.splitTextToSize(`Адрес: ${data.organization.legalAddress}`, PAGE_W - MARGIN * 2);
+      if (y + addrLines.length * 3.5 > PAGE_H - MARGIN * 2) {
+        doc.addPage();
+        y = MARGIN;
+      }
+      doc.text(addrLines, MARGIN, y);
+      y += addrLines.length * 3.5;
     }
     if (data.organization.phone || data.organization.email) {
       doc.text(`Тел: ${data.organization.phone || '—'}  Email: ${data.organization.email || '—'}`, MARGIN, y);
@@ -617,7 +710,22 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<jsPDFTyp
       startY: y,
       head,
       body,
-      margin: { left: MARGIN, right: MARGIN },
+      margin: { top: 10, bottom: MARGIN, left: MARGIN, right: MARGIN },
+      showHead: 'everyPage',
+      didDrawPage: (data: AutoTablePageData) => {
+        if (data.pageNumber > 1) {
+          doc.setFontSize(8);
+          doc.setFont('Roboto', 'normal');
+          doc.setTextColor(100, 100, 100);
+          doc.text(
+            `Продолжение таблицы (стр. ${data.pageNumber})`,
+            PAGE_W - MARGIN,
+            MARGIN + 5,
+            { align: 'right' },
+          );
+          doc.setTextColor(0, 0, 0);
+        }
+      },
       styles: { fontSize: 8, cellPadding: 1.5, lineColor: [200, 200, 200], lineWidth: 0.3 },
       headStyles: { fillColor: [41, 98, 255], textColor: 255, fontStyle: 'bold', fontSize: 8 },
       columnStyles: {
