@@ -2908,3 +2908,56 @@ Fix: dual-adapter (file:→ PrismaBetterSqlite3 / postgres:→ PrismaPg), align 
 
 ### Note (working tree state)
 At the time of this commit, the working tree contained additional dirty files beyond SCRAM-fix (≈ 111 modified M + 111 deleted D + 13 untracked ?? — full enumeration in followups). Only 3 SCRAM-fix files were staged per explicit user directive + Rule 6. The remaining dirty state is preserved for a followup commit cycle.
+
+---
+
+## Cycle 50 phase-1 (2026-06-20) — top-level docs migration + .gitignore update
+
+### Theme
+Closing the «Top-level documentation → docs/ structure» directive: migrate root `.md` files into `docs/process/spec/design` (per mapping below). Alongside: update `.gitignore` for runtime-noise (public/uploads, agent-queue.json, login_test.js) — one-time infra init.
+
+### Mapping (root → docs/)
+- AGENT-PROTOCOL.md → docs/process/AGENT-PROTOCOL.md
+- AI_COLLABORATION.md → docs/process/AI_COLLABORATION.md
+- TEAM-PROTOCOL.md → docs/process/TEAM-PROTOCOL.md
+- SPEC.md → docs/spec/SPEC.md
+- UI_KIT.md → docs/design/UI_KIT.md
+- (other root .md → docs/ as needed per mapping)
+
+### Stats
+- Migrated: depends on mapping (root → docs/)
+- Edited: .gitignore (+3 lines — public/uploads/, agent-queue.json, login_test.js)
+- Cleaned: .tmp-* (5 files, NOT committed, removed via rm)
+- Atomic commit per docs/CONTRIBUTING.md Rule 6.
+
+### Compliance
+- Rule 6 (single atomic commit per cycle): yes.
+- Rule 7 (active docs/current): yes (root cleaned).
+- Append-only audit-log: yes (entry below).
+
+---
+
+## Cycle 50 phase-1 correction — actual mapping values
+
+### Real migration table
+
+See mapping table below — these are the root files git rm'd and docs/* files git add'd as part of the Cycle 50 phase-1 amend.
+
+### Literal mapping per file
+
+| Removed from root | Added in docs/ |
+|---|---|
+| AGENT-PROTOCOL.md | docs/process/AGENT-PROTOCOL.md |
+| AI_COLLABORATION.md | docs/process/AI_COLLABORATION.md |
+| AUDIT-REVIEW.md | docs/analysis/AUDIT-REVIEW.md |
+| BUSINESS-LOGIC.md | docs/domain/BUSINESS-LOGIC.md |
+| CURRENT-CHECKLIST.md | docs/operations/CURRENT-CHECKLIST.md |
+| DEPLOY-SYNO.md | docs/operations/DEPLOY-SYNO.md |
+| SPEC.md | docs/spec/SPEC.md |
+| STABLE-MODULES.md | docs/operations/STABLE-MODULES.md |
+| TEAM-PROTOCOL.md | docs/process/TEAM-PROTOCOL.md |
+| UI_KIT.md | docs/design/UI_KIT.md |
+| audit-tasks-business.md | docs/operations/audit-tasks-business.md |
+| audit-tasks.md | docs/operations/audit-tasks.md |
+| business-tasks.md | docs/operations/business-tasks.md |
+| discussion-business-logic.md | docs/process/discussion-business-logic.md |
