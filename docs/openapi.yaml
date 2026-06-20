@@ -661,6 +661,168 @@ paths:
         '200':
           description: Список сертификатов
 
+  /auth/me:
+    get:
+      summary: Текущий пользователь
+      tags: [Auth]
+      responses:
+        '200':
+          description: Данные пользователя
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/User'
+
+  /health:
+    get:
+      summary: Health check
+      tags: [System]
+      security: []
+      responses:
+        '200':
+          description: Сервер работает
+
+  /cart:
+    get:
+      summary: Корзина (сессия)
+      tags: [Cart]
+      responses:
+        '200':
+          description: Данные корзины
+
+  /cart/{id}:
+    get:
+      summary: Корзина по ID
+      tags: [Cart]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Корзина
+
+  /cart/{id}/items:
+    post:
+      summary: Добавить товар в корзину
+      tags: [Cart]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '201':
+          description: Товар добавлен
+
+  /cart/{id}/items/{itemId}:
+    put:
+      summary: Обновить позицию корзины
+      tags: [Cart]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: itemId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Позиция обновлена
+
+    delete:
+      summary: Удалить позицию из корзины
+      tags: [Cart]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: itemId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Позиция удалена
+
+  /cart/{id}/convert:
+    post:
+      summary: Конвертировать корзину в КП
+      tags: [Cart]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: КП создано
+
+  /import/cad:
+    post:
+      summary: Импорт из CAD-систем
+      tags: [Import]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                products:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                      sku:
+                        type: string
+                      modules:
+                        type: array
+                        items:
+                          type: object
+      responses:
+        '200':
+          description: Импорт выполнен
+
+  /activity-log:
+    get:
+      summary: Журнал действий
+      tags: [Admin]
+      parameters:
+        - name: userId
+          in: query
+          schema:
+            type: string
+        - name: entity
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Записи журнала
+
+  /dashboard/stats:
+    get:
+      summary: Статистика дашборда
+      tags: [Dashboard]
+      responses:
+        '200':
+          description: Статистика
+
+  /dashboard/aggregated:
+    get:
+      summary: Агрегированные данные дашборда
+      tags: [Dashboard]
+      responses:
+        '200':
+          description: Агрегированные данные
+
 components:
   securitySchemes:
     BearerAuth:
