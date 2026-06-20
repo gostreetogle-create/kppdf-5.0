@@ -1,17 +1,17 @@
 import { cookies } from 'next/headers';
 import { prisma } from './db';
+import { verifyToken } from './jwt';
 
 // Цикл 39 (M5 развязка): JWT-логика вынесена в `./jwt.ts` чтобы:
 //   1) избежать импорта `prisma` при юнит-тестировании чистых JWT-функций;
 //   2) убрать top-level throw на JWT_SECRET (теперь lazy в jwt.ts);
 //   3) сохранить backwards-compatible re-export.
-// Цикл 39 (M5 развязка): JWT-логика вынесена в `./jwt.ts` чтобы:
-//   1) избежать импорта `prisma` при юнит-тестировании чистых JWT-функций;
-//   2) убрать top-level throw на JWT_SECRET (теперь lazy в jwt.ts);
-import { signAccessToken, signRefreshToken, verifyToken, type JwtPayload } from './jwt';
-//   3) сохранить backwards-compatible API для внешних потребителей auth.ts.
 // Двойной re-export: в TS strict/verbatimModuleSyntax (Next.js 16) простой
-// import не реэкспортирует — нужен явный export statement.
+// import НЕ реэкспортирует — нужен явный export statement. Только `verifyToken`
+// нужен локально в этом файле (для `requireAuth()`); signAccessToken/
+// signRefreshToken/JwtPayload — pure re-exports без локального использования,
+// поэтому удалены из import statement чтобы избежать unused-vars warnings
+// (cycle 46 ESLint cleanup).
 export { signAccessToken, signRefreshToken, verifyToken, type JwtPayload } from './jwt';
 
 export async function getCurrentUser() {
