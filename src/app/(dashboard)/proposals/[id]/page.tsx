@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Edit, Trash2 } from 'lucide-react';
+import { ArrowLeft, Edit, Trash2, GitBranch } from 'lucide-react';
 import { ProposalPreview } from '@/components/ui/proposal-preview';
 import type { ProposalPdfData } from '@/lib/pdf';
 import { PROPOSAL_STATUS, getStatus } from '@/lib/constants/statuses';
@@ -22,6 +22,10 @@ interface Proposal {
   number: string;
   title: string;
   status: string;
+  // Cycle 42 — Версионирование КП (Block 3.2)
+  version: number;
+  parentProposalId: string | null;
+  supersededAt: string | null;
   client?: {
     lastName: string;
     firstName: string;
@@ -60,6 +64,7 @@ export default function ProposalDetailPage() {
   const router = useRouter();
   const [proposal, setProposal] = useState<Proposal | null>(null);
   const [loading, setLoading] = useState(true);
+  const [creatingVersion, setCreatingVersion] = useState(false); // Cycle 43
 
   useEffect(() => {
     const fetchProposal = async () => {
@@ -117,6 +122,28 @@ export default function ProposalDetailPage() {
 
   const status = getStatus(PROPOSAL_STATUS, proposal.status);
 
+  // Cycle 43 — обработчик "Создать новую версию"
+  const handleCreateVersion = async () => {
+    if (!confirm(`Создать новую версию на основе v${proposal.version}? Старая версия будет помечена как superseded.`)) return;
+    setCreatingVersion(true);
+    try {
+      const res = await fetch(`/api/proposals/${proposal.id}/versions`, { method: 'POST' });
+      if (res.ok) {
+        const data = await res.json();
+        const newProposal = data.data?.proposal || data.proposal;
+        window.location.href = `/proposals/${newProposal.id}`;
+      } else {
+        const err = await res.json();
+        alert(`Ошибка: ${err.error || 'не удалось создать версию'}`);
+      }
+    } catch (err) {
+      console.error('Error creating version:', err);
+      alert('Ошибка сети');
+    } finally {
+      setCreatingVersion(false);
+    }
+  };
+
   const pdfData: ProposalPdfData = {
     number: proposal.number,
     title: proposal.title,
@@ -142,22 +169,53 @@ export default function ProposalDetailPage() {
           </button>
           <div>
             <h1 className="text-2xl font-bold text-[var(--foreground)]">{proposal.title}</h1>
-            <p className="text-sm text-gray-500">№ {proposal.number}</p>
+            <p className="text-sm text-gray-500 flex items-center gap-2">
+              № {proposal.number}
+              {/* Cycle 43 — version badge */}
+              {proposal.version > 1 && (
+                <span className="inline-flex px-2 py-0.5 bg-[var(--muted)] text-[var(--muted-foreground)] rounded text-xs font-medium">
+                  v{proposal.version}
+                </span>
+              )}
+              {/* Cycle 43 — superseded indicator */}
+              {proposal.supersededAt && (
+                <span className="inline-flex px-2 py-0.5 bg-[var(--status-warning-bg)] text-[var(--status-warning-text)] rounded text-xs font-medium">
+                  superseded — есть новая версия
+                </span>
+              )}
+            </p>
           </div>
         </div>
         <div className="flex items-center gap-2">
           <span className={`inline-flex px-3 py-1 rounded-full text-sm font-medium ${status.className}`}>
             {status.label}
           </span>
-          <button
-            onClick={() => router.push(`/proposals?edit=${proposal.id}`)}
-            className="p-2 rounded-lg border border-[var(--border)] hover:bg-[var(--muted)] transition-colors"
-          >
-            <Edit size={16} />
-          </button>
+          {/* Cycle 43 — кнопка "Создать новую версию" (только если не superseded) */}
+          {!proposal.supersededAt && (
+            <button
+              onClick={handleCreateVersion}
+              disabled={creatingVersion}
+              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-[var(--border)] hover:bg-[var(--muted)] transition-colors text-sm disabled:opacity-50"
+              title="Создать новую версию на основе этой"
+            >
+              <GitBranch size={14} />
+              {creatingVersion ? 'Создаём...' : 'Новая версия'}
+            </button>
+          )}
+          {/* Cycle 43 — disable Edit если superseded */}
+          {!proposal.supersededAt && (
+            <button
+              onClick={() => router.push(`/proposals?edit=${proposal.id}`)}
+              className="p-2 rounded-lg border border-[var(--border)] hover:bg-[var(--muted)] transition-colors"
+              title="Редактировать"
+            >
+              <Edit size={16} />
+            </button>
+          )}
           <button
             onClick={handleDelete}
             className="p-2 rounded-lg border border-[var(--status-danger-text)] text-[var(--status-danger-text)] hover:bg-[var(--status-danger-bg)] transition-colors"
+            title="Удалить"
           >
             <Trash2 size={16} />
           </button>

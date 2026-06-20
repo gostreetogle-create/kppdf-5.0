@@ -15,13 +15,13 @@
 | 40 | 1.3 — `src/lib/env.ts` consolidation | ✅ DONE |
 | 41 | 5.1 — PDF table page-break + footnote header | 📋 planned |
 | 41 | 5.2 — Latin overflow в `legalAddress` | 📋 planned |
-| 42-43 | 3.2 — Версионирование КП + `sourceItemId` | 📋 planned |
+| 42-43 | 3.2 — Версионирование КП + `sourceItemId` | ✅ DONE |
 | 44-45 | 🆕 3.1 — `ProposalEditor` refactor (architectural) | 📋 planned |
 | 46-47 | 4.1 — Proposal editor 3-panel UX | 📋 planned |
 | 48-49 | 6.1 — Tests isolation / in-memory mock prisma | 📋 planned |
 | 50 | 7.1 — Zustand refresh TTL + silent refresh preempt | 📋 planned |
 
-**Завершено**: 2/9 пунктов (M5 + env.ts). **Осталось**: 7 пунктов.
+**Завершено**: 3/9 пунктов (M5 + env.ts + versioning). **Осталось**: 6 пунктов.
 
 ---
 
@@ -116,11 +116,12 @@ if (y + addrLines.length * lineHeight > PAGE_H - MARGIN) {
 
 ---
 
-### 📋 3. Block 3.2 — Версионирование КП
+### ✅ 3. Block 3.2 — Версионирование КП — ЗАВЕРШЁН
 
 **Приоритет**: Medium
 **Сложность**: L
-**Цикл**: 42-43
+**Цикл**: 42-43 ✅
+**Статус**: ✅ COMPLETED (cycles 42-43, 2026-06-20). Подробности: [`tasks/current-task.md`](tasks/current-task.md) (раздел `=== РЕЗУЛЬТАТ ===`) и [`audit-log.md`](audit-log.md) (запись cycles 42-43).
 **Связь с discussion**: Round 2 (А предлагает, Б принимает + индекс)
 
 **Schema правки** (`prisma/schema.prisma`):
@@ -248,7 +249,7 @@ model ProposalItem {
 | 0 | M5 — auth/jwt развязка | High (DONE) | S | 39 ✅ |
 | 1 | 1.3 — env.ts consolidation | Low | S | 40 |
 | 2 | 5.1+5.2 — PDF page-break + Latin | High/Low | M/S | 41 |
-| 3 | 3.2 — Версионирование КП + sourceItemId | Medium | L | 42-43 |
+| 3 | 3.2 — Версионирование КП + sourceItemId | Medium | L | 42-43 ✅ |
 | 4 | 🆕 3.1 — ProposalEditor refactor | Medium | M | 44-45 |
 | 5 | 4.1 — Proposal editor 3-panel UX | Medium | M | 46-47 |
 | 6 | 6.1 — Tests isolation / integration | Low | M | 48-49 |

@@ -22,6 +22,11 @@ export async function POST(
     if (!proposal) return apiError('КП не найдено', 404);
     if (proposal.items.length === 0) return apiError('КП не содержит товаров', 400);
 
+    // Cycle 42: hard-block конвертацию superseded версии (только latest active)
+    if (proposal.supersededAt) {
+      return apiError('Нельзя конвертировать superseded версию. Создайте новую версию.', 400);
+    }
+
     // Проверяем, не конвертировано ли уже
     if (proposal.status === 'converted') {
       return apiError('КП уже конвертировано в договор', 400);

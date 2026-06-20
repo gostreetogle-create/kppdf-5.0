@@ -47,7 +47,11 @@ export async function POST(request: NextRequest) {
     if (!validation.success) return validation.error;
 
     const number = validation.data.number || await nextProposalNumber();
-    const existing = await prisma.proposal.findUnique({ where: { number } });
+    // Cycle 42: composite unique @@unique([number, version]) — POST creates root proposals (version=1)
+    const existing = await prisma.proposal.findFirst({
+      where: { number, version: 1 },
+      select: { id: true },
+    });
     if (existing) return apiError(`Документ с номером ${number} уже существует`, 400);
 
     const { items, ...data } = validation.data;

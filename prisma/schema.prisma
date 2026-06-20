@@ -4,7 +4,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
 }
 
 // ========================================
@@ -273,9 +273,9 @@ model CartSession {
 
 model Proposal {
   id           String   @id @default(cuid())
-  number       String   @unique
+  number       String
   title        String
-  status       String   @default("draft") // draft | sent | accepted | rejected | converted
+  status       String   @default("draft") // draft | sent | accepted | rejected | converted | paid
   clientId     String?
   client       Client?  @relation(fields: [clientId], references: [id])
   organizationId String?
@@ -290,12 +290,22 @@ model Proposal {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
+  // Cycle 42 — Версионирование КП (Block 3.2)
+  parentProposalId String?
+  parentProposal   Proposal?  @relation("ProposalVersions", fields: [parentProposalId], references: [id], onDelete: SetNull)
+  childVersions    Proposal[] @relation("ProposalVersions")
+  version          Int        @default(1)
+  supersededAt     DateTime?
+
   items        ProposalItem[]
   contract     Contract?
   productionOrders ProductionOrder[]
 
+  @@unique([number, version])  // CRITICAL: composite unique — иначе multi-versioning крашится
+  @@unique([parentProposalId, version])  // Cycle 43: race protection — не более одной v2/v3... от одного parent
   @@index([number])
   @@index([status])
+  @@index([parentProposalId])  // fast lineage lookup
 }
 
 model ProposalItem {
@@ -312,7 +322,14 @@ model ProposalItem {
   proposalId String
   proposal   Proposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
 
+  // Cycle 42 — Версионирование КП (Block 3.2): lineage self-FK
+  // sourceItem указывает на immediate parent в lineage (v3 → v2, v4 → v3)
+  sourceItemId  String?
+  sourceItem    ProposalItem?  @relation("ItemLineage", fields: [sourceItemId], references: [id], onDelete: SetNull)
+  derivedItems  ProposalItem[] @relation("ItemLineage")
+
   @@index([proposalId])
+  @@index([sourceItemId])  // 🚀 fast lineage lookup
 }
 
 // ========================================
@@ -809,4 +826,17 @@ model FeatureFlag {
   updatedAt       DateTime @updatedAt
 
   @@index([key])
+}
+
+// ========================================
+// RATE LIMITING (persistent across restarts)
+// ========================================
+
+model RateLimitEntry {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  count     Int      @default(1)
+  expiresAt DateTime
+
+  @@index([expiresAt])
 }

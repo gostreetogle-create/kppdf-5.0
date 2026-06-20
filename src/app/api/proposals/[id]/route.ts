@@ -26,8 +26,18 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     const { id } = await params;
     const body = await request.json();
     if (body.number) {
-      const existing = await prisma.proposal.findUnique({ where: { number: body.number } });
-      if (existing && existing.id !== id) return apiError(`Документ с номером ${body.number} уже существует`, 400);
+      // Cycle 42: composite unique @@unique([number, version]) + block superseded
+      const cur = await prisma.proposal.findUnique({
+        where: { id },
+        select: { version: true, supersededAt: true },
+      });
+      if (!cur) return apiError('Не найдено', 404);
+      if (cur.supersededAt) return apiError('Нельзя редактировать superseded версию. Создайте новую версию.', 400);
+      const conflict = await prisma.proposal.findFirst({
+        where: { number: body.number, version: cur.version },
+        select: { id: true },
+      });
+      if (conflict && conflict.id !== id) return apiError(`Документ с номером ${body.number} уже существует`, 400);
     }
     const item = await prisma.proposal.update({ where: { id }, data: body, include });
     return apiOk(item);
@@ -69,8 +79,14 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       return apiError('Укажите статус', 400);
     }
 
-    const current = await prisma.proposal.findUnique({ where: { id }, select: { status: true } });
+    const current = await prisma.proposal.findUnique({
+      where: { id },
+      select: { status: true, supersededAt: true },
+    });
     if (!current) return apiError('Не найдено', 404);
+
+    // Cycle 42: hard-block смены статуса для superseded версии
+    if (current.supersededAt) return apiError('Нельзя менять статус superseded версии. Создайте новую версию.', 400);
 
     const allowed = VALID_TRANSITIONS[current.status];
     if (!allowed || !allowed.includes(status)) {
