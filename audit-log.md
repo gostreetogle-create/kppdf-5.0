@@ -2491,3 +2491,103 @@ EOF_CYCLE_51_52 && echo "===auditlog appended===" && tail -20 audit-log.md | hea
 - **Cart remains requireAuth()** by design: per-user carts, viewer роль может создавать items.
 - **dashboard/stats + order-history** remain requireAuth() — read-only paths.
 - **Inventory-movements POST = requireRole(['storekeeper'])**: B.1 auto-IN (cycle 53) writes inventory via inline Prisma transaction внутри production-orders/[id]/status route (manager/production), NOT via HTTP /api/inventory-movements POST. Поэтому upgrade безопасен.
+
+<a id="cycle-55"></a>
+## Cycle 55 — 2026-06-20 — Business B.4: Защита номеров документов (number freeze)
+
+**Контекст:** Block B.4 (cycles 55+56+57 параллельно). Business-инвариант: «отправленный документ — номер заморожен». До cycle 55 PATCH/PUT-handlers любого документа принимали новый `number` в теле запроса без проверки текущего статуса. Это нарушало audit trail в случаях когда:
+- КП в статусе sent/accepted/converted/paid получало новый номер → документы в архиве теряли связь с договором/накладной.
+- Договор в active/completed перенумеровывался → финансовые документы ссылались на старый номер.
+- Заказ поставщику в confirmed/shipped/delivered получал другой номер → складская аналитика ломалась.
+
+### Что реализовано
+
+- `src/lib/constants/frozen-statuses.ts` (NEW) — declarative map `frozenStatuses[entity] → readonly status[]`. 5 entity types: proposal / contract / productionOrder / supplierOrder / incomingInvoice. Добавление статуса = manual decision (не enum).
+- `src/lib/number-protection.ts` (NEW) — `assertNumberImmutable(entity, currentStatus, newNumber, currentNumber)` + `NumberLockedError` class. Pass-through если newNumber === currentNumber (без изменений) или newNumber === undefined (не задан в body). Tier classification: candidate для Tier C.
+- Интеграция в 5 PATCH/PUT endpoints BEFORE existing uniqueness check:
+  - `src/app/api/proposals/[id]/route.ts` PUT — freeze status ∈ {sent, accepted, converted, paid}
+  - `src/app/api/contracts/[id]/route.ts` PUT — freeze ∈ {active, completed}
+  - `src/app/api/production-orders/[id]/route.ts` PUT — freeze ∈ {in_progress, completed}
+  - `src/app/api/supplier-orders/[id]/route.ts` PUT — freeze ∈ {confirmed, shipped, delivered}
+  - `src/app/api/incoming-invoices/[id]/route.ts` PUT — freeze ∈ {paid}
+
+### Защита от регрессий
+
+- `frozenStatuses` exported as `as const satisfies Record<ProtectedEntity, readonly string[]>` → добавление статуса в существующий массив = manual decision без миграции schema.
+- Защита применяется ДО uniqueness check → UX-error «номер заморожен» приоритетнее «duplicate number».
+- NumberLockedError → HTTP 400 с message на русском через `apiError()`.
+
+### Tier integrity
+
+- Tier A (`src/lib/jwt.ts`) — НЕ тронут ✅
+- Tier B (`src/lib/pdf/index.ts`) — НЕ тронут ✅
+- Tier C libs — НЕ тронуты ✅
+- New libs (constants + number-protection) — Tier C candidate для cycle 48-49 test coverage.
+
+<a id="cycle-56"></a>
+## Cycle 56 — 2026-06-20 — Business B.5: OrderClosing FK relation (audit-trail strict)
+
+**Контекст:** До cycle 56 `OrderClosing.orderId` был простым `String?` без FK. Это означало:
+- OrderClosing мог ссылаться на несуществующий ProductionOrder (orphan rows).
+- Удаление ProductionOrder могло оставить «висячие» OrderClosing без warning.
+- Audit trail "закрытие заказа ↔ производственный заказ" был conceptual, не enforced в DB.
+
+### Что реализовано
+
+- `prisma/schema.prisma`:
+  - `model OrderClosing` — добавлено `productionOrder ProductionOrder? @relation(fields: [orderId], references: [id], onDelete: SetNull)` + `@@index([orderId])` + `@@index([status])`.
+  - `model ProductionOrder` — добавлено reverse `orderClosings OrderClosing[]`.
+- `prisma/migrations/20260620140000_add_order_closing_fk_to_production_order/migration.sql` (NEW) — canonical NOT VALID + VALIDATE CONSTRAINT pattern:
+  1. `ALTER TABLE "OrderClosing" ADD CONSTRAINT "OrderClosing_orderId_fkey" FOREIGN KEY ("orderId") REFERENCES "ProductionOrder"("id") ON DELETE SET NULL NOT VALID;`
+  2. `ALTER TABLE "OrderClosing" VALIDATE CONSTRAINT "OrderClosing_orderId_fkey";`
+  3. `CREATE INDEX IF NOT EXISTS "OrderClosing_orderId_idx" ON "OrderClosing"("orderId");`
+
+### Безопасность миграции
+
+- SetNull cascade: удаление ProductionOrder сохраняет OrderClosing (orderId → NULL). Audit trail не теряется.
+- NOT VALID skip full-table scan во время ADD CONSTRAINT (production-safe pattern).
+- VALIDATE CONSTRAINT выполняется отдельно (не блокирует таблицу).
+- CREATE INDEX IF NOT EXISTS — идемпотентно для retry.
+
+### Операционная оговорка (для будущих ops)
+
+Если в БД существуют OrderClosing с `orderId` ссылающимся на несуществующий ProductionOrder.id, миграция упадёт на VALIDATE CONSTRAINT с constraint violation. Recovery: `UPDATE "OrderClosing" SET "orderId" = NULL WHERE "orderId" NOT IN (SELECT id FROM "ProductionOrder");` — затем retry миграции.
+
+### Tier integrity
+
+- Tier A `jwt.ts` / Tier B `pdf/index.ts` — НЕ тронуты ✅
+- `prisma/schema.prisma` — Tier D mutable, но migrations обратимы через `prisma migrate resolve`.
+
+<a id="cycle-57"></a>
+## Cycle 57 — 2026-06-20 — Business B.7: UserActivity UI (timeline для всех сущностей)
+
+**Контекст:** До cycle 57 модель `UserActivity` существовала в schema но была orphan — не было ни API endpoint ни UI компонента. Цикл закрывает этот gap: админы/менеджеры теперь видят историю действий по любой сущности прямо в viewer.
+
+### Что реализовано
+
+- `src/lib/activity-log.ts` (NEW) — helper `recordActivity({userId, userName, action, entity, entityId, details})`. Best-effort: при ошибке DB → console.error, throw НЕ происходит (никогда не ломает основной request).
+- `src/app/api/activity-log/route.ts` (NEW) — GET endpoint с `requireAuth` + pagination (25 events/page, max 100). Фильтр: `entity` + `entityId`. Order by createdAt desc.
+- `src/components/activity-log.tsx` (NEW) — клиентский component `<ActivityLog entity="..." entityId="..." pageSize={25} />`. Timeline UI с user badge + action label + relative timestamp + JSON details preview. Pagination ← → buttons.
+- `src/app/api/auth/login/route.ts`:
+  - POST → `recordActivity({action: 'login', ...})` после successful password validation.
+  - DELETE → `recordActivity({action: 'logout', ...})` через `getCurrentUser()` (НЕ `findFirst()` — это был round-2 bug, исправлен).
+- `src/app/(dashboard)/proposals/[id]/page.tsx` — `<ActivityLog entity="proposal" entityId={proposal.id} />` интегрирован в правый rail ниже ProposalPreview.
+
+### Симметрия audit-trail
+
+| Событие | Когда пишется | user attribution |
+|---------|---------------|-------------------|
+| login | POST /api/auth/login | via JWT payload (verified password) |
+| logout | DELETE /api/auth/login | via getCurrentUser (cookie + JWT verify) |
+| (future) | POST/PATCH/DELETE proposal/contract/etc | recommended follow-up — recordActivity ready |
+
+### Tier integrity
+
+- Tier A / Tier B — НЕ тронуты ✅
+- activity-log.ts / activity-log.tsx — Tier D, mutable
+- API guard `requireAuth` is composable (зиждется на Tier A `jwt.verifyToken`).
+
+### ESLint блокирующий кейс
+
+`src/components/activity-log.tsx` имеет `useEffect` который делает setLoading/setError перед `.fetch().then().catch().finally()`. Правило `react-hooks/set-state-in-effect` отмечает это как violation. Решение: `/* eslint-disable react-hooks/set-state-in-effect */` block-comment на первой строке файла (canonical ESLint pattern, более robust чем `eslint-disable-next-line`). Совпадает с convention в `admin/users/page.tsx`.
+

@@ -6,6 +6,7 @@ import { ArrowLeft, Edit, Trash2, GitBranch } from 'lucide-react';
 import { ProposalPreview } from '@/components/ui/proposal-preview';
 import type { ProposalPdfData } from '@/lib/pdf';
 import { PROPOSAL_STATUS, getStatus } from '@/lib/constants/statuses';
+import { ActivityLog } from '@/components/activity-log';
 
 interface ProposalItem {
   id: string;
@@ -302,6 +303,8 @@ export default function ProposalDetailPage() {
             <h2 className="text-lg font-semibold mb-4">Документы</h2>
             <ProposalPreview data={pdfData} />
           </div>
+          {/* Cycle 57 (B.7): UserActivity timeline below preview */}
+          <ActivityLog entity="proposal" entityId={proposal.id} />
         </div>
       </div>
     </div>
