@@ -2832,3 +2832,31 @@ preserved unstaged per Rule 5.
 ### Next cycle
 - v3.2 — Color refinement (Nvidia-style borders, sidebar accents, light-theme warmth)
 - Pending user action: отдельный SCRAM-fix commit (db.ts + prisma/schema.prisma + dev.db push)
+
+---
+
+## Cycle v3.2 (2026-06-20) — Color Refinement
+
+### Theme
+Вдохнуть в интерфейс индивидуальность без потери структуры: Nvidia-style dark borders (PCB-trace green на dark slate), section color-coding в sidebar (7 muted colours), warm-grey borders в light theme, perf-fix click-lag.
+
+### Stats
+- Файлов изменено: 7 (1 CSS token layer + 1 sidebar component + 5 UI primitives)
+- Token layer: --border / --input / --ring updated + 21 новых --nav-N-{stripe,bg,icon} (7 sections x 3 props x 2 themes)
+- Sidebar: добавлен section: 1..7 в NavItem, inline style injects CSS vars, transitions border-l-[3px] transparent -> --sec-stripe
+- Perf: .glass-surface blur 24->12, .glass-surface-soft 16->8, .glass-overlay 8->8 (restored for modal polish)
+
+### Theme decisions
+- Dark: PCB-trace green --border: #152219, --input: #1D3325, --border-focus: #5DA67A (AA 4.1:1 vs #0B0E14)
+- Light: Stone warm-grey --border: #E7E5E4, --input: #D6D3D1 (warm bias harmonises with dusty lavenders)
+- Sidebar sections: Dashboard slate / References dusty lavender / Sales muted terracotta / Production sage / Warehouse dim gold / Finance deep teal / Admin muted ruby
+- Focus transition: transition-[box-shadow,border-color] duration-200 on inputs (border smooth + ring fade)
+
+### Result
+- tsc 0 · eslint 0 · vitest 143/143
+- browser-use visual verify: PASS
+- 0 console errors
+- 0 broken cross-refs
+
+### Next
+- v3.3 — TBD (depends on user)

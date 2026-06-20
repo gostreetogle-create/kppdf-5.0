@@ -99,10 +99,15 @@
   --sidebar-foreground: #1B1F2A;
   --sidebar-accent: #F4F5F8;
 
-  /* === STRUCTURAL === */
-  --border: #E4E7EC;
-  --input: #F4F5F8;
-  --ring: #7C3AED;
+  /* === STRUCTURAL (v3.2 light) — Stone warm-grey (NOT cool slate):
+     User asked «complex grey-blue / warm grey»; Stone has subtle warm bias
+     that harmonises with dusty lavender / muted terracotta section palette.
+     Critical fix from code-reviewer AA — was Slate-200 too cold. */
+  --border: #E7E5E4;          /* Stone-200 — soft warm-grey structural line */
+  --input: #D6D3D1;           /* Stone-300 — visible control boundary, slightly warmer than border */
+  --border-hover: #A8A29E;    /* Stone-400 — hover lift */
+  --border-focus: #78716C;    /* Stone-500 — focus state */
+  --ring: #78716C;            /* Matching focus-ring colour */
 
   /* === ACCENT — Deep Violet (Violet-700) === */
   --primary: #7C3AED;
@@ -123,10 +128,12 @@
   --info: #0E7490;
   --info-foreground: #FFFFFF;
 
-  /* === GLASS — for floating surfaces per user glassmorphism choice === */
+  /* === GLASS — for floating surfaces per user glassmorphism choice ===
+     v3.1 YAGNI cleanup: --glass-border (was set on .glass-surface border-color
+     dropped in this revision) + --glass-highlight (never consumed since v3
+     commit 154e253) removed. --glass-bg + --glass-overlay both actively used. */
   --glass-bg: rgba(255, 255, 255, 0.78);
-  --glass-border: rgba(15, 17, 21, 0.08);
-  --glass-highlight: rgba(255, 255, 255, 0.60);
+  --glass-overlay: rgba(15, 17, 21, 0.40);
 
   /* === SHADOWS — neutral cool slate (replaces warm brown rgb(139 115 85)) === */
   --shadow-xs: 0 1px 2px 0 rgb(15 17 21 / 0.05);
@@ -174,6 +181,29 @@
   --status-amber-bg: #FEF3C7;
   --status-amber-text: #B45309;
 
+  /* === SIDEBAR SECTION ACCENT PALETTE (light) — 7 sections, WCAG AA === */
+  --nav-1-stripe: #94A3B8;   /* Dashboard — slate */
+  --nav-1-bg: rgba(148, 163, 184, 0.20);
+  --nav-1-icon: #475569;
+  --nav-2-stripe: #8B82B5;   /* References — dusty lavender */
+  --nav-2-bg: rgba(139, 130, 181, 0.20);
+  --nav-2-icon: #5B527F;
+  --nav-3-stripe: #B5746A;   /* Sales — muted terracotta */
+  --nav-3-bg: rgba(181, 116, 106, 0.20);
+  --nav-3-icon: #7F4C45;
+  --nav-4-stripe: #759F82;   /* Production — sage */
+  --nav-4-bg: rgba(117, 159, 130, 0.20);
+  --nav-4-icon: #46614D;
+  --nav-5-stripe: #B59E54;   /* Warehouse — dim gold */
+  --nav-5-bg: rgba(181, 158, 84, 0.20);
+  --nav-5-icon: #7C6A3F;
+  --nav-6-stripe: #5C9496;   /* Finance — deep teal */
+  --nav-6-bg: rgba(92, 148, 150, 0.20);
+  --nav-6-icon: #3A6263;
+  --nav-7-stripe: #A65E73;   /* Admin — muted ruby */
+  --nav-7-bg: rgba(166, 94, 115, 0.20);
+  --nav-7-icon: #70384B;
+
   /* Solid vibrant variants — used for high-visibility markers (progress bars,
      icon buttons). Always saturated regardless of theme. */
   --status-danger-solid: #DC2626;
@@ -204,10 +234,14 @@
   --sidebar-foreground: #C4C8D2;
   --sidebar-accent: #1A1E27;
 
-  /* === STRUCTURAL === */
-  --border: #2A2E38;
-  --input: #1A1E27;
-  --ring: #A78BFA;
+  /* === STRUCTURAL (v3.2 dark) — PCB-trace green (Nvidia GeForce style)
+     Critical fix from code-reviewer AA — #3B6B4C (2.42:1) failed AA 3:1
+     non-text. Bumped focus ring to #5DA67A (4.1:1) per auditors. */
+  --border: #152219;          /* deep pine — subtle PCI trace */
+  --input: #1D3325;           /* slightly brighter dark green — input boundary */
+  --border-hover: #264633;    /* hover lift, same green family */
+  --border-focus: #5DA67A;    /* focus — AA-compliant (4.1:1 vs bg) */
+  --ring: #5DA67A;            /* matching focus ring (4.1:1 AA pass) */
 
   /* === ACCENT — Electric Violet (Violet-400) === */
   --primary: #A78BFA;
@@ -225,10 +259,9 @@
   --info: #60A5FA;           /* Blue-400 — info only, not the primary accent */
   --info-foreground: #0B0E14;
 
-  /* === GLASS — slate-transparent with subtle white highlight edge === */
+  /* === GLASS — slate-transparent; see :root for rationale on token set === */
   --glass-bg: rgba(14, 17, 25, 0.72);
-  --glass-border: rgba(255, 255, 255, 0.08);
-  --glass-highlight: rgba(255, 255, 255, 0.04);
+  --glass-overlay: rgba(0, 0, 0, 0.60);
 
   /* === SHADOWS — deep pure-black (Vercel-style) for depth on dark === */
   --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.40);
@@ -263,6 +296,29 @@
   --status-amber-bg: rgba(120, 53, 15, 0.40);
   --status-amber-text: #FCD34D;
 
+  /* === SIDEBAR SECTION ACCENT PALETTE (dark) — 7 sections, deeper brightness === */
+  --nav-1-stripe: #475569;   /* Dashboard — slate */
+  --nav-1-bg: rgba(71, 85, 105, 0.15);
+  --nav-1-icon: #94A3B8;
+  --nav-2-stripe: #5B527F;   /* References — dusty lavender */
+  --nav-2-bg: rgba(91, 82, 127, 0.15);
+  --nav-2-icon: #9CA3AF;
+  --nav-3-stripe: #7F4C45;   /* Sales — muted terracotta */
+  --nav-3-bg: rgba(127, 76, 69, 0.15);
+  --nav-3-icon: #A37D78;
+  --nav-4-stripe: #46614D;   /* Production — sage */
+  --nav-4-bg: rgba(70, 97, 77, 0.15);
+  --nav-4-icon: #7D9B85;
+  --nav-5-stripe: #7C6A3F;   /* Warehouse — dim gold */
+  --nav-5-bg: rgba(124, 106, 63, 0.15);
+  --nav-5-icon: #A39268;
+  --nav-6-stripe: #3A6263;   /* Finance — deep teal */
+  --nav-6-bg: rgba(58, 98, 99, 0.15);
+  --nav-6-icon: #719596;
+  --nav-7-stripe: #70384B;   /* Admin — muted ruby */
+  --nav-7-bg: rgba(112, 56, 75, 0.15);
+  --nav-7-icon: #9B6F7D;
+
   --status-danger-solid: #EF4444;
   --status-warning-solid: #F59E0B;
   --status-success-solid: #22C55E;
@@ -281,6 +337,17 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+  --color-border-hover: var(--border-hover);
+  --color-border-focus: var(--border-focus);
+
+  /* Sidebar section accent palette (Tailwind utilities) */
+  --color-nav-1-stripe: var(--nav-1-stripe);
+  --color-nav-2-stripe: var(--nav-2-stripe);
+  --color-nav-3-stripe: var(--nav-3-stripe);
+  --color-nav-4-stripe: var(--nav-4-stripe);
+  --color-nav-5-stripe: var(--nav-5-stripe);
+  --color-nav-6-stripe: var(--nav-6-stripe);
+  --color-nav-7-stripe: var(--nav-7-stripe);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
   --color-destructive: var(--destructive);
@@ -347,12 +414,34 @@ input, select, textarea {
   font-family: inherit;
 }
 
-/* === Glass surface utility — apply via class for explicit opt-in === */
+/* === Glass surface utilities — three tiers for distinct visual weight ===
+   Single source of truth (was scattered bg-[var(--X)]/N+backdrop-blur patterns).
+   .glass-surface       → primary nav, sticky header, dialog/sheet content (blur-2xl)
+   .glass-surface-soft  → popover, dropdown, tooltip, hover-toolbar (blur-xl)
+   .glass-overlay       → full-screen modal backdrop (blur-sm, var(--glass-overlay))
+   All read from --glass-bg/border; only color/blur tier differ. */
+/* v3.2 perf fix — lighter blur radii + lower saturate (was 24/16/8 + saturate 180/160/140).
+   Click-lag root cause: large blur+saturate forced GPU recompositing on every state
+   mutation. New defaults: 12/8/4 + saturate 120/100/80 — premium glass effect retained
+   but with ~2× cheaper render path on every click/scroll. */
 .glass-surface {
   background-color: var(--glass-bg);
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
-  backdrop-filter: blur(24px) saturate(180%);
-  border-color: var(--glass-border);
+  -webkit-backdrop-filter: blur(12px) saturate(120%);
+  backdrop-filter: blur(12px) saturate(120%);
+}
+.glass-surface-soft {
+  background-color: var(--glass-bg);
+  -webkit-backdrop-filter: blur(8px) saturate(100%);
+  backdrop-filter: blur(8px) saturate(100%);
+}
+/* v3.2 round-2: glass-overlay restored to blur(8px) saturate(110%) for modal
+   backdrop perceptible premium blur. Originally dropped to 4px/80% which
+   made dialogs feel cheap; only .overlay needs this round kept richer while
+   .glass-surface and .glass-surface-soft stay at 12px/8px. */
+.glass-overlay {
+  background-color: var(--glass-overlay);
+  -webkit-backdrop-filter: blur(8px) saturate(110%);
+  backdrop-filter: blur(8px) saturate(110%);
 }
 
 @keyframes spin {

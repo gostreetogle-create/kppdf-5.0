@@ -8,7 +8,7 @@ const cardVariants = cva('rounded-lg border bg-card text-card-foreground', {
       default: 'shadow-sm',
       ghost: 'border-transparent shadow-none',
       elevated: 'shadow-md',
-      interactive: 'shadow-sm transition-shadow hover:shadow-md',
+      interactive: 'shadow-sm transition-all duration-200 hover:shadow-md hover:border-[var(--border-hover)]',
     },
   },
   defaultVariants: {

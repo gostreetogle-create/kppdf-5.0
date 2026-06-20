@@ -141,7 +141,7 @@ export function Table<T extends Record<string, unknown>>({
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(0); }}
             placeholder={searchPlaceholder}
-            className="h-10 w-full rounded-md border border-input bg-transparent pl-9 pr-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
+            className="h-10 w-full rounded-md border border-input bg-transparent pl-9 pr-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 transition-[box-shadow,border-color] duration-200 hover:border-[var(--border-hover)]"
           />
         </div>
       )}
