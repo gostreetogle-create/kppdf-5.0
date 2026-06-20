@@ -2883,3 +2883,28 @@ preserved unstaged per Rule 5.
 
 ### Rationale
 Удаление `docs/_cleanup/` — финал большой операции «Генеральная уборка docs/». Временные файлы сделали своё дело и больше не нужны в active tree. Если когда-нибудь понадобится восстановить — `git show a729b3c:docs/_cleanup/AUDIT_REPORT.md` (и аналоги для двух других).
+
+---
+
+## Cycle v3.1.1 (2026-06-20) — SCRAM fix (dual-adapter + sqlite provider)
+
+### Theme
+Fix SCRAM-SERVER-FIRST-MESSAGE error in dev by switching DbClient to dual-adapter pattern with Prisma 7 sqlite-compatible runtime, and aligning prisma schema provider (sqlite) with the prod intent declared in deploy/docker-compose.prod.yml.
+
+### Stats
+- Edited: src/lib/db.ts: introduced `createAdapter(url)` factory that dispatches to PrismaBetterSqlite3 (for `file:` URLs) or PrismaPg (for `postgres://` URLs). Singleton via `globalForPrisma` preserved.
+- Edited: prisma/schema.prisma: `datasource db { provider }` ∈ {"postgresql"} → {"sqlite"} to match runtime adapter. Schema is primitive-only (no Postgres-specific column types) — migrations and queries remain forward-compatible.
+- Generated: dev.db (binary) — schema push + data aligned with new sqlite provider.
+
+### Rationale
+Symptom 1 (in dev): `SASL SCRAM-SERVER-FIRST-MESSAGE: client password must be a string` (stale PrismaClient singleton with mixed adapter on reload).
+Symptom 2 (in dev/CI): `PrismaClientInitializationError: Driver Adapter sqlite is incompatible with the postgres provider defined in the Prisma schema` (Prisma 7 refuses mismatched adapter+provider at instantiation, not at first query).
+Root cause: rigid PrismaPg-only fallback in src/lib/db.ts + schema provider didn't match prod intent in deploy/docker-compose.prod.yml (which mandates `DATABASE_URL=file:/data/dev.db`).
+Fix: dual-adapter (file:→ PrismaBetterSqlite3 / postgres:→ PrismaPg), align sqlite provider, ensure singleton uses factory. Both incidents resolved.
+
+### Compliance
+- CONTRIBUTING.md Rule 6 (single atomic commit per cycle): yes.
+- CONTRIBUTING.md Rule (append-only audit-log): yes (new entry below; cycle 40 + prior historical entries immutable).
+
+### Note (working tree state)
+At the time of this commit, the working tree contained additional dirty files beyond SCRAM-fix (≈ 111 modified M + 111 deleted D + 13 untracked ?? — full enumeration in followups). Only 3 SCRAM-fix files were staged per explicit user directive + Rule 6. The remaining dirty state is preserved for a followup commit cycle.

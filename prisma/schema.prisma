@@ -3,8 +3,26 @@ generator client {
   output   = "../src/generated/prisma"
 }
 
+// ----------------------------------------------------------------------------
+// Cycle v3.1.1 — provider aligned to actual runtime target.
+//
+// Production runtime is SQLite: deploy/docker-compose.prod.yml sets
+//   DATABASE_URL=file:/data/dev.db
+// and the dev-time path is dev.db on disk. Schema provider must match the
+// driver adapter used at runtime — Prisma 7 refuses to start PrismaClient
+// when there's a mismatch (raised at instantiation, not at first query).
+//
+// The previous `provider = "postgresql"` declaration was inconsistent with
+// prod intent and produces a `PrismaClientInitializationError:
+// Driver Adapter sqlite is incompatible with the postgres provider defined
+// in the Prisma schema` whenever the dev process or vitest inherits a
+// `file:` DATABASE_URL from the shell.
+//
+// Schema is primitive-only (no Postgres-specific column types) — all
+// migrations and queries remain forward-compatible with this alignment.
+// ----------------------------------------------------------------------------
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
 }
 
 // ========================================
