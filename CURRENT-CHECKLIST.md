@@ -22,8 +22,9 @@
 |------|------|--------|------|-------|
 | **51** | **B.3 — StatusWorkflow live query + seed migration** | ✅ **DONE** (2026-06-20) | [`tasks/current-task.md`](tasks/current-task.md) | Foundation layer — `src/lib/status-workflow.ts` (new) + seed migration SQL + 5 PATCH route refactors. ADR-003 формализован. Commit `cycle-51` (1b9c836). |
 | **52** | **B.6 — Роли в API guards** | ✅ **DONE** (2026-06-20) | см. cycle 51 spec | Foundation layer — механическая замена `requireAuth` → `requireRole([...])` в 5 critical entity routes. Commit `cycle-52` (f0a5583). |
-| **53 — завершён** (см. ниже в business-секции) | | | | | | |
-| **54 — завершён** (см. ниже в business-секции) | | | | | | |
+| **53** | **B.1 — Finished Goods auto-IN** | ✅ **DONE** (2026-06-20) | cycle-53 commit (3132dc2) | Business-critical layer — InventoryMovement auto-IN при completed. ADR-004. |
+| **54** | **B.2 — Client юрлица (B2B)** | ✅ **DONE** (2026-06-20) | cycle-54 commit (2e638fb) | Business-critical layer — Client.type discriminator +5 fields + Zod DU + search insensitive. ADR-004. |
+| **44** | **🆕 3.1 — `ProposalEditor` refactor (architectural)** | ✅ **DONE** (2026-06-20) | cycle-44 commit (pending) | Extraction: 449-line monolith → 11 sub-components + types + provider + thin page wrapper (15 lines). ADR-005. Cycle 45 polish deferred. |
 
 **Foundation layer стартовал параллельно** — разные файлы, готовит B.1+B.2.
 
@@ -31,7 +32,8 @@
 
 | Цикл | Блок | Статус | Зависимости |
 |------|------|--------|-------------|
-| 44-45 | 3.1 — `<ProposalEditor>` refactor | 📋 planned | нет |
+| 44 | 🆕 3.1 — `<ProposalEditor>` refactor (structural) | ✅ done (2026-06-20) | нет |
+| 45 | 🆕 3.1 — `<ProposalEditor>` polish (memo audit + ESLint cleanup) | 📋 planned | cycle 44 ✅ |
 | 46-47 | 4.1 — Proposal editor 3-panel UX | 📋 planned | 3.1 |
 | 48-49 | 6.1 — Tests isolation / integration | 📋 planned | нет |
 | 50 | 7.1 — Zustand refresh TTL + silent preempt | 📋 planned | нет |

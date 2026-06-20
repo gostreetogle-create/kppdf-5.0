@@ -139,3 +139,4 @@
 | 2026-06-20 | Initial creation: STABLE-MODULES.md создан, Tier A: jwt.ts, Tier B: pdf/index.ts API frozen, Tier C: env.ts + clone-items.ts candidates | 41 |
 | 2026-06-20 | Tier C expansion: status-workflow.ts (NEW helper, cycle 51) — lib for B.3 workflow engine. Tier A/B unchanged (jwt.ts, pdf/index.ts NOT touched). | 51+52 |
 | 2026-06-20 | Tier C expansion: warehouse/auto-receive-finished-goods.ts (NEW lib, cycle 53) — B.1 finished goods IN helper. Tier A/B/C unchanged (jwt.ts, pdf/index.ts, status-workflow.ts NOT touched). | 53+54 |
+| 2026-06-20 | Tier D expansion: 11 new files in `src/components/proposal-editor/` + `src/types/proposal-editor.ts` (cycle 44) — Block 3.1 refactor. Tier A/B/C unchanged. | 44 |
