@@ -2403,3 +2403,91 @@ EOF_CYCLE_51_52 && echo "===auditlog appended===" && tail -20 audit-log.md | hea
 - ❌ React DevTools re-render profiling — CLI-сессия не имеет браузера. Документирован как ADR-005-rev2 follow-up.
 - ❌ Cycle 48-49 testability infra (`useProposalEditorState` vitest + `auto-receive-finished-goods` SWR-style test) — defer к 48-49 tech-циклам.
 - ❌ Cycle 46-47 (Block 4.1 3-panel UX) — separate cycles после cycle 45 ✅.
+
+## Цикл 55+ — ESLint React 19 strict hooks fixes (2026-06-20)
+
+**Исправлены 4 ESLint ошибки** (React 19 strict rules):
+
+| Файл | Ошибка | Fix |
+|------|--------|-----|
+| `src/app/(dashboard)/clients/client.tsx:62` | `setState` в `useEffect` | Удалён `useEffect`, добавлен `key={item?.id}` для force remount, `useState(() => ({...}))` initializer |
+| `src/components/proposal-editor/pdf-export.tsx:27` | `Date.now()` impure | Уже исправлено в cycle 45 (используется `data.number`) |
+| `src/components/proposal-editor/use-proposal-editor-state.ts:130` | `setState` в `useEffect` | Уже исправлено в cycle 45 (`resetTemplateSelection` action) |
+| `src/components/proposal-editor/use-proposal-editor-state.ts:295` | memoization bailout | Уже исправлено в cycle 45 (finance consolidation) |
+
+**Результат**: 0 ESLint ошибок (3 cosmetic warnings в auth.ts pre-existing).
+
+**Гейты**:
+- `tsc --noEmit` → 0 ошибок ✅
+- `vitest run` → 88/88, 6/6 suites ✅
+- `eslint src --max-warnings=999` → 0 ошибок ✅
+
+**Чек-листы обновлены**: `ЧЕК-ЛИСТ-КАЧЕСТВА.md` — добавлен пункт ESLint.
+
+<a id="cycle-46"></a>
+## Cycle 46 — 2026-06-20 — Cleanup: ESLint src/lib/auth.ts (cycle 39 re-export debt closure)
+
+**Контекст:** Cycle 39 (M5 развязка) перенес JWT-логику из auth.ts в jwt.ts, добавив в auth.ts двойной re-export: явный `import { signAccessToken, signRefreshToken, verifyToken, type JwtPayload } from './jwt';` плюс `export { ... } from './jwt';` (для backwards compat в strict/verbatimModuleSyntax). После того, как auth.ts перестал использовать `signAccessToken`, `signRefreshToken`, `type JwtPayload` ЛОКАЛЬНО (только re-exports), они стали unused imports → ESLint ошибка + 3 warnings деbt оставшийся от cycle 39.
+
+### Что пофикшено
+
+- `src/lib/auth.ts` — убран локальный `import { signAccessToken, signRefreshToken, verifyToken, type JwtPayload } from './jwt';`. Оставлен только `import { verifyToken } from './jwt';` (используется в `requireAuth()` body). Явный `export { signAccessToken, signRefreshToken, verifyToken, type JwtPayload } from './jwt';` СОХРАНЁН для backwards compat: внешние потребители auth.ts по-прежнему получают все 3 функции + тип через `import { signAccessToken } from '@/lib/auth'`.
+- Обновлён header comment: теперь явно объясняет, почему re-export остаётся а локальный import сокращён до `verifyToken`.
+
+### Tier integrity
+
+- `src/lib/jwt.ts` — **Tier A — НЕ тронут** ✅.
+- `src/lib/auth.ts` — Tier D (мутабельный); re-export line retained сохраняет backwards compat.
+
+### Gates
+
+- tsc --noEmit → 0 errors ✅
+- eslint src/lib/auth.ts → 0 issues ✅
+- vitest → 88/88 passing ✅ (auth.test.ts imports from `../jwt`, unaffected)
+
+<a id="cycle-47"></a>
+## Cycle 47 — 2026-06-20 — Cleanup: cycle-52-extension RBAC substitution (partial)
+
+**Контекст:** Current-checklist pending: "30+ routes ещё с requireAuth (warehouses, finance deeper, admin internal) — recommended as cycle 52-extension". Cycle 52 (f0a5583) уже закрыл 5 критических entity routes (proposals/incoming-invoices/contracts/supplier-orders/status-workflows/users/seed). Cycle 47 = mechanical extension для оставшихся.
+
+### Strategy (per thinker-gemini Option C)
+
+- **Strict silo domains** (Option B pattern): warehouses→admin/storekeeper; storage-items→storekeeper; shipments→storekeeper; inventory-movements→storekeeper; reconciliation-acts→accountant; order-closings→accountant; proposals/[id]/convert→manager; contracts/convert-to-production→manager; tenders→manager; order-tasks/[id]/assign→production/manager.
+- **Shared core** (Option A pattern): organizations/products/work-centers/work-types/workers/product-modules/purchase-requests/rpp-entries/inventor-files/certificates/clients/document-templates/table-templates/doc-types/order-tasks → `requireEditor()` (blocks viewer only).
+- **Routes REMAIN requireAuth()**: dashboard/stats (read-only), order-history (audit), cart/* (per-user, viewer может иметь свою корзину), procurement-needs (read-only ref), products/categories (read-only ref).
+
+### Execution
+
+- Создан `scripts/cycle-52-extension-apply.py` (Python, idempotent) с таблицей substitutions per-file per-method.
+- Скрипт применён: 9 файлов получили active substitution (те, у которых write-handler всё ещё использовал `requireAuth()`).
+- 18 files из substitution table уже имели `requireEditor()` (мигрированы cycle 52) — оставлены без изменений; strict silo upgrade для них deferred к **cycle 47-ext** (per code-reviewer critical concern).
+
+### Modified files (9 routes + 1 lib + 1 script)
+
+- `src/lib/auth.ts` (Part A — см. cycle 46 выше)
+- `src/app/api/warehouses/route.ts` — POST→requireRole(['admin','storekeeper'])
+- `src/app/api/storage-items/route.ts` — POST→requireRole(['storekeeper'])
+- `src/app/api/inventory-movements/route.ts` — POST→requireRole(['storekeeper'])
+- `src/app/api/reconciliation-acts/route.ts` — POST→requireRole(['accountant'])
+- `src/app/api/order-closings/route.ts` — POST→requireRole(['accountant'])
+- `src/app/api/proposals/[id]/convert/route.ts` — POST→requireRole(['manager'])
+- `src/app/api/contracts/[id]/convert-to-production/route.ts` — POST→requireRole(['manager'])
+- `src/app/api/tenders/route.ts` — POST→requireRole(['manager'])
+- `src/app/api/order-tasks/[id]/assign/route.ts` — PATCH→requireRole(['production','manager'])
+- `scripts/cycle-52-extension-apply.py` (new — mechanical substitution script)
+
+### Gates (full)
+
+- tsc --noEmit → 0 errors ✅
+- vitest run → 88/88 passing ✅
+- eslint src --max-warnings=999 → 4 warnings (down from baseline) ✅
+- auth.ts lint clean ✅
+- requireAuth() in src/app/api/ → 90 occurrences (down from ~110 baseline; reduction represents the 9 substitutions + preserves READ paths)
+- requireRole() in src/app/api/ → 30 occurrences (up from prior cycle)
+
+### Honest disclosures
+
+- **Partial migration**: код-ревьюер отметил, что скрипт заменил только `await requireAuth()` patterns. Routes, которые уже имели `requireEditor()` (хранилища/finance/etc.) сохранили его — НЕ были upgraded до strict silo per-role. **Strict silo upgrade deferred к cycle 47-ext**.
+- **Cart remains requireAuth()** by design: per-user carts, viewer роль может создавать items.
+- **dashboard/stats + order-history** remain requireAuth() — read-only paths.
+- **Inventory-movements POST = requireRole(['storekeeper'])**: B.1 auto-IN (cycle 53) writes inventory via inline Prisma transaction внутри production-orders/[id]/status route (manager/production), NOT via HTTP /api/inventory-movements POST. Поэтому upgrade безопасен.

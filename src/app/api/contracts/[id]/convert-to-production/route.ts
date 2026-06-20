@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/db';
-import { requireAuth } from '@/lib/auth';
+import {requireAuth, requireRole} from '@/lib/auth';
 import { apiOk, apiError } from '@/lib/api-response';
 import { nextProductionOrderNumber } from '@/lib/counter';
 
@@ -87,7 +87,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    await requireAuth();
+    await requireRole(['manager']);
     const { id } = await params;
 
     // Получаем договор с товарами и КП
