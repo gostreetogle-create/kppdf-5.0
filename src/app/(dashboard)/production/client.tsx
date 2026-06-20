@@ -11,13 +11,13 @@ interface ProductionOrder {
   number: string;
   title: string;
   status: string;
-  workType?: { name: string };
-  plannedStart: string;
-  plannedEnd: string;
-  workTypeId: string;
-  workCenterId: string;
+  workType: { name: string } | null;
+  plannedStart: Date | null;
+  plannedEnd: Date | null;
+  workTypeId: string | null;
+  workCenterId: string | null;
   priority: number;
-  notes: string;
+  notes: string | null;
 }
 
 function ProductionOrderForm({ item, onClose }: { item: ProductionOrder | null; onClose: () => void }) {
@@ -27,8 +27,8 @@ function ProductionOrderForm({ item, onClose }: { item: ProductionOrder | null; 
     workTypeId: item?.workTypeId ?? '',
     workCenterId: item?.workCenterId ?? '',
     priority: item?.priority ?? 0,
-    plannedStart: item?.plannedStart ? item.plannedStart.slice(0, 16) : '',
-    plannedEnd: item?.plannedEnd ? item.plannedEnd.slice(0, 16) : '',
+    plannedStart: item?.plannedStart ? new Date(item.plannedStart).toISOString().slice(0, 16) : '',
+    plannedEnd: item?.plannedEnd ? new Date(item.plannedEnd).toISOString().slice(0, 16) : '',
     notes: item?.notes ?? '',
   });
   const [saving, setSaving] = useState(false);

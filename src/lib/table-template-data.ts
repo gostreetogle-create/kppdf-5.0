@@ -11,7 +11,7 @@
 export interface DataField {
   name: string;        // fieldName — техническое имя
   label: string;       // человекочитаемый заголовок
-  type: 'text' | 'number' | 'date' | 'currency';
+  type: 'text' | 'number' | 'date' | 'currency' | 'image';
   defaultWidth?: string;
   align?: 'left' | 'center' | 'right';
   format?: string;     // опциональный формат (напр. "0.00")
@@ -35,6 +35,7 @@ export const DATA_SOURCES: Record<string, DataSource> = {
     label: 'Товары',
     fields: [
       { name: 'rowNumber',  label: '№',          type: 'number',   defaultWidth: '40px',  align: 'center' },
+      { name: 'photo',      label: 'Фотография', type: 'image',    defaultWidth: '60px',  align: 'center' },
       { name: 'name',       label: 'Наименование', type: 'text',    defaultWidth: '200px', align: 'left' },
       { name: 'sku',        label: 'Артикул',     type: 'text',    defaultWidth: '100px', align: 'left' },
       { name: 'unit',       label: 'Ед. изм.',    type: 'text',    defaultWidth: '60px',  align: 'center' },
@@ -49,6 +50,7 @@ export const DATA_SOURCES: Record<string, DataSource> = {
     label: 'Позиции документа',
     fields: [
       { name: 'rowNumber',  label: '№',          type: 'number',   defaultWidth: '40px',  align: 'center' },
+      { name: 'photo',      label: 'Фотография', type: 'image',    defaultWidth: '60px',  align: 'center' },
       { name: 'name',       label: 'Наименование', type: 'text',    defaultWidth: '200px', align: 'left' },
       { name: 'quantity',   label: 'Количество',  type: 'number',  defaultWidth: '80px',  align: 'center' },
       { name: 'unit',       label: 'Ед. изм.',    type: 'text',    defaultWidth: '60px',  align: 'center' },
@@ -104,7 +106,7 @@ export interface TableTemplateColumnV4 {
   fieldName: string;       // поле из источника (name, sku, ...)
   label: string;           // заголовок колонки
   width?: string;          // CSS ширина (напр. "100px", "20%")
-  type?: 'text' | 'number' | 'date' | 'currency';
+  type?: 'text' | 'number' | 'date' | 'currency' | 'image';
   order: number;           // порядок сортировки
   visible?: boolean;       // показать/скрыть
   align?: 'left' | 'center' | 'right';

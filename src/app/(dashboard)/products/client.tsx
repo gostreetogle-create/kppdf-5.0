@@ -10,14 +10,14 @@ interface Product {
   id: string;
   sku: string;
   name: string;
-  category?: { name: string };
+  category: { name: string } | null;
   productType: string;
   basePrice: number;
   unit: string;
-  description: string;
+  description: string | null;
   defaultMarkupPercent: number;
-  weightKg: number;
-  material: string;
+  weightKg: number | null;
+  material: string | null;
   isActive: boolean;
 }
 

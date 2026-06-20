@@ -11,6 +11,5 @@ export default async function ProposalsPage() {
     prisma.proposal.count(),
   ]);
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return <ProposalsClient initialData={proposals as any[]} initialTotal={total} />;
+  return <ProposalsClient initialData={proposals} initialTotal={total} />;
 }

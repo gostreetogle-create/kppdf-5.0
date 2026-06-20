@@ -6,7 +6,7 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/lib/utils';
 
 const dialogContentVariants = cva(
-  'relative z-50 w-full rounded-lg border bg-card p-6 shadow-lg animate-scale-in max-h-[85vh] overflow-y-auto',
+  'relative z-50 w-full rounded-lg border glass-surface p-6 shadow-xl animate-scale-in max-h-[85vh] overflow-y-auto',
   {
     variants: {
       size: {
@@ -85,7 +85,7 @@ export function Dialog({
       aria-hidden={!open}
     >
       <div
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm animate-fade-in"
+        className="absolute inset-0 glass-overlay animate-fade-in"
         onClick={closeOnBackdrop ? onClose : undefined}
       />
       <div className="fixed inset-0 flex items-center justify-center p-4">

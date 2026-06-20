@@ -6,6 +6,7 @@ interface CartItemForBuilder {
     name: string;
     sku: string;
     unit: string;
+    photos?: { url: string; isMain?: boolean }[];
   };
   quantity: number;
   priceSnapshot: number;
@@ -54,6 +55,11 @@ function buildTableBlock(
     const total = unitPrice * item.quantity;
 
     return {
+      // Резолвим основное фото из relation Product.photos (блок 1.2: photo-поле в registry).
+      // Приоритет: isMain=true → первое попавшееся → null.
+      photo: (item.product.photos?.find?.((p) => p.isMain)?.url
+        ?? item.product.photos?.[0]?.url
+        ?? null),
       name: item.product.name,
       sku: item.product.sku,
       quantity: item.quantity,

@@ -11,6 +11,5 @@ export default async function OrganizationsPage() {
     prisma.organization.count(),
   ]);
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return <OrganizationsClient initialData={organizations as any[]} initialTotal={total} />;
+  return < OrganizationsClient initialData={organizations} initialTotal={total} />;
 }

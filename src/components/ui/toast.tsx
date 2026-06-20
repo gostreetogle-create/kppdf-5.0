@@ -23,12 +23,16 @@ interface ToastContextValue {
 
 const ToastContext = createContext<ToastContextValue | null>(null);
 
+/* v3.1 glass: removed `bg-X/10` from each variant — `glass-surface-soft` provides
+   unified translucent bg; only border + text remain tinted per variant. Avoids
+   CSS source-order collision where Tailwind v4 utilities (bg-X/10) emitted
+   AFTER custom .glass-surface-soft and overrode the glass effect. */
 const variantConfig: Record<ToastVariant, { icon: typeof CheckCircle2; styles: string }> = {
-  success: { icon: CheckCircle2, styles: 'border-success/50 bg-success/10 text-success' },
-  error: { icon: AlertCircle, styles: 'border-destructive/50 bg-destructive/10 text-destructive' },
-  info: { icon: Info, styles: 'border-info/50 bg-info/10 text-info' },
-  warning: { icon: AlertTriangle, styles: 'border-warning/50 bg-warning/10 text-warning' },
-  loading: { icon: Loader2, styles: 'border-border bg-background text-foreground' },
+  success: { icon: CheckCircle2, styles: 'border-success/50 text-success' },
+  error: { icon: AlertCircle, styles: 'border-destructive/50 text-destructive' },
+  info: { icon: Info, styles: 'border-info/50 text-info' },
+  warning: { icon: AlertTriangle, styles: 'border-warning/50 text-warning' },
+  loading: { icon: Loader2, styles: 'border-border text-foreground' },
 };
 
 function ToastContainer({ toasts, removeToast }: { toasts: Toast[]; removeToast: (id: string) => void }) {
@@ -46,7 +50,7 @@ function ToastContainer({ toasts, removeToast }: { toasts: Toast[]; removeToast:
           <div
             key={t.id}
             className={cn(
-              'pointer-events-auto flex items-start gap-3 rounded-lg border px-4 py-3 shadow-lg backdrop-blur-sm animate-slide-in-right',
+              'pointer-events-auto flex items-start gap-3 rounded-lg border glass-surface-soft px-4 py-3 shadow-lg animate-slide-in-right',
               config.styles,
             )}
           >

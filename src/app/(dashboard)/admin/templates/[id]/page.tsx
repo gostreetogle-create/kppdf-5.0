@@ -130,21 +130,18 @@ export default function TemplateEditorPage() {
         isDefault: template.isDefault,
         docTypeId: template.docTypeId || null,
         organizationId: template.organizationId || null,
-        blocks: {
-          deleteMany: {},
-          create: template.blocks.map((block, index) => ({
-            type: block.type,
-            order: index,
-            page: block.page,
-            title: block.title,
-            content: block.content,
-            columns: block.columns,
-            tableTemplateId: block.tableTemplateId,
-            height: block.height,
-            showLine: block.showLine,
-            settings: block.settings,
-          })),
-        },
+        blocks: template.blocks.map((block, index) => ({
+          type: block.type,
+          order: index,
+          page: block.page,
+          title: block.title,
+          content: block.content,
+          columns: block.columns,
+          tableTemplateId: block.tableTemplateId,
+          height: block.height,
+          showLine: block.showLine,
+          settings: block.settings,
+        })),
       };
       const res = await fetch(url, {
         method,

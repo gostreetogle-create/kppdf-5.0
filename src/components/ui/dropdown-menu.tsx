@@ -96,7 +96,7 @@ export function DropdownMenu({
         <div
           ref={menuRef}
           className={cn(
-            'absolute z-[--z-dropdown] min-w-[12rem] overflow-hidden rounded-md border bg-card py-1 shadow-md animate-scale-in',
+            'absolute z-[--z-dropdown] min-w-[12rem] overflow-hidden rounded-md border glass-surface-soft py-1 shadow-md animate-scale-in',
             alignStyles[align],
             sideStyles[side],
             className,

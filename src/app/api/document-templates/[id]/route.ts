@@ -53,21 +53,22 @@ export async function PUT(
     });
 
     if (blocks) {
+      // PUT replaces all blocks atomically: deleteMany + createMany from flat array.
+      // Schema (UpdateDocumentTemplateSchema) validates blocks as z.array(TemplateBlockSchema);
+      // the previous z.any() loophole is closed (cycle 37 fix).
       await prisma.templateBlock.deleteMany({ where: { templateId: id } });
-      if (blocks.create) {
-        await prisma.templateBlock.createMany({
-          data: blocks.create.map((b: Record<string, unknown>, i: number) => ({
-            templateId: id,
-            type: String(b.type || 'text'),
-            order: i,
-            title: b.title ? String(b.title) : null,
-            content: b.content ? String(b.content) : null,
-            height: typeof b.height === 'number' ? b.height : null,
-            showLine: !!b.showLine,
-            settings: b.settings ? JSON.stringify(b.settings) : null,
-          })),
-        });
-      }
+      await prisma.templateBlock.createMany({
+        data: blocks.map((b, i: number) => ({
+          templateId: id,
+          type: b.type,
+          order: i,
+          title: b.title ?? null,
+          content: b.content ?? null,
+          height: b.height ?? null,
+          showLine: b.showLine ?? false,
+          settings: b.settings ? JSON.stringify(b.settings) : null,
+        })),
+      });
     }
 
     const updated = await prisma.documentTemplate.findUnique({

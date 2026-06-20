@@ -6,7 +6,7 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/lib/utils';
 
 const sheetVariants = cva(
-  'fixed z-[--z-modal] gap-4 bg-background p-6 shadow-lg transition-transform duration-300 ease-in-out overflow-y-auto',
+  'fixed z-[--z-modal] gap-4 glass-surface p-6 shadow-xl transition-transform duration-300 ease-in-out overflow-y-auto',
   {
     variants: {
       side: {
@@ -22,7 +22,7 @@ const sheetVariants = cva(
   },
 );
 
-const overlayStyles = 'fixed inset-0 z-[--z-modal] bg-black/50 backdrop-blur-sm';
+const overlayStyles = 'fixed inset-0 z-[--z-modal] glass-overlay';
 
 interface SheetProps extends VariantProps<typeof sheetVariants> {
   open: boolean;

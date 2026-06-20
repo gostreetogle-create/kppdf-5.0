@@ -21,9 +21,10 @@ export const CreateDocumentTemplateSchema = z.object({
   blocks: z.array(TemplateBlockSchema).optional(),
 });
 
-export const UpdateDocumentTemplateSchema = CreateDocumentTemplateSchema.partial().extend({
-  blocks: z.any().optional(),
-});
+// Update inherits strict validation from CreateDocumentTemplateSchema (no z.any() loophole).
+// Both client routes must send a flat array `blocks: [...]`; the server handles
+// deleteMany/createMany internally based on operation type.
+export const UpdateDocumentTemplateSchema = CreateDocumentTemplateSchema.partial();
 
 export type CreateDocumentTemplateInput = z.infer<typeof CreateDocumentTemplateSchema>;
 export type UpdateDocumentTemplateInput = z.infer<typeof UpdateDocumentTemplateSchema>;

@@ -11,12 +11,12 @@ interface Contract {
   number: string;
   title: string;
   status: string;
-  client?: { lastName: string; firstName: string };
+  client: { lastName: string; firstName: string } | null;
   totalAmount: number;
-  signedAt: string;
-  clientId: string;
-  organizationId: string;
-  notes: string;
+  signedAt: Date | null;
+  clientId: string | null;
+  organizationId: string | null;
+  notes: string | null;
 }
 
 function ContractForm({ item, onClose }: { item: Contract | null; onClose: () => void }) {

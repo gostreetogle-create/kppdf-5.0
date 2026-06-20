@@ -85,8 +85,8 @@ export function TextBlockDialog({ block, onSave, onClose }: TextBlockDialogProps
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-      <div className="bg-[var(--card)] rounded-2xl shadow-2xl w-full max-w-6xl max-h-[95vh] overflow-hidden flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center glass-overlay p-4">
+      <div className="glass-surface rounded-2xl shadow-2xl w-full max-w-6xl max-h-[95vh] overflow-hidden flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--border)] shrink-0">
           <h2 className="text-base font-semibold text-[var(--foreground)] flex items-center gap-2.5">
@@ -283,8 +283,8 @@ export function TableBlockDialog({ block, tableTemplates, onSave, onClose, onCre
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-      <div className="bg-[var(--card)] rounded-2xl shadow-2xl w-full max-w-md">
+    <div className="fixed inset-0 z-50 flex items-center justify-center glass-overlay p-4">
+      <div className="glass-surface rounded-2xl shadow-2xl w-full max-w-md">
         <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--border)]">
           <h2 className="text-base font-semibold text-[var(--foreground)]">Настройка таблицы</h2>
           <button onClick={onClose} className="p-2 rounded-xl hover:bg-[var(--muted)] transition-colors">
@@ -373,8 +373,8 @@ export function SeparatorBlockDialog({ block, onSave, onClose }: SeparatorBlockD
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-      <div className="bg-[var(--card)] rounded-2xl shadow-2xl w-full max-w-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center glass-overlay p-4">
+      <div className="glass-surface rounded-2xl shadow-2xl w-full max-w-sm">
         <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--border)]">
           <h2 className="text-base font-semibold text-[var(--foreground)]">Настройка разделителя</h2>
           <button onClick={onClose} className="p-2 rounded-xl hover:bg-[var(--muted)] transition-colors">

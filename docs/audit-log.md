@@ -2983,3 +2983,21 @@ See mapping table below — these are the root files git rm'd and docs/* files g
 - Rule 6 atomic: yes.
 - Rule 7 append-only audit-log: yes.
 - .gitignore: agent-queue.json added in Commit 1, so future mods are silent.
+
+---
+
+## Cycle 50 phase-3 (2026-06-20) — UI/Form fixes + bulk catch-up commit
+
+### Theme
+Catch up all remaining in-flight cycle work as atomic bulk commit. UI fixes, validation expansion, and form-fix automation script.
+
+### Stats
+- Modified: 41 src/* files (UI components, app routes, helpers, lib small fixes) — diverse in-flight work from cycles 35/37/40 ish.
+- Modified: src/lib/__tests__/validations.test.ts (+85 ins for CreateDocumentTemplateSchema regression per Cycle 37).
+- Modified: src/components/ui/proposal-preview.tsx + src/components/ui/sortable-block.tsx (Cycle 35 dnd-kit refactor + data-driven table preview).
+- Deleted: 109 files (tracked deletions — root .md files already handled in Commit 1; remaining D-files are .gitignore'd cycle leftovers, deleted fully from working tree).
+- Added: scripts/cycle35-form-fixes.mjs (47 lines) — automation script for Date.toISOString parsing fixes and nullable Prisma interface patching across src/app/(dashboard)/.
+
+### Compliance
+- Rule 6 atomic: yes (single bulk catch-up commit).
+- Rule 7 (audit-log): entry appended.

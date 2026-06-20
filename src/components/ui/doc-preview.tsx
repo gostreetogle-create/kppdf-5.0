@@ -45,7 +45,7 @@ export function DocPreview({ title, children, onDownload, downloadLabel = 'Ск�
       </div>
 
       {isPreviewOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center glass-overlay">
           <div className="relative w-full max-w-4xl max-h-[90vh] bg-[var(--card)] border border-[var(--border)] rounded-lg shadow-xl overflow-hidden">
             <div className="flex items-center justify-between p-4 border-b border-[var(--border)]">
               <h2 className="text-lg font-semibold text-[var(--foreground)]">{title}</h2>

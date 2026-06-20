@@ -56,7 +56,7 @@ export function Tooltip({
         <div
           role="tooltip"
           className={cn(
-            'absolute z-[--z-tooltip] rounded-md border bg-popover px-3 py-1.5 text-sm text-popover-foreground shadow-md animate-scale-in',
+            'absolute z-[--z-tooltip] rounded-md border glass-surface-soft px-3 py-1.5 text-sm text-popover-foreground shadow-md animate-scale-in',
             positionStyles[side],
             className,
           )}

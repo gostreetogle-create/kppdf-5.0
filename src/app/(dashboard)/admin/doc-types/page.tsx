@@ -128,7 +128,7 @@ export default function DocTypesPage() {
       </div>
 
       {showForm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center glass-overlay">
           <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl shadow-xl p-6 w-full max-w-md mx-4">
             <h2 className="text-lg font-semibold text-[var(--foreground)] mb-4">
               {editItem ? 'Редактировать тип документа' : 'Новый тип документа'}
@@ -149,7 +149,7 @@ export default function DocTypesPage() {
       )}
 
       {deleteConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center glass-overlay">
           <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl shadow-xl p-6 w-full max-w-sm mx-4">
             <h3 className="text-lg font-semibold mb-2">Удалить тип документа?</h3>
             <p className="text-sm text-[var(--muted-foreground)] mb-6">Это действие нельзя отменить.</p>

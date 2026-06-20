@@ -11,6 +11,5 @@ export default async function ProductionPage() {
     prisma.productionOrder.count(),
   ]);
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return <ProductionClient initialData={orders as any[]} initialTotal={total} />;
+  return <ProductionClient initialData={orders} initialTotal={total} />;
 }

@@ -14,11 +14,9 @@ export default async function ProductsPage() {
 
   return (
     <ProductsClient
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      initialData={products as any[]}
+      initialData={products}
       initialTotal={total}
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      categories={categories as any[]}
+      categories={categories}
     />
   );
 }

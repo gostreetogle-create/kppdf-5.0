@@ -482,7 +482,7 @@ export default function ProductionOrderDetailPage() {
       {/* Status change modal */}
       {showStatusModal && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+          className="fixed inset-0 z-50 flex items-center justify-center glass-overlay"
           onClick={() => !statusUpdating && setShowStatusModal(false)}
         >
           <div

@@ -68,7 +68,7 @@ export function Popover({
       {isOpen && (
         <div
           className={cn(
-            'absolute z-[--z-popover] w-72 rounded-md border bg-popover p-4 text-popover-foreground shadow-md outline-none animate-scale-in',
+            'absolute z-[--z-popover] w-72 rounded-md border glass-surface-soft p-4 text-popover-foreground shadow-md outline-none animate-scale-in',
             sideStyles[side],
             alignStyles[align],
             className,

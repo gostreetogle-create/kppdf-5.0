@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { CrudPage } from '@/components/crud-page';
 
 interface Client {
@@ -35,8 +35,9 @@ function ClientForm({ item, onClose }: { item: Client | null; onClose: () => voi
   const initialType: 'individual' | 'legal' =
     item?.type === 'legal' ? 'legal' : 'individual';
 
+  // Use key to force remount when item changes (React 19: avoid setState in useEffect).
   const [type, setType] = useState<'individual' | 'legal'>(initialType);
-  const [form, setForm] = useState({
+  const [form, setForm] = useState(() => ({
     // individual fields
     lastName: item?.lastName ?? '',
     firstName: item?.firstName ?? '',
@@ -53,29 +54,9 @@ function ClientForm({ item, onClose }: { item: Client | null; onClose: () => voi
     phone: item?.phone ?? '',
     email: item?.email ?? '',
     notes: item?.notes ?? '',
-  });
+  }));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  // Reset form when item changes (important for edit -> switch type after open).
-  useEffect(() => {
-    setType(initialType);
-    setForm({
-      lastName: item?.lastName ?? '',
-      firstName: item?.firstName ?? '',
-      patronymic: item?.patronymic ?? '',
-      address: item?.address ?? '',
-      companyName: item?.companyName ?? '',
-      legalForm: item?.legalForm ?? '',
-      inn: item?.inn ?? '',
-      kpp: item?.kpp ?? '',
-      ogrn: item?.ogrn ?? '',
-      legalAddress: item?.legalAddress ?? '',
-      phone: item?.phone ?? '',
-      email: item?.email ?? '',
-      notes: item?.notes ?? '',
-    });
-  }, [item, initialType]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -287,7 +268,7 @@ export function ClientsClient({ initialData, initialTotal }: { initialData: Clie
           render: (item) => item.organization?.name ?? '—',
         },
       ]}
-      renderForm={(item, onClose) => <ClientForm item={item} onClose={onClose} />}
+      renderForm={(item, onClose) => <ClientForm key={item?.id ?? 'new'} item={item} onClose={onClose} />}
     />
   );
 }

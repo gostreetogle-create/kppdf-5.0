@@ -12,6 +12,10 @@ import {
   CreateContractSchema,
   ContractStatusSchema,
 } from '../validations/contract';
+import {
+  CreateDocumentTemplateSchema,
+  UpdateDocumentTemplateSchema,
+} from '../validations/document-template';
 
 describe('CreateProductionOrderSchema', () => {
   it('должен пропускать минимальный валидный объект', () => {
@@ -207,5 +211,86 @@ describe('ContractStatusSchema', () => {
   it('должен отклонять невалидный статус', () => {
     const result = ContractStatusSchema.safeParse({ status: 'unknown' });
     expect(result.success).toBe(false);
+  });
+});
+
+// Cycle 37 regression coverage: client must send blocks as flat array, not Prisma nested format.
+describe('CreateDocumentTemplateSchema', () => {
+  it('должен пропускать минимальный валидный объект', () => {
+    const result = CreateDocumentTemplateSchema.safeParse({ name: 'Тестовый шаблон' });
+    expect(result.success).toBe(true);
+  });
+
+  it('должен устанавливать pageSize по умолчанию A4', () => {
+    const result = CreateDocumentTemplateSchema.parse({ name: 'Тест' });
+    expect(result.pageSize).toBe('A4');
+  });
+
+  it('должен принимать плоский массив блоков', () => {
+    const data = {
+      name: 'Шаблон КП',
+      blocks: [
+        { type: 'text', title: 'Заголовок', content: 'Текст', showLine: false },
+        { type: 'separator' },
+        { type: 'table', title: 'Таблица', height: 200, showLine: true },
+      ],
+    };
+    const result = CreateDocumentTemplateSchema.safeParse(data);
+    expect(result.success).toBe(true);
+  });
+
+  it('должен ОТКЛОНЯТЬ вложенный Prisma-формат deleteMany/create (cycle-37 regression)', () => {
+    const data = {
+      name: 'Шаблон КП',
+      blocks: {
+        deleteMany: {},
+        create: [{ type: 'text', title: 'Блок' }],
+      },
+    };
+    const result = CreateDocumentTemplateSchema.safeParse(data);
+    expect(result.success).toBe(false);
+  });
+
+  it('должен отклонять пустое название', () => {
+    const result = CreateDocumentTemplateSchema.safeParse({ name: '' });
+    expect(result.success).toBe(false);
+  });
+
+  it('должен отклонять невалидный тип блока', () => {
+    const data = {
+      name: 'Тест',
+      blocks: [{ type: 'invalid_type' as 'text' }],
+    };
+    const result = CreateDocumentTemplateSchema.safeParse(data);
+    expect(result.success).toBe(false);
+  });
+
+  it('должен отклонять backgroundOpacity вне диапазона [0,1]', () => {
+    const result = CreateDocumentTemplateSchema.safeParse({ name: 'Тест', backgroundOpacity: 1.5 });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe('UpdateDocumentTemplateSchema', () => {
+  it('должен быть partial — все поля опциональны', () => {
+    const result = UpdateDocumentTemplateSchema.safeParse({});
+    expect(result.success).toBe(true);
+  });
+
+  it('должен принимать плоский массив блоков (после cycle-37 фикса)', () => {
+    const data = { blocks: [{ type: 'text', showLine: false }] };
+    const result = UpdateDocumentTemplateSchema.safeParse(data);
+    expect(result.success).toBe(true);
+  });
+
+  it('должен ОТКЛОНЯТЬ вложенный Prisma-формат (cycle-37 regression: z.any() loophole закрыт)', () => {
+    const data = { blocks: { deleteMany: {}, create: [{ type: 'text' }] } };
+    const result = UpdateDocumentTemplateSchema.safeParse(data);
+    expect(result.success).toBe(false);
+  });
+
+  it('должен пропускать частичное обновление одного поля', () => {
+    const result = UpdateDocumentTemplateSchema.safeParse({ name: 'Новое имя' });
+    expect(result.success).toBe(true);
   });
 });

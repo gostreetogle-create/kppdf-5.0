@@ -13,14 +13,13 @@ interface Proposal {
   number: string;
   title: string;
   status: string;
-  client?: { lastName: string; firstName: string };
-  total: number;
-  createdAt: string;
-  clientId: string;
-  organizationId: string;
+  client: { lastName: string; firstName: string } | null;
+  createdAt: Date;
+  clientId: string | null;
+  organizationId: string | null;
   markupPercent: number;
-  notes: string;
-  validUntil: string;
+  notes: string | null;
+  validUntil: Date | null;
 }
 
 function ProposalForm({ item, onClose }: { item: Proposal | null; onClose: () => void }) {
@@ -31,7 +30,7 @@ function ProposalForm({ item, onClose }: { item: Proposal | null; onClose: () =>
     organizationId: item?.organizationId ?? '',
     markupPercent: item?.markupPercent ?? 0,
     notes: item?.notes ?? '',
-    validUntil: item?.validUntil ? item.validUntil.slice(0, 10) : '',
+    validUntil: item?.validUntil ? new Date(item.validUntil).toISOString().slice(0, 10) : '',
   });
   const [saving, setSaving] = useState(false);
   const [clients, setClients] = useState<{ id: string; name: string }[]>([]);

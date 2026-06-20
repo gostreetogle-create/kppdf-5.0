@@ -11,6 +11,5 @@ export default async function TendersPage() {
     prisma.tender.count(),
   ]);
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return <TendersClient initialData={tenders as any[]} initialTotal={total} />;
+  return <TendersClient initialData={tenders} initialTotal={total} />;
 }

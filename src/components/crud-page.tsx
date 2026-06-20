@@ -296,7 +296,7 @@ export function CrudPage<T extends Record<string, unknown>>({
 
       {/* Inline Form Dialog */}
       {showForm && renderForm && (
-        <div className="fixed inset-0 z-[--z-modal] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[--z-modal] flex items-center justify-center glass-overlay">
           <div className="bg-card border border-border rounded-xl shadow-xl w-full max-w-2xl max-h-[85vh] overflow-y-auto mx-4">
             <div className="p-6">
               {renderForm(editItem, () => { setShowForm(false); setEditItem(null); setTrigger((t) => t + 1); })}

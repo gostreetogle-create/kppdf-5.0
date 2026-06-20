@@ -16,10 +16,10 @@ interface Tender {
   number: string;
   title: string;
   status: string;
-  customerName: string;
+  customerName: string | null;
   totalAmount: number;
-  deadline: string;
-  notes: string;
+  deadline: Date | null;
+  notes: string | null;
 }
 
 function TenderForm({ item, onClose }: { item: Tender | null; onClose: () => void }) {
@@ -28,7 +28,7 @@ function TenderForm({ item, onClose }: { item: Tender | null; onClose: () => voi
     title: item?.title ?? '',
     customerName: item?.customerName ?? '',
     totalAmount: item?.totalAmount ?? 0,
-    deadline: item?.deadline ? item.deadline.slice(0, 10) : '',
+    deadline: item?.deadline ? new Date(item.deadline).toISOString().slice(0, 10) : '',
     notes: item?.notes ?? '',
   });
   const [saving, setSaving] = useState(false);
