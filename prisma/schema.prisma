@@ -87,9 +87,7 @@ model OrgRole {
   organizations  Organization[]
 
   @@index([slug])
-}
-
-model Client {
+}model Client {
   id                    String    @id @default(cuid())
   lastName              String
   firstName             String
@@ -101,8 +99,8 @@ model Client {
   personalMarkupPercent Float?
   notes                 String?
   isActive              Boolean   @default(true)
-  createdAt             DateTime  @default(now())
-  updatedAt             DateTime  @updatedAt
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
 
   organizationId        String?
   organization          Organization? @relation(fields: [organizationId], references: [id])
@@ -450,6 +448,9 @@ model ProductionOrder {
 
   tasks       OrderTask[]
 
+  // Cycle 53 (B.1): обратная связь для InventoryMovement.productionOrder.
+  inventoryMovements InventoryMovement[]
+
   @@index([number])
   @@index([status])
   @@index([contractId])
@@ -532,6 +533,18 @@ model InventoryMovement {
 
   storageItemId String
   storageItem   StorageItem @relation(fields: [storageItemId], references: [id])
+
+  // Cycle 53 (B.1): FK to ProductionOrder для авто-IN при completed.
+  // Nullable: ручные IN/OUT/transfer не привязаны к заказу.
+  // onDelete SetNull: если заказ удаляется — movement сохраняется как historical record.
+  productionOrderId String?
+  productionOrder   ProductionOrder? @relation(fields: [productionOrderId], references: [id], onDelete: SetNull)
+
+  // Race protection: один IN на (order, storageItem, type).
+  // Позволяет отдельные OUT для возврата материалов на тот же заказ.
+  @@unique([productionOrderId, storageItemId, type])
+  @@index([storageItemId])
+  @@index([productionOrderId])
 }
 
 model PurchaseRequest {

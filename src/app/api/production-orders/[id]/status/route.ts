@@ -5,6 +5,8 @@ import { apiOk, apiError } from '@/lib/api-response';
 import { logOrderAction } from '@/lib/order-history';
 // Cycle 51 (B.3): live workflow вместо VALID_TRANSITIONS.
 import { assertTransitionAllowed, WorkflowError } from '@/lib/status-workflow';
+// Cycle 53 (B.1): авто-приёмка готовой продукции на склад при completed.
+import { autoReceiveFinishedGoods } from '@/lib/warehouse/auto-receive-finished-goods';
 
 // Cycle 51 (B.3): VALID_TRANSITIONS удалён — теперь live query через assertTransitionAllowed.
 
@@ -155,6 +157,30 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       data: { status, actualStart: status === 'in_progress' ? new Date() : undefined, actualEnd: status === 'completed' ? new Date() : undefined },
       include: { tasks: true, workType: true, workCenter: true },
     });
+
+    // Cycle 53 (B.1): авто-IN готовой продукции на склад при completed.
+    // Выполняем ПОСЛЕ update статуса — если update упадёт, IN не создастся.
+    // autoReceiveFinishedGoods внутренне идемпотентен (race-safe + UNIQUE constraint).
+    if (current.status !== 'completed' && status === 'completed') {
+      try {
+        const result = await autoReceiveFinishedGoods(id);
+        if (result.errors.length > 0) {
+          console.warn(
+            `[cycle-53] Auto-IN partial fail для заказа ${id}: ${result.errors.join('; ')}`,
+          );
+        }
+        if (result.created > 0 || result.skipped > 0) {
+          console.log(
+            `[cycle-53] Авто-IN для заказа ${id}: создано ${result.created}, пропущено ${result.skipped} (повторные/расы)`,
+          );
+        }
+      } catch (err) {
+        // Логируем но НЕ fail заказа — completion важнее чем inventory perfect-sync.
+        // Это намеренный trade-off: business-critical (production completion) wins над
+        // warehouse consistency (admin can manually adjust).
+        console.error(`[cycle-53] Auto-IN critically failed для заказа ${id}:`, err);
+      }
+    }
 
     // Логируем смену статуса
     await logOrderAction({
