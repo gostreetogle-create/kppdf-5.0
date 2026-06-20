@@ -3051,3 +3051,15 @@ User feedback + code-reviewer (v3.1.1 review): "Postgres branch is dead code giv
 ### Compliance
 - Rule 6 single atomic commit: yes.
 - Rule 7 audit-log append-only: yes.
+
+---
+
+## Cycle 57 (2026-06-20) — .gitignore alignment + final noise cleanup
+
+### Theme
+.gitignore entries (public/uploads/, agent-queue.json, login_test.js) были потеряны при amendment cascade в Commit 1. Добавлены снова + остаточный upload файл удалён.
+
+### Stats
+- Added: 3 lines to .gitignore (public/uploads/, agent-queue.json, login_test.js).
+- Deleted: 1 untracked file (public/uploads/...png).
+- Working tree now fully clean.
