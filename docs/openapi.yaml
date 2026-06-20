@@ -1,0 +1,880 @@
+openapi: 3.0.3
+info:
+  title: KPPDF CRM API
+  description: REST API для системы управления коммерческими предложениями KPPDF CRM
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:3000/api
+    description: Development server
+
+security:
+  - BearerAuth: []
+
+paths:
+  /auth/login:
+    post:
+      summary: Вход в систему
+      tags: [Auth]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, password]
+              properties:
+                username:
+                  type: string
+                password:
+                  type: string
+      responses:
+        '200':
+          description: Успешный вход
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      user:
+                        $ref: '#/components/schemas/User'
+                      accessToken:
+                        type: string
+          headers:
+            Set-Cookie:
+              description: JWT cookies (accessToken, refreshToken)
+
+    delete:
+      summary: Выход из системы
+      tags: [Auth]
+      responses:
+        '200':
+          description: Cookies удалены
+
+  /auth/refresh:
+    post:
+      summary: Обновление токена
+      tags: [Auth]
+      security: []
+      responses:
+        '200':
+          description: Новый accessToken
+
+  /seed:
+    post:
+      summary: Seed данных (только bootstrap)
+      tags: [System]
+      security: []
+      responses:
+        '200':
+          description: Данные созданы
+
+  /clients:
+    get:
+      summary: Список клиентов
+      tags: [Clients]
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/SearchParam'
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [individual, legal]
+      responses:
+        '200':
+          description: Список клиентов
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Client'
+                      total:
+                        type: integer
+
+    post:
+      summary: Создать клиента
+      tags: [Clients]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClientCreate'
+      responses:
+        '201':
+          description: Клиент создан
+
+  /clients/{id}:
+    get:
+      summary: Клиент по ID
+      tags: [Clients]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Клиент
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Client'
+
+    put:
+      summary: Обновить клиента
+      tags: [Clients]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClientUpdate'
+      responses:
+        '200':
+          description: Клиент обновлён
+
+    delete:
+      summary: Удалить клиента
+      tags: [Clients]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Клиент удалён
+
+  /organizations:
+    get:
+      summary: Список организаций
+      tags: [Organizations]
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/SearchParam'
+      responses:
+        '200':
+          description: Список организаций
+
+    post:
+      summary: Создать организацию
+      tags: [Organizations]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                inn:
+                  type: string
+                kpp:
+                  type: string
+      responses:
+        '201':
+          description: Организация создана
+
+  /organizations/{id}:
+    get:
+      summary: Организация по ID
+      tags: [Organizations]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Организация
+
+    put:
+      summary: Обновить организацию
+      tags: [Organizations]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Организация обновлена
+
+    delete:
+      summary: Удалить организацию
+      tags: [Organizations]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Организация удалена
+
+  /products:
+    get:
+      summary: Список товаров
+      tags: [Products]
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/SearchParam'
+        - name: categoryId
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Список товаров
+
+    post:
+      summary: Создать товар
+      tags: [Products]
+      responses:
+        '201':
+          description: Товар создан
+
+  /products/{id}:
+    get:
+      summary: Товар по ID
+      tags: [Products]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Товар
+
+    put:
+      summary: Обновить товар
+      tags: [Products]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Товар обновлён
+
+    delete:
+      summary: Удалить товар
+      tags: [Products]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Товар удалён
+
+  /proposals:
+    get:
+      summary: Список коммерческих предложений
+      tags: [Proposals]
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/SearchParam'
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [draft, sent, accepted, rejected, paid, converted]
+      responses:
+        '200':
+          description: Список КП
+
+    post:
+      summary: Создать КП
+      tags: [Proposals]
+      responses:
+        '201':
+          description: КП создано
+
+  /proposals/{id}:
+    get:
+      summary: КП по ID
+      tags: [Proposals]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: КП
+
+    put:
+      summary: Обновить КП
+      tags: [Proposals]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: КП обновлено
+
+    patch:
+      summary: Изменить статус КП
+      tags: [Proposals]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum: [draft, sent, accepted, rejected, paid, converted]
+      responses:
+        '200':
+          description: Статус обновлён
+
+    delete:
+      summary: Удалить КП
+      tags: [Proposals]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: КП удалено
+
+  /proposals/{id}/versions:
+    post:
+      summary: Создать новую версию КП
+      tags: [Proposals]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '201':
+          description: Новая версия создана
+
+  /proposals/{id}/convert:
+    post:
+      summary: Конвертировать КП в договор
+      tags: [Proposals]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Договор создан
+
+  /contracts:
+    get:
+      summary: Список договоров
+      tags: [Contracts]
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/SearchParam'
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [draft, active, completed, cancelled]
+      responses:
+        '200':
+          description: Список договоров
+
+    post:
+      summary: Создать договор
+      tags: [Contracts]
+      responses:
+        '201':
+          description: Договор создан
+
+  /contracts/{id}:
+    get:
+      summary: Договор по ID
+      tags: [Contracts]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Договор
+
+    put:
+      summary: Обновить договор
+      tags: [Contracts]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Договор обновлён
+
+    patch:
+      summary: Изменить статус договора
+      tags: [Contracts]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Статус обновлён
+
+    delete:
+      summary: Удалить договор
+      tags: [Contracts]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Договор удалён
+
+  /contracts/{id}/convert-to-production:
+    post:
+      summary: Конвертировать договор в производственный заказ
+      tags: [Contracts]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Заказ создан
+
+  /production-orders:
+    get:
+      summary: Список производственных заказов
+      tags: [Production]
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - name: status
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Список заказов
+
+    post:
+      summary: Создать производственный заказ
+      tags: [Production]
+      responses:
+        '201':
+          description: Заказ создан
+
+  /production-orders/{id}:
+    get:
+      summary: Заказ по ID
+      tags: [Production]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Заказ
+
+    put:
+      summary: Обновить заказ
+      tags: [Production]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Заказ обновлён
+
+  /production-orders/{id}/status:
+    patch:
+      summary: Изменить статус заказа
+      tags: [Production]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum: [planned, in_progress, manufacturing, painting, shipping, completed, cancelled]
+      responses:
+        '200':
+          description: Статус обновлён
+
+  /order-tasks:
+    get:
+      summary: Список задач заказа
+      tags: [Production]
+      parameters:
+        - name: productionOrderId
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Список задач
+
+  /order-tasks/{id}/assign:
+    patch:
+      summary: Назначить исполнителя на задачу
+      tags: [Production]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Исполнитель назначен
+
+  /work-types:
+    get:
+      summary: Список видов работ
+      tags: [Production]
+      responses:
+        '200':
+          description: Список видов работ
+
+  /work-centers:
+    get:
+      summary: Список рабочих центров
+      tags: [Production]
+      responses:
+        '200':
+          description: Список рабочих центров
+
+  /workers:
+    get:
+      summary: Список работников
+      tags: [Production]
+      responses:
+        '200':
+          description: Список работников
+
+  /warehouse:
+    get:
+      summary: Список складов
+      tags: [Warehouse]
+      responses:
+        '200':
+          description: Список складов
+
+  /storage-items:
+    get:
+      summary: Остатки на складе
+      tags: [Warehouse]
+      parameters:
+        - name: warehouseId
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Остатки
+
+  /inventory-movements:
+    get:
+      summary: История движения товаров
+      tags: [Warehouse]
+      parameters:
+        - name: storageItemId
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Движения
+
+  /supplier-orders:
+    get:
+      summary: Список заказов поставщикам
+      tags: [Warehouse]
+      responses:
+        '200':
+          description: Список заказов
+
+  /incoming-invoices:
+    get:
+      summary: Список входящих счетов
+      tags: [Finance]
+      responses:
+        '200':
+          description: Список счетов
+
+  /order-closings:
+    get:
+      summary: Список закрытий заказов
+      tags: [Finance]
+      responses:
+        '200':
+          description: Список закрытий
+
+  /reconciliation-acts:
+    get:
+      summary: Список актов сверки
+      tags: [Finance]
+      responses:
+        '200':
+          description: Список актов
+
+  /financial-reports:
+    get:
+      summary: Финансовые отчёты
+      tags: [Finance]
+      responses:
+        '200':
+          description: Отчёты
+
+  /dashboard:
+    get:
+      summary: Данные для дашборда
+      tags: [Dashboard]
+      responses:
+        '200':
+          description: Агрегированные данные
+
+  /users:
+    get:
+      summary: Список пользователей
+      tags: [Admin]
+      responses:
+        '200':
+          description: Список пользователей
+
+  /status-workflows:
+    get:
+      summary: Правила переходов статусов
+      tags: [Admin]
+      responses:
+        '200':
+          description: Правила
+
+  /tenders:
+    get:
+      summary: Список тендеров
+      tags: [Admin]
+      responses:
+        '200':
+          description: Список тендеров
+
+  /certificates:
+    get:
+      summary: Список сертификатов
+      tags: [Admin]
+      responses:
+        '200':
+          description: Список сертификатов
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: apiKey
+      in: header
+      name: Cookie
+      description: JWT token в cookie (accessToken)
+
+  parameters:
+    IdParam:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+
+    PageParam:
+      name: page
+      in: query
+      schema:
+        type: integer
+        default: 1
+
+    LimitParam:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        default: 20
+
+    SearchParam:
+      name: search
+      in: query
+      schema:
+        type: string
+      description: Поиск по названию/номеру
+
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+        username:
+          type: string
+        displayName:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+        role:
+          type: string
+          enum: [admin, manager, viewer, production, storekeeper, accountant]
+        isActive:
+          type: boolean
+
+    Client:
+      type: object
+      properties:
+        id:
+          type: string
+        lastName:
+          type: string
+        firstName:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+        type:
+          type: string
+          enum: [individual, legal]
+        companyName:
+          type: string
+        inn:
+          type: string
+
+    ClientCreate:
+      type: object
+      required: [lastName, firstName]
+      properties:
+        lastName:
+          type: string
+        firstName:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+        type:
+          type: string
+          enum: [individual, legal]
+          default: individual
+        companyName:
+          type: string
+        inn:
+          type: string
+        kpp:
+          type: string
+        ogrn:
+          type: string
+        legalAddress:
+          type: string
+
+    ClientUpdate:
+      type: object
+      properties:
+        lastName:
+          type: string
+        firstName:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+        type:
+          type: string
+        companyName:
+          type: string
+        inn:
+          type: string
+
+    Proposal:
+      type: object
+      properties:
+        id:
+          type: string
+        number:
+          type: string
+        status:
+          type: string
+        version:
+          type: integer
+        discountPercent:
+          type: number
+        vatRate:
+          type: number
+        clientId:
+          type: string
+        organizationId:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    Contract:
+      type: object
+      properties:
+        id:
+          type: string
+        number:
+          type: string
+        status:
+          type: string
+        totalAmount:
+          type: number
+        clientId:
+          type: string
+        organizationId:
+          type: string
+        signedAt:
+          type: string
+          format: date-time
+        validUntil:
+          type: string
+          format: date-time
+
+    ProductionOrder:
+      type: object
+      properties:
+        id:
+          type: string
+        number:
+          type: string
+        status:
+          type: string
+        contractId:
+          type: string
+        proposalId:
+          type: string
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+
+    Organization:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        inn:
+          type: string
+        kpp:
+          type: string
+        legalAddress:
+          type: string
+
+    Product:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        sku:
+          type: string
+        unit:
+          type: string
+        defaultMarkupPercent:
+          type: number
+        categoryId:
+          type: string
