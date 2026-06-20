@@ -1,18 +1,12 @@
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/db';
-import { requireAuth } from '@/lib/auth';
+import { requireRole } from '@/lib/auth';
 import { apiOk, apiError } from '@/lib/api-response';
 import { logOrderAction } from '@/lib/order-history';
+// Cycle 51 (B.3): live workflow вместо VALID_TRANSITIONS.
+import { assertTransitionAllowed, WorkflowError } from '@/lib/status-workflow';
 
-const VALID_TRANSITIONS: Record<string, string[]> = {
-  planned: ['in_progress', 'cancelled'],
-  in_progress: ['manufacturing', 'painting', 'completed', 'cancelled'],
-  manufacturing: ['painting', 'completed', 'cancelled'],
-  painting: ['shipping', 'completed', 'cancelled'],
-  shipping: ['completed', 'cancelled'],
-  completed: [],
-  cancelled: ['planned'],
-};
+// Cycle 51 (B.3): VALID_TRANSITIONS удалён — теперь live query через assertTransitionAllowed.
 
 /**
  * Авто-списание материалов со склада при старте производства
@@ -120,7 +114,9 @@ async function autoDeductMaterials(orderId: string) {
 
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    await requireAuth();
+    // Cycle 52 (B.6): manager или production могут менять статус (admin bypass).
+    // Cycle 51 (B.3): capture user.role для transition check.
+    const user = await requireRole(['manager', 'production']);
     const { id } = await params;
     const { status } = await request.json();
 
@@ -134,9 +130,19 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     });
     if (!current) return apiError('Заказ не найден', 404);
 
-    const allowed = VALID_TRANSITIONS[current.status];
-    if (!allowed || !allowed.includes(status)) {
-      return apiError(`Нельзя перевести из "${current.status}" в "${status}"`, 400);
+    // Cycle 51 (B.3): live workflow + role-aware transition check.
+    try {
+      await assertTransitionAllowed('productionOrder', current.status, status, user.role);
+    } catch (error) {
+      if (error instanceof WorkflowError) {
+        if (error.code === 'TRANSITION_NOT_ALLOWED') {
+          return apiError(`Нельзя перевести из "${current.status}" в "${status}"`, 400);
+        }
+        if (error.code === 'INSUFFICIENT_ROLE') {
+          return apiError(error.message, 403);
+        }
+      }
+      throw error;
     }
 
     // Авто-списание материалов при старте производства
@@ -160,6 +166,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     return apiOk(item, `Заказ №${current.number} переведён в статус "${status}"`);
   } catch (error) {
     if (error instanceof Error && error.message === 'UNAUTHORIZED') return apiError('Не авторизован', 401);
+    if (error instanceof Error && error.message === 'FORBIDDEN') return apiError('Доступ запрещён', 403);
     return apiError(String(error), 500);
   }
 }

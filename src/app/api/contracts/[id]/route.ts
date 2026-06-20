@@ -1,7 +1,9 @@
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/db';
-import { requireAuth, requireEditor } from '@/lib/auth';
+import { requireAuth, requireRole } from '@/lib/auth';
 import { apiOk, apiError } from '@/lib/api-response';
+// Cycle 51 (B.3): live workflow вместо VALID_TRANSITIONS.
+import { assertTransitionAllowed, WorkflowError } from '@/lib/status-workflow';
 
 const include = { items: true, client: true, organization: true, proposal: true };
 
@@ -21,7 +23,8 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    await requireEditor();
+    // Cycle 52 (B.6): manager-only mutation.
+    await requireRole(['manager']);
     const { id } = await params;
     const body = await request.json();
     if (body.number) {
@@ -39,7 +42,8 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
 export async function DELETE(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    await requireEditor();
+    // Cycle 52 (B.6): manager-only delete.
+    await requireRole(['manager']);
     const { id } = await params;
     await prisma.contract.delete({ where: { id } });
     return apiOk(null, 'Удалено');
@@ -50,16 +54,12 @@ export async function DELETE(_request: NextRequest, { params }: { params: Promis
   }
 }
 
-const VALID_TRANSITIONS: Record<string, string[]> = {
-  draft: ['active'],
-  active: ['completed', 'cancelled'],
-  completed: ['cancelled'],
-  cancelled: ['draft'],
-};
+// Cycle 51 (B.3): VALID_TRANSITIONS удалён — теперь live query через assertTransitionAllowed.
 
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    await requireAuth();
+    // Cycle 52 (B.6): capture user.role для transition check.
+    const user = await requireRole(['manager']);
     const { id } = await params;
     const { status, signedAt } = await request.json();
 
@@ -70,9 +70,19 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     const current = await prisma.contract.findUnique({ where: { id }, select: { status: true, signedAt: true } });
     if (!current) return apiError('Не найдено', 404);
 
-    const allowed = VALID_TRANSITIONS[current.status];
-    if (!allowed || !allowed.includes(status)) {
-      return apiError(`Нельзя перевести из "${current.status}" в "${status}"`, 400);
+    // Cycle 51 (B.3): live workflow + role-aware transition check.
+    try {
+      await assertTransitionAllowed('contract', current.status, status, user.role);
+    } catch (error) {
+      if (error instanceof WorkflowError) {
+        if (error.code === 'TRANSITION_NOT_ALLOWED') {
+          return apiError(`Нельзя перевести из "${current.status}" в "${status}"`, 400);
+        }
+        if (error.code === 'INSUFFICIENT_ROLE') {
+          return apiError(error.message, 403);
+        }
+      }
+      throw error;
     }
 
     const data: Record<string, unknown> = { status };

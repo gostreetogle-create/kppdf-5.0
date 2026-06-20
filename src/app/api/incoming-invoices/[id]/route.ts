@@ -1,9 +1,11 @@
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/db';
-import { requireAuth, requireEditor } from '@/lib/auth';
+import { requireAuth, requireRole } from '@/lib/auth';
 import { apiOk, apiError } from '@/lib/api-response';
 import { UpdateIncomingInvoiceSchema } from '@/lib/validations/incoming-invoice';
 import { validateBody } from '@/lib/validations';
+// Cycle 51 (B.3): live workflow вместо VALID_TRANSITIONS.
+import { assertTransitionAllowed, WorkflowError } from '@/lib/status-workflow';
 
 export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -21,7 +23,8 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    await requireEditor();
+    // Cycle 52 (B.6): accountant-only mutation закупок.
+    await requireRole(['accountant']);
     const { id } = await params;
     const body = await request.json();
     const validation = validateBody(body, UpdateIncomingInvoiceSchema);
@@ -41,7 +44,8 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
 export async function DELETE(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    await requireEditor();
+    // Cycle 52 (B.6): accountant-only delete.
+    await requireRole(['accountant']);
     const { id } = await params;
     await prisma.incomingInvoice.delete({ where: { id } });
     return apiOk(null, 'Удалено');
@@ -52,15 +56,12 @@ export async function DELETE(_request: NextRequest, { params }: { params: Promis
   }
 }
 
-const VALID_TRANSITIONS: Record<string, string[]> = {
-  draft: ['paid', 'overdue'],
-  paid: [],
-  overdue: ['paid', 'draft'],
-};
+// Cycle 51 (B.3): VALID_TRANSITIONS удалён — теперь live query через assertTransitionAllowed.
 
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    await requireAuth();
+    // Cycle 52 (B.6): accountant-only PATCH (оплата/овердью).
+    const user = await requireRole(['accountant']);
     const { id } = await params;
     const { status } = await request.json();
 
@@ -71,9 +72,19 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     const current = await prisma.incomingInvoice.findUnique({ where: { id }, select: { status: true } });
     if (!current) return apiError('Не найдено', 404);
 
-    const allowed = VALID_TRANSITIONS[current.status];
-    if (!allowed || !allowed.includes(status)) {
-      return apiError(`Нельзя перевести из "${current.status}" в "${status}"`, 400);
+    // Cycle 51 (B.3): live workflow + role-aware transition check.
+    try {
+      await assertTransitionAllowed('incomingInvoice', current.status, status, user.role);
+    } catch (error) {
+      if (error instanceof WorkflowError) {
+        if (error.code === 'TRANSITION_NOT_ALLOWED') {
+          return apiError(`Нельзя перевести из "${current.status}" в "${status}"`, 400);
+        }
+        if (error.code === 'INSUFFICIENT_ROLE') {
+          return apiError(error.message, 403);
+        }
+      }
+      throw error;
     }
 
     const item = await prisma.incomingInvoice.update({ where: { id }, data: { status } });

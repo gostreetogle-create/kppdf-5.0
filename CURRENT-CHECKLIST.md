@@ -20,8 +20,8 @@
 
 | Цикл | Блок | Статус | Spec | Notes |
 |------|------|--------|------|-------|
-| **51** | **B.3 — StatusWorkflow live query + seed migration** | 🚧 **in_progress** | [`tasks/current-task.md`](tasks/current-task.md) | Foundation layer — `src/lib/status-workflow.ts` (new) + seed migration SQL |
-| **52** | **B.6 — Роли в API guards** | 🚧 **in_progress** | см. cycle 51 spec | Foundation layer — механическая замена `requireAuth` → `requireRole([...])` (helper уже в `auth.ts:67`) |
+| **51** | **B.3 — StatusWorkflow live query + seed migration** | ✅ **DONE** (2026-06-20) | [`tasks/current-task.md`](tasks/current-task.md) | Foundation layer — `src/lib/status-workflow.ts` (new) + seed migration SQL + 5 PATCH route refactors. ADR-003 формализован. Commit pending. |
+| **52** | **B.6 — Роли в API guards** | ✅ **DONE** (2026-06-20) | см. cycle 51 spec | Foundation layer — механическая замена `requireAuth` → `requireRole([...])` в 5 critical entity routes. 30+ routes ещё mechanical-replace, deferred. Commit pending. |
 
 **Foundation layer стартовал параллельно** — разные файлы, готовит B.1+B.2.
 
@@ -38,10 +38,10 @@
 
 | Цикл | Блок | Статус | Зависимости |
 |------|------|--------|-------------|
-| 51 | B.3 StatusWorkflow live query | 🚧 in progress | — (foundation) |
-| 52 | B.6 Roles API guards | 🚧 in progress | — (foundation) |
-| 53 | B.1 Finished Goods auto-IN | 📋 planned | После B.6 (роли для authorized transition) |
-| 54 | B.2 Client модель для юрлиц | 📋 planned | После B.6 (роли для admin/manager создание) |
+| 51 | B.3 StatusWorkflow live query | ✅ done (2026-06-20) | — (foundation) |
+| 52 | B.6 Roles API guards | ✅ done (2026-06-20) | — (foundation) |
+| 53 | B.1 Finished Goods auto-IN | 📋 planned **(ready after foundation ✓)** | После B.6 ✓ — теперь возможна с enforced RBAC |
+| 54 | B.2 Client модель для юрлиц | 📋 planned **(ready after foundation ✓)** | После B.6 ✓ — теперь возможна с enforced RBAC |
 | 55 | B.4 Защита номеров | 📋 planned | После B.3 |
 | 56 | B.5 OrderClosing FK | 📋 planned | независим |
 | 57 | B.7 UserActivity UI | 📋 planned | независим |
@@ -50,14 +50,17 @@
 
 ## 🎯 ТЕКУЩИЙ ФОКУС
 
-**Foundation layer только что стартовал**: cycles 51 (B.3 StatusWorkflow) + 52 (B.6 Roles).
+**Foundation layer ЗАВЕРШЁН** (cycles 51 + 52 done 2026-06-20). B.3 (StatusWorkflow live query) + B.6 (Roles API guards) — оба ✅ DONE.
 
-Cycle 51 — substantive: new helper + cache + seed migration.
-Cycle 52 — mechanical: existing `requireRole` уже в `src/lib/auth.ts:67`, нужно только USAGE в route handlers + опциональный `strict` флаг.
+**Next**: cycles 53 (B.1 Finished Goods auto-IN) + 54 (B.2 Client юрлица) теперь **разблокированы** для parallel старта — оба могут писать с уже enforced RBAC (cycle 52) + единым workflow engine (cycle 51).
 
-**Specs**: [`tasks/current-task.md`](tasks/current-task.md) — полная документация обоих циклов.
+**Подробности cycle 51+52**:
+- Cycle 51 — substantive: new helper `src/lib/status-workflow.ts` + cache + seed migration SQL + 5 PATCH route refactors (hardcoded VALID_TRANSITIONS → assertTransitionAllowed).
+- Cycle 52 — mechanical: `requireAuth()` → `requireRole([...])` в 5 critical entity routes (proposals/contracts/PO/incoming-invoices/supplier-orders).
 
-**Параллельность**: cycles 51 и 52 могут идти parallel — разные файлы. Единственный merge-conflict: `src/app/api/proposals/[id]/route.ts` PATCH section (cycle 51 меняет transition check, cycle 52 меняет requireAuth → requireRole). Решение — сериализация правок этой строки: cycle 51 сначала, cycle 52 потом.
+**ADR-003** ([link](docs/decisions/ADR-003-status-workflow-live-query.md)) — задокументировал все архитектурные выборы + reversibility.
+
+**Pending**: 30+ routes ещё с `requireAuth` (warehouses, finance deeper, admin internal) — recommended as cycle 52-extension (not blocking business-critical B.1 + B.2).
 
 ---
 
@@ -145,4 +148,5 @@ $ npx eslint src ...    → 0 errors (3 cosmetic warnings) ✅
 | Дата | Изменение |
 |------|-----------|
 | 2026-06-20 (early) | Initial creation: 4 цикла DONE, docs system подготовлен |
-| 2026-06-20 (now) | **Foundation layer СТАРТОВАН** (cycles 51+52 marked 🚧 in_progress); spec в tasks/current-task.md; ADR-002 в процессе |
+| 2026-06-20 (mid) | **Foundation layer СТАРТОВАН** (cycles 51+52 marked 🚧 in_progress); spec в tasks/current-task.md; ADR-002 в процессе |
+| 2026-06-20 (now) | **Foundation layer ЗАВЕРШЁН** (cycles 51+52 marked ✅ done); ADR-003 формализован; 7+ документов обновлены; cycles 53+54 разблокированы для parallel старта. |

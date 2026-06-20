@@ -1,8 +1,10 @@
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/db';
-import { requireAuth, requireEditor } from '@/lib/auth';
+import { requireAuth, requireRole } from '@/lib/auth';
 import { apiOk, apiError } from '@/lib/api-response';
 import { nextProductionOrderNumber } from '@/lib/counter';
+// Cycle 51 (B.3): live workflow вместо VALID_TRANSITIONS.
+import { assertTransitionAllowed, WorkflowError } from '@/lib/status-workflow';
 
 const include = { items: { include: { product: true } }, client: true, organization: true };
 
@@ -22,7 +24,8 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    await requireEditor();
+    // Cycle 52 (B.6): manager-only mutation (admin bypass сохранён в requireRole).
+    await requireRole(['manager']);
     const { id } = await params;
     const body = await request.json();
     if (body.number) {
@@ -50,7 +53,8 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
 export async function DELETE(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    await requireEditor();
+    // Cycle 52 (B.6): manager-only delete.
+    await requireRole(['manager']);
     const { id } = await params;
     await prisma.proposal.delete({ where: { id } });
     return apiOk(null, 'Удалено');
@@ -61,17 +65,12 @@ export async function DELETE(_request: NextRequest, { params }: { params: Promis
   }
 }
 
-const VALID_TRANSITIONS: Record<string, string[]> = {
-  draft: ['sent'],
-  sent: ['accepted', 'rejected', 'paid'],
-  accepted: ['converted', 'paid'],
-  paid: ['converted'],
-  rejected: ['draft'],
-};
+// Cycle 51 (B.3): VALID_TRANSITIONS удалён — теперь live query через assertTransitionAllowed.
 
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    await requireAuth();
+    // Cycle 52 (B.6): capture user for RBAC в transition check ниже.
+    const user = await requireRole(['manager']);
     const { id } = await params;
     const { status } = await request.json();
 
@@ -88,9 +87,19 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     // Cycle 42: hard-block смены статуса для superseded версии
     if (current.supersededAt) return apiError('Нельзя менять статус superseded версии. Создайте новую версию.', 400);
 
-    const allowed = VALID_TRANSITIONS[current.status];
-    if (!allowed || !allowed.includes(status)) {
-      return apiError(`Нельзя перевести из "${current.status}" в "${status}"`, 400);
+    // Cycle 51 (B.3): live workflow + role-aware transition check.
+    try {
+      await assertTransitionAllowed('proposal', current.status, status, user.role);
+    } catch (error) {
+      if (error instanceof WorkflowError) {
+        if (error.code === 'TRANSITION_NOT_ALLOWED') {
+          return apiError(`Нельзя перевести из "${current.status}" в "${status}"`, 400);
+        }
+        if (error.code === 'INSUFFICIENT_ROLE') {
+          return apiError(error.message, 403);
+        }
+      }
+      throw error;
     }
 
     // Авто-конвертация в ProductionOrder при оплате

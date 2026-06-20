@@ -1,9 +1,11 @@
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/db';
-import { requireAuth, requireEditor } from '@/lib/auth';
+import { requireAuth, requireRole } from '@/lib/auth';
 import { apiOk, apiError } from '@/lib/api-response';
 import { UpdateSupplierOrderSchema } from '@/lib/validations/supplier-order';
 import { validateBody } from '@/lib/validations';
+// Cycle 51 (B.3): live workflow вместо VALID_TRANSITIONS.
+import { assertTransitionAllowed, WorkflowError } from '@/lib/status-workflow';
 
 const include = { items: true };
 
@@ -23,7 +25,8 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    await requireEditor();
+    // Cycle 52 (B.6): storekeeper-only mutation.
+    await requireRole(['storekeeper']);
     const { id } = await params;
     const body = await request.json();
     const validation = validateBody(body, UpdateSupplierOrderSchema);
@@ -52,7 +55,8 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
 export async function DELETE(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    await requireEditor();
+    // Cycle 52 (B.6): storekeeper-only delete.
+    await requireRole(['storekeeper']);
     const { id } = await params;
     await prisma.supplierOrder.delete({ where: { id } });
     return apiOk(null, 'Удалено');
@@ -63,17 +67,12 @@ export async function DELETE(_request: NextRequest, { params }: { params: Promis
   }
 }
 
-const VALID_TRANSITIONS: Record<string, string[]> = {
-  draft: ['confirmed', 'cancelled'],
-  confirmed: ['shipped', 'cancelled'],
-  shipped: ['delivered', 'cancelled'],
-  delivered: [],
-  cancelled: ['draft'],
-};
+// Cycle 51 (B.3): VALID_TRANSITIONS удалён — теперь live query через assertTransitionAllowed.
 
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    await requireAuth();
+    // Cycle 52 (B.6): storekeeper-only PATCH (поставка/отмена).
+    const user = await requireRole(['storekeeper']);
     const { id } = await params;
     const { status } = await request.json();
 
@@ -84,9 +83,19 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     const current = await prisma.supplierOrder.findUnique({ where: { id }, select: { status: true } });
     if (!current) return apiError('Не найдено', 404);
 
-    const allowed = VALID_TRANSITIONS[current.status];
-    if (!allowed || !allowed.includes(status)) {
-      return apiError(`Нельзя перевести из "${current.status}" в "${status}"`, 400);
+    // Cycle 51 (B.3): live workflow + role-aware transition check.
+    try {
+      await assertTransitionAllowed('supplierOrder', current.status, status, user.role);
+    } catch (error) {
+      if (error instanceof WorkflowError) {
+        if (error.code === 'TRANSITION_NOT_ALLOWED') {
+          return apiError(`Нельзя перевести из "${current.status}" в "${status}"`, 400);
+        }
+        if (error.code === 'INSUFFICIENT_ROLE') {
+          return apiError(error.message, 403);
+        }
+      }
+      throw error;
     }
 
     const item = await prisma.supplierOrder.update({ where: { id }, data: { status }, include });
