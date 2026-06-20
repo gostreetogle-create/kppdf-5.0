@@ -22,7 +22,6 @@ import type {
   Category,
   CartSession,
   Organization,
-  Client,
   DocumentTemplateSummary,
   CartItem,
 } from '@/types/proposal-editor';
@@ -46,7 +45,7 @@ export function useProposalEditorState() {
 
   // ===== Reference data =====
   const [organizations, setOrganizations] = useState<Organization[]>([]);
-  const [clients, setClients] = useState<Client[]>([]);
+  const [customers, setCustomers] = useState<Organization[]>([]);
   const [templates, setTemplates] = useState<DocumentTemplateSummary[]>([]);
 
   // ===== Selection =====
@@ -104,7 +103,7 @@ export function useProposalEditorState() {
           fetch('/api/products?limit=200&sort=name'),
           fetch('/api/products/categories?limit=100'),
           fetch('/api/organizations?limit=100'),
-          fetch('/api/clients?limit=100'),
+          fetch('/api/organizations?role=client&limit=100'),
           fetch('/api/document-templates?limit=100'),
         ]);
         const [pData, cData, oData, clData, tData] = await Promise.all([
@@ -117,7 +116,7 @@ export function useProposalEditorState() {
         if (pData.success) setProducts(pData.data.items.filter((p: Product) => p.isActive));
         if (cData.success) setCategories(cData.data.items || []);
         if (oData.success) setOrganizations(oData.data.items || []);
-        if (clData.success) setClients(clData.data.items || []);
+        if (clData.success) setCustomers(clData.data.items || []);
         if (tData.success) setTemplates(tData.data.items || []);
       } catch (e) {
         console.error('Load error:', e);
@@ -223,7 +222,7 @@ export function useProposalEditorState() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           title: proposalTitle || undefined,
-          clientId: selectedClientId || undefined,
+          customerId: selectedClientId || undefined,
           organizationId: selectedOrgId || undefined,
           templateId: selectedTemplateId || undefined,
           ralCode: ralCode || undefined,
@@ -260,14 +259,14 @@ export function useProposalEditorState() {
     () => organizations.find((o) => o.id === selectedOrgId),
     [organizations, selectedOrgId],
   );
-  const selectedClient = useMemo(
-    () => clients.find((c) => c.id === selectedClientId),
-    [clients, selectedClientId],
+  const selectedCustomer = useMemo(
+    () => customers.find((c) => c.id === selectedClientId),
+    [customers, selectedClientId],
   );
 
   const effectiveMarkup = useCallback(
-    (item: CartItem): number => selectedClient?.personalMarkupPercent ?? item.markupPercent ?? 0,
-    [selectedClient],
+    (_item: CartItem): number => 0,
+    [],
   );
 
   const subtotal = useMemo(
@@ -340,9 +339,9 @@ export function useProposalEditorState() {
         markupPercent: item.markupPercent,
       })),
       finance,
-      clientMarkup: selectedClient?.personalMarkupPercent,
+      clientMarkup: undefined,
     });
-  }, [templateBlocks, cartItems, finance, selectedClient?.personalMarkupPercent]);
+  }, [templateBlocks, cartItems, finance, selectedCustomer?.name]);
 
   /**
    * Cycle 45: lazy useState initializer pattern. `Date.now()` and `new Date()`
@@ -372,13 +371,9 @@ export function useProposalEditorState() {
     return {
       number: proposalMeta.number,
       title: proposalTitle || 'Коммерческое предложение',
-      status: 'draft',
-      client: selectedClient
+      status: 'draft',        customer: selectedCustomer
         ? {
-            lastName: selectedClient.lastName,
-            firstName: selectedClient.firstName,
-            patronymic: selectedClient.patronymic || undefined,
-            phone: selectedClient.phone,
+            name: selectedCustomer.name,
           }
         : undefined,
       organization: selectedOrg ? { name: selectedOrg.name, shortName: selectedOrg.shortName } : undefined,
@@ -400,7 +395,7 @@ export function useProposalEditorState() {
       vatAmount: finance.vatAmount,
       grandTotal: finance.grandTotal,
     };
-  }, [cart, finance, selectedOrg, selectedClient, proposalTitle, proposalMeta.number, proposalMeta.createdAt]);
+  }, [cart, finance, selectedOrg, selectedCustomer, proposalTitle, proposalMeta.number, proposalMeta.createdAt]);
 
   // ========================================
   // Bundle
@@ -415,7 +410,7 @@ export function useProposalEditorState() {
     searchQuery,
     filterCategory,
     organizations,
-    clients,
+    customers,
     templates,
     selectedOrgId,
     selectedClientId,
@@ -461,7 +456,7 @@ export function useProposalEditorState() {
 
   const computed: ProposalEditorComputed = {
     selectedOrg,
-    selectedClient,
+    selectedCustomer,
     effectiveMarkup,
     subtotal,
     discountAmount,

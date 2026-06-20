@@ -8,7 +8,17 @@
 // Future: <ProposalEditor mode="edit" /> для /proposals/[id]/edit (out of scope
 // для cycles 44-45 — зарезервировано для следующего тех-цикла).
 
-import { ProposalEditor } from '@/components/proposal-editor';
+import dynamic from 'next/dynamic';
+import { EditorSkeleton } from '@/components/skeletons';
+
+// Code-split: ProposalEditor (editor with DnD, cart, catalog) → отдельный чанк
+const ProposalEditor = dynamic(
+  () => import('@/components/proposal-editor').then(m => ({ default: m.ProposalEditor })),
+  {
+    ssr: false,
+    loading: () => <EditorSkeleton />,
+  },
+);
 
 export default function NewProposalPage() {
   return <ProposalEditor />;

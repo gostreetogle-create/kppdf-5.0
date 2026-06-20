@@ -51,15 +51,7 @@ export interface Organization {
   vatRate?: number;
 }
 
-export interface Client {
-  id: string;
-  lastName: string;
-  firstName: string;
-  patronymic: string | null;
-  phone: string;
-  personalMarkupPercent?: number;
-  organization: { name: string } | null;
-}
+
 
 export interface DocumentTemplateSummary {
   id: string;
@@ -88,7 +80,7 @@ export interface ProposalEditorState {
 
   // Reference data
   organizations: Organization[];
-  clients: Client[];
+  customers: Organization[];
   templates: DocumentTemplateSummary[];
 
   // Selection
@@ -161,7 +153,7 @@ export interface ProposalEditorActions {
 
 export interface ProposalEditorComputed {
   selectedOrg: Organization | undefined;
-  selectedClient: Client | undefined;
+  selectedCustomer: Organization | undefined;
   effectiveMarkup: (item: CartItem) => number;
   subtotal: number;
   discountAmount: number;
@@ -187,6 +179,8 @@ export interface ProposalEditorComputed {
  * stay short (4 deps instead of 8-11), which preserves React Compiler manual
  * memoization (was bailing out in cycle 44 with the verbose dep arrays).
  */
+export type Customer = Organization;
+
 export interface ProposalEditorFinance {
   subtotal: number;
   discountPercent: number;

@@ -71,9 +71,7 @@ export function ConfigPanel() {
           className="w-full h-7 px-2 mt-0.5 rounded-md border border-[var(--input)] bg-[var(--background)] text-xs text-left flex items-center justify-between"
         >
           <span className="truncate">
-            {computed.selectedClient
-              ? `${computed.selectedClient.lastName} ${computed.selectedClient.firstName}`
-              : '—'}
+            {computed.selectedCustomer?.name || '—'}
           </span>
           <ChevronDown className="h-3 w-3 shrink-0 text-[var(--muted-foreground)]" />
         </button>
@@ -88,7 +86,7 @@ export function ConfigPanel() {
             >
               — Не выбран —
             </button>
-            {state.clients.map((c) => (
+            {state.customers.map((c) => (
               <button
                 key={c.id}
                 onClick={() => {
@@ -97,7 +95,7 @@ export function ConfigPanel() {
                 }}
                 className="w-full px-2 py-1 text-xs text-left hover:bg-[var(--muted)] truncate"
               >
-                {c.lastName} {c.firstName}
+                {c.name}
               </button>
             ))}
           </div>

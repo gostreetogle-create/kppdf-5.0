@@ -22,7 +22,6 @@ import type {
   ProductCategoryListItem,
   ContractListItem,
   OrganizationListItem,
-  ClientListItem,
   TenderListItem,
 } from '../server-pages';
 
@@ -34,7 +33,6 @@ import {
   PRODUCTION_ORDER_LIST_QUERY_ARGS,
   PRODUCT_LIST_QUERY_ARGS,
   CONTRACT_LIST_QUERY_ARGS,
-  CLIENT_LIST_QUERY_ARGS,
   WAREHOUSE_LIST_QUERY_ARGS,
   ORGANIZATION_LIST_QUERY_ARGS,
   TENDER_LIST_QUERY_ARGS,
@@ -75,11 +73,10 @@ describe('server-pages helpers — include pattern (A)', () => {
   // not `never` (which would happen if GetPayload dropped the include).
   // This is robust to field-level regen: only checks relation shape.
 
-  it('ProposalListItem carries a client relation', () => {
-    type ClientRel = ProposalListItem['client'];
-    expectTypeOf<ClientRel>().not.toBeNever();
-    // client can be either an object or null when not joined.
-    expectTypeOf<NonNullable<ClientRel> | null>().toMatchTypeOf<ClientRel>();
+  it('ProposalListItem carries a customer relation', () => {
+    type CustomerRel = ProposalListItem['customer'];
+    expectTypeOf<CustomerRel>().not.toBeNever();
+    expectTypeOf<NonNullable<CustomerRel> | null>().toMatchTypeOf<CustomerRel>();
   });
 
   it('ProposalListItem carries an items relation', () => {
@@ -101,16 +98,10 @@ describe('server-pages helpers — include pattern (A)', () => {
     expectTypeOf<NonNullable<CategoryRel> | null>().toMatchTypeOf<CategoryRel>();
   });
 
-  it('ContractListItem carries a client relation', () => {
-    type ClientRel = ContractListItem['client'];
-    expectTypeOf<ClientRel>().not.toBeNever();
-    expectTypeOf<NonNullable<ClientRel> | null>().toMatchTypeOf<ClientRel>();
-  });
-
-  it('ClientListItem carries an organization relation', () => {
-    type OrgRel = ClientListItem['organization'];
-    expectTypeOf<OrgRel>().not.toBeNever();
-    expectTypeOf<NonNullable<OrgRel> | null>().toMatchTypeOf<OrgRel>();
+  it('ContractListItem carries a customer relation', () => {
+    type CustomerRel = ContractListItem['customer'];
+    expectTypeOf<CustomerRel>().not.toBeNever();
+    expectTypeOf<NonNullable<CustomerRel> | null>().toMatchTypeOf<CustomerRel>();
   });
 });
 
@@ -128,7 +119,7 @@ describe('server-pages helpers — page-size contract (Cycle 26 ADR)', () => {
     expect(PRODUCTION_ORDER_LIST_QUERY_ARGS.take).toBe(20);
     expect(PRODUCT_LIST_QUERY_ARGS.take).toBe(20);
     expect(CONTRACT_LIST_QUERY_ARGS.take).toBe(20);
-    expect(CLIENT_LIST_QUERY_ARGS.take).toBe(20);
+
     expect(WAREHOUSE_LIST_QUERY_ARGS.take).toBe(20);
     expect(ORGANIZATION_LIST_QUERY_ARGS.take).toBe(20);
     expect(TENDER_LIST_QUERY_ARGS.take).toBe(20);

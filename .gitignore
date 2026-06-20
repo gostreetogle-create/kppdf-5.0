@@ -48,3 +48,8 @@ mimo.exe
 /public/uploads/
 /agent-queue.json
 /login_test.js
+
+# SQLite dev database (replaced by PostgreSQL in v3.4)
+/dev.db
+*.sqlite
+*.sqlite3

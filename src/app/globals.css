@@ -80,6 +80,26 @@
  */
 
 :root {
+  /* === GRADIENT PALETTE #245 — warm earthy tones from gradients.app ===
+     #d4a271  → warm golden brown (primary accent)
+     #f4c28a  → light peach sand (background warmth)
+     #a47a58  → medium warm brown (secondary)
+     #b4c4bb  → cool sage grey (neutral contrast)
+     #4b4230  → dark warm brown (dark accents)
+     #3d3814  → deep olive (dark theme accent) */
+
+  /* === GRADIENT TOKENS (light) === */
+  --gradient-primary: linear-gradient(135deg, #d4a271, #a47a58);
+  --gradient-primary-hover: linear-gradient(135deg, #c89461, #946a48);
+  --gradient-primary-active: linear-gradient(135deg, #b88451, #84603a);
+  --gradient-background: linear-gradient(180deg, #fbfbfd 0%, #f9f5f0 50%, #f6f0e8 100%);
+  --gradient-card: linear-gradient(135deg, #ffffff, #fcf8f4);
+  --gradient-card-elevated: linear-gradient(135deg, #ffffff, #faf4ee);
+  --gradient-sidebar: linear-gradient(180deg, #fbfbfd 0%, #f7f2ec 100%);
+  --gradient-header: linear-gradient(135deg, rgba(212,162,113,0.10), rgba(164,122,88,0.04));
+  --gradient-hero: linear-gradient(135deg, rgba(212,162,113,0.12) 0%, rgba(164,122,88,0.04) 50%, transparent 100%);
+  --gradient-text: linear-gradient(135deg, #d4a271, #a47a58);
+
   /* === BASE — airy cool off-white + near-black slate text === */
   --background: #FBFBFD;
   --foreground: #0F1116;
@@ -213,6 +233,18 @@
 }
 
 [data-theme="dark"] {
+  /* === GRADIENT TOKENS (dark) — warm earthy accents on deep slate === */
+  --gradient-primary: linear-gradient(135deg, #d4a271, #c49a7a);
+  --gradient-primary-hover: linear-gradient(135deg, #debc8a, #d4a88a);
+  --gradient-primary-active: linear-gradient(135deg, #c49a7a, #b48a68);
+  --gradient-background: linear-gradient(180deg, #0B0E14 0%, #0e0d0b 50%, #100e0a 100%);
+  --gradient-card: linear-gradient(135deg, #11151C, #161310);
+  --gradient-card-elevated: linear-gradient(135deg, #181C24, #1a1612);
+  --gradient-sidebar: linear-gradient(180deg, #0E1119 0%, #12100d 100%);
+  --gradient-header: linear-gradient(135deg, rgba(212,162,113,0.14), rgba(164,122,88,0.06));
+  --gradient-hero: linear-gradient(135deg, rgba(212,162,113,0.15) 0%, rgba(164,122,88,0.05) 50%, transparent 100%);
+  --gradient-text: linear-gradient(135deg, #e0b48a, #c49a7a);
+
   /* === BASE — deep blue-slate (Kaspersky deep, Vercel near-true-black) ===
      No green-tinted RGB anywhere. Verified: each hsl/hex has 0% green bias
      relative to its parent grey family. */
@@ -379,12 +411,17 @@
   border-color: var(--border);
 }
 
+body, .glass-surface, .glass-surface-soft, [class*="border-"], button, input, select, textarea {
+  transition: border-color 0.3s ease;
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans, system-ui, -apple-system, sans-serif);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.4s ease, color 0.4s ease;
 }
 
 ::selection {
@@ -442,6 +479,12 @@ input, select, textarea {
   background-color: var(--glass-overlay);
   -webkit-backdrop-filter: blur(8px) saturate(110%);
   backdrop-filter: blur(8px) saturate(110%);
+}
+
+@keyframes gradientShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
 }
 
 @keyframes spin {
@@ -558,4 +601,30 @@ input, select, textarea {
 
 .animate-indeterminate {
   animation: progress 1.5s ease-in-out infinite;
+}
+
+/* === Gradient utilities === */
+.gradient-text {
+  background: var(--gradient-text);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.bg-gradient-primary {
+  background: var(--gradient-primary);
+}
+
+.bg-gradient-card {
+  background: var(--gradient-card);
+}
+
+.bg-gradient-card-elevated {
+  background: var(--gradient-card-elevated);
+}
+
+/* Animated gradient for hero blocks */
+.animate-gradient {
+  background-size: 200% 200%;
+  animation: gradientShift 8s ease infinite;
 }

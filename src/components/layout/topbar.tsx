@@ -15,10 +15,13 @@ export function Topbar({ onMenuClick }: TopbarProps) {
   const [showUserMenu, setShowUserMenu] = useState(false);
 
   return (
-    <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-[var(--border)]/60 glass-surface px-4 lg:px-6 relative">
+    <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-[var(--border)]/60 glass-surface px-4 lg:px-6 relative overflow-hidden">
 
-      {/* v3 glass surface — accent gradient line at top edge */}
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[var(--primary)]/40 to-transparent" />
+      {/* Warm gradient background accent */}
+      <div className="pointer-events-none absolute inset-0 bg-[var(--gradient-header)]" />
+
+      {/* Gradient accent line at top edge */}
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-[2px] bg-[var(--gradient-primary)]" />
 
       <div className="flex items-center gap-3">
         <button

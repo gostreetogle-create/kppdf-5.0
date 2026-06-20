@@ -1,9 +1,6 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // SQLite (better-sqlite3) — предотвращает ошибки сборки в Next.js 16
-  serverExternalPackages: ['better-sqlite3'],
-
   // Кеширование статики
   headers: async () => [
     {

@@ -16,7 +16,7 @@ export async function POST(
     // Получаем КП с товарами
     const proposal = await prisma.proposal.findUnique({
       where: { id },
-      include: { items: { include: { product: true } }, client: true, organization: true },
+      include: { items: { include: { product: true } }, customer: { select: { name: true } }, organization: true },
     });
 
     if (!proposal) return apiError('КП не найдено', 404);
@@ -65,14 +65,14 @@ export async function POST(
           number,
           title: `Договор №${number}`,
           status: 'draft',
-          clientId: proposal.clientId,
+          customerId: proposal.customerId,
           organizationId: proposal.organizationId,
           proposalId: id,
           totalAmount: Math.round(totalAmount * 100) / 100,
           notes: proposal.notes || '',
           items: { create: contractItems },
         },
-        include: { items: true, client: true, organization: true },
+        include: { items: true, customer: { select: { name: true } }, organization: true },
       }),
       prisma.proposal.update({
         where: { id },

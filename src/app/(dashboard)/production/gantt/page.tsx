@@ -2,9 +2,17 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { GanttChart, type GanttItem, type GanttItemUpdate } from '@/components/ui/gantt-chart';
+import dynamic from 'next/dynamic';
 import { BarChart3, RefreshCw, X, Calendar, Clock, User, MapPin, FileText } from 'lucide-react';
 import { StatusBadge, ORDER_STATUS } from '@/lib/constants/statuses';
+import { GanttSkeleton } from '@/components/skeletons';
+import type { GanttItem, GanttItemUpdate } from '@/components/ui/gantt-chart';
+
+// Code-split: GanttChart (~400 lines, DnD) → отдельный чанк
+const GanttChart = dynamic(() => import('@/components/ui/gantt-chart').then(m => ({ default: m.GanttChart })), {
+  ssr: false,
+  loading: () => <GanttSkeleton />,
+});
 
 export default function GanttPage() {
   const router = useRouter();

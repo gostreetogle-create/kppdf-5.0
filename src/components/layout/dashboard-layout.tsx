@@ -36,14 +36,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   if (isLoading || !user) {
     return (
-      <div className="flex h-screen items-center justify-center bg-[var(--background)]">
+      <div className="flex h-screen items-center justify-center" style={{background: 'var(--gradient-background)'}}>
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-[var(--primary)] border-t-transparent" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[var(--background)]">
+    <div className="min-h-screen" style={{background: 'var(--gradient-background)'}}>
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       <div className="lg:pl-64">

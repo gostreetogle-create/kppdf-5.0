@@ -52,7 +52,7 @@ export async function POST(
           number: newNumber,
           title: parent.title,
           status: 'draft',
-          clientId: parent.clientId,
+          customerId: parent.customerId,
           organizationId: parent.organizationId,
           templateId: parent.templateId,
           markupPercent: parent.markupPercent,

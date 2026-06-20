@@ -1,6 +1,10 @@
 # ============================================================
 # KPPDF v5.0 — docker-compose.prod.yml (Synology)
 # ============================================================
+# Cycle v3.4 — FINAL migration to PostgreSQL.
+# No SQLite. No file:. No dual-adapter.
+# DATABASE_URL must be set in .env or in the shell before deploy.
+# ============================================================
 # Использование:
 #   docker compose -f deploy/docker-compose.prod.yml up -d
 # ============================================================
@@ -17,13 +21,11 @@ services:
     environment:
       - NODE_ENV=production
       - JWT_SECRET=${JWT_SECRET:?JWT_SECRET is required}
-      - DATABASE_URL=file:/data/dev.db
+      - DATABASE_URL=${DATABASE_URL:?DATABASE_URL is required. Example: postgresql://user:pass@host:5432/kppdf}
       - HOSTNAME=0.0.0.0
       - PORT=3000
     volumes:
-      # SQLite база данных — персистентность между рестартами
-      - kppdf50_data:/data
-      # Загрузки (фото товаров, CAD, аватары)
+      # Загрузки (фото товаров, CAD, аватары) — персистентность
       - kppdf50_uploads:/app/public/uploads
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://localhost:3000').then(r => process.exit(r.ok ? 0 : 1)).catch(_ => process.exit(1))"]
@@ -33,7 +35,5 @@ services:
       start_period: 40s
 
 volumes:
-  kppdf50_data:
-    driver: local
   kppdf50_uploads:
     driver: local

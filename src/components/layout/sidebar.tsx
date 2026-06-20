@@ -37,10 +37,11 @@ const navigation: NavItem[] = [
     label: 'Справочники', href: '/organizations', icon: Building2,
     section: 2, roles: ['admin', 'manager'],
     children: [
-      { label: 'Контрагенты', href: '/organizations' },
-      { label: 'Клиенты', href: '/clients' },
+      { label: 'Организации', href: '/organizations' },
+      { label: 'Контактные лица', href: '/persons' },
       { label: 'Категории', href: '/products/categories' },
       { label: 'Товары', href: '/products' },
+      { label: 'Материалы', href: '/materials' },
     ],
   },
   {
@@ -149,11 +150,12 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
 
       <aside
         className={cn(
-          'fixed left-0 top-0 z-40 h-screen w-64 glass-surface border-r border-[var(--border)]/60',
+          'fixed left-0 top-0 z-40 h-screen w-64 glass-surface border-r border-[var(--border)]/60 overflow-hidden',
           'transition-transform duration-200 ease-in-out',
           'lg:translate-x-0',
           isOpen ? 'translate-x-0' : '-translate-x-full',
         )}
+        style={{background: 'var(--gradient-sidebar)'}}
       >
         <div className="flex h-full flex-col">
           {/* Logo */}

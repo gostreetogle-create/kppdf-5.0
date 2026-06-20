@@ -13,9 +13,9 @@ interface Proposal {
   number: string;
   title: string;
   status: string;
-  client: { lastName: string; firstName: string } | null;
+  customer: { name: string } | null;
   createdAt: Date;
-  clientId: string | null;
+  customerId: string | null;
   organizationId: string | null;
   markupPercent: number;
   notes: string | null;
@@ -26,20 +26,20 @@ function ProposalForm({ item, onClose }: { item: Proposal | null; onClose: () =>
   const [form, setForm] = useState({
     number: item?.number ?? '',
     title: item?.title ?? '',
-    clientId: item?.clientId ?? '',
+    customerId: item?.customerId ?? '',
     organizationId: item?.organizationId ?? '',
     markupPercent: item?.markupPercent ?? 0,
     notes: item?.notes ?? '',
     validUntil: item?.validUntil ? new Date(item.validUntil).toISOString().slice(0, 10) : '',
   });
   const [saving, setSaving] = useState(false);
-  const [clients, setClients] = useState<{ id: string; name: string }[]>([]);
+  const [customers, setCustomers] = useState<{ id: string; name: string }[]>([]);
   const [organizations, setOrganizations] = useState<{ id: string; name: string }[]>([]);
 
   // Лёгкий fetch для select-опций
   useEffect(() => {
-    fetch('/api/clients?limit=100').then(r => r.json()).then(d => {
-      if (d.success) setClients(d.data.items.map((c: Record<string, unknown>) => ({ id: c.id as string, name: `${(c.name as string) || ''}`.trim() || (c.id as string) })));
+    fetch('/api/organizations?role=client&limit=100').then(r => r.json()).then(d => {
+      if (d.success) setCustomers(d.data.items.map((o: Record<string, unknown>) => ({ id: o.id as string, name: (o.name as string) || (o.id as string) })));
     }).catch(() => {});
     fetch('/api/organizations?limit=100').then(r => r.json()).then(d => {
       if (d.success) setOrganizations(d.data.items.map((o: Record<string, unknown>) => ({ id: o.id as string, name: (o.name as string) || (o.id as string) })));
@@ -75,10 +75,10 @@ function ProposalForm({ item, onClose }: { item: Proposal | null; onClose: () =>
         <FormField label="Название" name="title" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} required />
         <FormSelect
           label="Клиент"
-          name="clientId"
-          value={form.clientId}
-          onChange={(e) => setForm({ ...form, clientId: e.target.value })}
-          options={[{ value: '', label: '— Не выбран —' }, ...clients.map((c) => ({ value: c.id, label: c.name }))]}
+          name="customerId"
+          value={form.customerId}
+          onChange={(e) => setForm({ ...form, customerId: e.target.value })}
+          options={[{ value: '', label: '— Не выбран —' }, ...customers.map((c) => ({ value: c.id, label: c.name }))]}
         />
         <FormSelect
           label="Организация"
@@ -128,9 +128,9 @@ export function ProposalsClient({ initialData, initialTotal }: { initialData: Pr
             render: (item) => <StatusBadge status={item.status} map={PROPOSAL_STATUS} />,
           },
           {
-            key: 'client',
-            label: 'Клиент',
-            render: (item) => item.client ? `${item.client.lastName} ${item.client.firstName}` : '—',
+          key: 'customer',
+          label: 'Клиент',
+          render: (item) => item.customer?.name ?? '—',
           },
           {
             key: 'total',

@@ -1,9 +1,12 @@
 # ============================================================
-# KPPDF v5.0 — Dockerfile (Next.js 16 + Prisma + SQLite)
+# KPPDF v5.0 — Dockerfile (Next.js 16 + Prisma + PostgreSQL)
+# ============================================================
+# Cycle v3.4 — FINAL migration to PostgreSQL.
+# No SQLite. No file:. No dual-adapter.
 # ============================================================
 # Multi-stage сборка:
 #   deps    — установка production-зависимостей
-#   builder — полная сборка + Prisma Client + миграции + seed
+#   builder — полная сборка + Prisma Client + генерация клиента
 #   runner  — минимальный образ для запуска
 # ============================================================
 
@@ -22,7 +25,7 @@ RUN npm config set fetch-timeout 120000 && \
     npm config set fetch-retry-maxtimeout 120000 && \
     npm ci --omit=dev
 
-# ---- Stage 2: Build + Prisma migrations ----
+# ---- Stage 2: Build + Prisma Client generation ----
 FROM node:20-alpine AS builder
 WORKDIR /app
 
@@ -37,12 +40,8 @@ RUN npm config set fetch-timeout 120000 && \
 
 COPY . .
 
-# Генерируем Prisma Client
+# Генерируем Prisma Client (без миграции — она выполняется в runtime через migrate deploy)
 RUN npx prisma generate
-
-# Создаём БД со схемой (миграция) — seed-файл для runtime
-ENV DATABASE_URL=file:/app/prisma/dev.db
-RUN npx prisma db push --accept-data-loss
 
 # Продакшн сборка Next.js
 ENV NODE_ENV=production
@@ -59,12 +58,12 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
-# Копируем standalone Next.js (Next.js 16 output)
+# Копируем standalone Next.js
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/public ./public
 
-# Копируем Prisma: CLI + Client engine + миграции + seed DB
+# Копируем Prisma: CLI + Client engine + миграции
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
@@ -78,14 +77,10 @@ EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
 
-# Entrypoint: если нет БД — копируем seed (схема уже применена),
-# применяем миграции (на случай обновления схемы), запускаем Next.js
+# Entrypoint: применяем миграции, запускаем Next.js
+# DATABASE_URL должен быть установлен в docker-compose или в окружении контейнера.
 CMD ["sh", "-c", "\
-  if [ ! -f /data/dev.db ]; then \
-    cp /app/prisma/dev.db /data/dev.db 2>/dev/null && \
-    echo '📦 seeded fresh database from build'; \
-  fi && \
-  npx prisma db push --accept-data-loss 2>&1 | grep -v 'ready in' && \
-  echo '🚀 starting Next.js production server' && \
+  npx prisma migrate deploy 2>&1 | grep -v 'ready in' && \
+  echo '🚀 starting Next.js production server (PostgreSQL)' && \
   node server.js \
 "]

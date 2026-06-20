@@ -8,7 +8,6 @@ export async function GET() {
 
     const [
       orgCount,
-      clientCount,
       productCount,
       proposalCount,
       proposalStatusCounts,
@@ -19,7 +18,6 @@ export async function GET() {
       recentOrders,
     ] = await Promise.all([
       prisma.organization.count(),
-      prisma.client.count(),
       prisma.product.count(),
       prisma.proposal.count(),
       prisma.proposal.groupBy({
@@ -37,7 +35,7 @@ export async function GET() {
         orderBy: { sortOrder: 'asc' },
       }),
       prisma.proposal.findMany({
-        select: { id: true, number: true, title: true, status: true, createdAt: true, client: { select: { lastName: true, firstName: true } } },
+        select: { id: true, number: true, title: true, status: true, createdAt: true, customer: { select: { name: true } } },
         orderBy: { createdAt: 'desc' },
         take: 5,
       }),
@@ -51,7 +49,6 @@ export async function GET() {
     return apiOk({
       overview: [
         { title: 'Организации', count: orgCount, href: '/organizations' },
-        { title: 'Клиенты', count: clientCount, href: '/clients' },
         { title: 'Товары', count: productCount, href: '/products' },
         { title: 'Предложения', count: proposalCount, href: '/proposals' },
         { title: 'Договоры', count: contractCount, href: '/contracts' },

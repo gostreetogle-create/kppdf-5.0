@@ -2,8 +2,18 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import { ArrowLeft, Save, ImageIcon } from 'lucide-react';
-import { BlockEditor } from '@/components/ui/block-editor';
+import { AdminSkeleton } from '@/components/skeletons';
+
+// Code-split: BlockEditor (DnD blocks, templates) → отдельный чанк
+const BlockEditor = dynamic(
+  () => import('@/components/ui/block-editor').then(m => ({ default: m.BlockEditor })),
+  {
+    ssr: false,
+    loading: () => <AdminSkeleton />,
+  },
+);
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';

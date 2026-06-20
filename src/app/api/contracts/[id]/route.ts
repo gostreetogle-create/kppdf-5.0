@@ -7,7 +7,7 @@ import { assertTransitionAllowed, WorkflowError } from '@/lib/status-workflow';
 // Cycle 55 (B.4): protection to frozen-statuses.
 import { assertNumberImmutable, NumberLockedError } from '@/lib/number-protection';
 
-const include = { items: true, client: true, organization: true, proposal: true };
+const include = { items: true, customer: { select: { name: true } }, organization: true, proposal: true };
 
 export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {

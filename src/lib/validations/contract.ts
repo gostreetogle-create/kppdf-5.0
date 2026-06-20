@@ -15,7 +15,7 @@ export const CreateContractSchema = z.object({
   title: z.string().min(1, 'Название обязательно').max(500),
   description: z.string().max(2000).optional(),
   status: z.enum(['draft', 'active', 'completed', 'cancelled']).default('draft'),
-  clientId: z.string().cuid().optional(),
+  customerId: z.string().cuid().optional(),
   organizationId: z.string().cuid().optional(),
   proposalId: z.string().cuid().optional(),
   totalAmount: z.number().min(0).default(0),

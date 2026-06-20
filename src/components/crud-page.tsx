@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { Plus, Search, ChevronLeft, ChevronRight, Pencil, Trash2, Eye, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -10,6 +10,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { Typography } from '@/components/ui/typography';
 import { Flex } from '@/components/ui/layout';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { useList, useDelete } from '@/lib/api-hooks';
 
 interface Column<T> {
   key: string;
@@ -22,13 +23,15 @@ interface CrudPageProps<T> {
   title: string;
   apiPath: string;
   columns: Column<T>[];
-  initialData?: T[];           // Server Component initial data — пропускает первый fetch
-  initialTotal?: number;       // Общее количество (для пагинации)
+  initialData?: T[];
+  initialTotal?: number;
   createHref?: string;
   detailHref?: (item: T) => string;
   renderForm?: (item: T | null, onClose: () => void) => ReactNode;
   extraActions?: (item: T) => ReactNode;
   searchId?: string;
+  /** Специфический staleTime для этого списка (ms). Default: 30000 (30s). */
+  staleTime?: number;
 }
 
 export function CrudPage<T extends Record<string, unknown>>({
@@ -42,70 +45,42 @@ export function CrudPage<T extends Record<string, unknown>>({
   renderForm,
   extraActions,
   searchId,
+  staleTime,
 }: CrudPageProps<T>) {
   const router = useRouter();
-  const [items, setItems] = useState<T[]>(initialData || []);
-  const [total, setTotal] = useState(initialTotal || 0);
   const [page, setPage] = useState(1);
   const [limit] = useState(20);
-  const [totalPages, setTotalPages] = useState(initialTotal ? Math.ceil(initialTotal / 20) : 0);
   const [search, setSearch] = useState('');
-  const [loading, setLoading] = useState(!initialData);
-  const firstLoadSkipped = useRef(false);
   const [sortField, setSortField] = useState('createdAt');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [showForm, setShowForm] = useState(false);
   const [editItem, setEditItem] = useState<T | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
-  const [trigger, setTrigger] = useState(0);
 
-  useEffect(() => {
-    // Если данные пришли с сервера — первый useEffect вызов пропускаем,
-    // последующие вызовы (пагинация, поиск, refresh) работают как обычно
-    if (initialData && !firstLoadSkipped.current) {
-      firstLoadSkipped.current = true;
-      return;
-    }
+  // TanStack Query: замена useEffect + fetch
+  const {
+    data,
+    isLoading,
+    isFetching,
+    refetch,
+  } = useList<T>(
+    { apiPath, page, limit, search, sortField, sortOrder },
+    staleTime,
+  );
 
-    let cancelled = false;
-    async function load() {
-      setLoading(true);
-      try {
-        const params = new URLSearchParams({
-          page: String(page),
-          limit: String(limit),
-          sort: `${sortOrder === 'desc' ? '-' : ''}${sortField}`,
-        });
-        if (search) params.set('search', search);
-        const res = await fetch(`${apiPath}?${params}`);
-        const data = await res.json();
-        if (!cancelled && data.success && data.data) {
-          setItems(data.data.items || []);
-          setTotal(data.data.total || 0);
-          setTotalPages(data.data.totalPages || 0);
-        }
-      } catch (err) {
-        console.error('Fetch error:', err);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-    load();
-    return () => { cancelled = true; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [apiPath, page, limit, search, sortField, sortOrder, trigger]);
+  const items = data?.items ?? initialData ?? [];
+  const total = data?.total ?? initialTotal ?? 0;
+  const totalPages = data?.totalPages ?? (initialTotal ? Math.ceil(initialTotal / 20) : 0);
+  const loading = isLoading && !initialData;
 
-  const handleDelete = async (id: string) => {
-    try {
-      const res = await fetch(`${apiPath}/${id}`, { method: 'DELETE' });
-      const data = await res.json();
-      if (data.success) {
-        setDeleteConfirm(null);
-        setTrigger((t) => t + 1);
-      }
-    } catch (err) {
-      console.error('Delete error:', err);
-    }
+  // Мутация удаления — onSuccess передаётся через mutate, не через useDelete
+  // (чтобы не перезатереть onSettled из api-hooks, который инвалидирует кеш)
+  const deleteMutation = useDelete(apiPath);
+
+  const handleDelete = (id: string) => {
+    deleteMutation.mutate(id, {
+      onSuccess: () => setDeleteConfirm(null),
+    });
   };
 
   const handleSort = (key: string) => {
@@ -123,8 +98,8 @@ export function CrudPage<T extends Record<string, unknown>>({
       <Flex direction="col" className="sm:flex-row sm:items-center sm:justify-between" gap="md">
         <Typography variant="h2">{title}</Typography>
         <Flex gap="sm">
-          <Button variant="ghost" size="icon" onClick={() => setTrigger((t) => t + 1)} title="Обновить">
-            <RefreshCw className="h-4 w-4" />
+          <Button variant="ghost" size="icon" onClick={() => refetch()} title="Обновить" disabled={isFetching}>
+            <RefreshCw className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
           </Button>
           {createHref && (
             <Button onClick={() => router.push(createHref)}>
@@ -299,7 +274,7 @@ export function CrudPage<T extends Record<string, unknown>>({
         <div className="fixed inset-0 z-[--z-modal] flex items-center justify-center glass-overlay">
           <div className="bg-card border border-border rounded-xl shadow-xl w-full max-w-2xl max-h-[85vh] overflow-y-auto mx-4">
             <div className="p-6">
-              {renderForm(editItem, () => { setShowForm(false); setEditItem(null); setTrigger((t) => t + 1); })}
+              {renderForm(editItem, () => { setShowForm(false); setEditItem(null); })}
             </div>
           </div>
         </div>
@@ -312,6 +287,7 @@ export function CrudPage<T extends Record<string, unknown>>({
         message="Это действие нельзя отменить."
         confirmLabel="Удалить"
         danger
+        loading={deleteMutation.isPending}
         onConfirm={() => handleDelete(deleteConfirm!)}
         onCancel={() => setDeleteConfirm(null)}
       />

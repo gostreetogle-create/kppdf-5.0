@@ -132,7 +132,7 @@ export const PROPOSAL_LIST_QUERY_ARGS = {
   orderBy: { createdAt: 'desc' },
   take: 20,
   include: {
-    client: { select: { lastName: true, firstName: true } },
+    customer: { select: { name: true } },
     items: { select: { total: true } },
   },
 } satisfies Prisma.ProposalFindManyArgs;
@@ -203,7 +203,7 @@ export const CONTRACT_LIST_QUERY_ARGS = {
   orderBy: { createdAt: 'desc' },
   take: 20,
   include: {
-    client: { select: { lastName: true, firstName: true } },
+    customer: { select: { name: true } },
   },
 } satisfies Prisma.ContractFindManyArgs;
 
@@ -225,24 +225,6 @@ export const ORGANIZATION_LIST_QUERY_ARGS: Prisma.OrganizationFindManyArgs = {
 export type OrganizationListItem = Organization;
 
 // ============================================================================
-// Client (with includes) — PATTERN (A)
-// ============================================================================
-//
-// page.tsx: src/app/(dashboard)/clients/page.tsx
-// prisma.client.findMany({ orderBy, take, include {organization {name}} })
-// Раньше: `clients as any[]`
-
-export const CLIENT_LIST_QUERY_ARGS = {
-  orderBy: { createdAt: 'desc' },
-  take: 20,
-  include: {
-    organization: { select: { name: true } },
-  },
-} satisfies Prisma.ClientFindManyArgs;
-
-export type ClientListItem = Prisma.ClientGetPayload<typeof CLIENT_LIST_QUERY_ARGS>;
-
-// ============================================================================
 // Tender (no includes) — PATTERN (B)
 // ============================================================================
 //
@@ -258,3 +240,21 @@ export const TENDER_LIST_QUERY_ARGS: Prisma.TenderFindManyArgs = {
 };
 
 export type TenderListItem = Tender;
+
+// ============================================================================
+// Material (with includes) — PATTERN (A)
+// ============================================================================
+//
+// page.tsx: src/app/(dashboard)/materials/page.tsx
+// prisma.material.findMany({ orderBy, take, include {supplier {name}, category {name}} })
+
+export const MATERIAL_LIST_QUERY_ARGS = {
+  orderBy: { name: 'asc' },
+  take: 20,
+  include: {
+    supplier: { select: { name: true } },
+    category: { select: { name: true } },
+  },
+} satisfies Prisma.MaterialFindManyArgs;
+
+export type MaterialListItem = Prisma.MaterialGetPayload<typeof MATERIAL_LIST_QUERY_ARGS>;

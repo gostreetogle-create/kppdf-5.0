@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
         orderBy,
         skip: (page - 1) * limit,
         take: limit,
-        include: { items: true, client: true, organization: true },
+        include: { items: true, customer: { select: { name: true } }, organization: true },
       }),
       prisma.contract.count({ where }),
     ]);
@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
         number,
         items: items ? { create: items } : undefined,
       },
-      include: { items: true, client: true, organization: true },
+      include: { items: true, customer: { select: { name: true } }, organization: true },
     });
     return apiOk(item);
   } catch (error) {

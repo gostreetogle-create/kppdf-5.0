@@ -20,6 +20,7 @@ export const CreateOrganizationSchema = z.object({
   paymentTermDays: z.number().int().min(0).default(0),
   vatRate: z.number().min(0).max(100).default(20),
   isActive: z.boolean().default(true),
+  roleIds: z.array(z.string()).default([]),
 });
 
 export const UpdateOrganizationSchema = CreateOrganizationSchema.partial();

@@ -64,13 +64,16 @@ function LoginForm() {
 
   return (
     <div className="flex min-h-screen items-center justify-center p-4 relative overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-to-br from-[var(--primary)]/5 via-background to-[var(--primary)]/10" />
-      <div className="absolute top-1/4 -left-32 w-96 h-96 bg-[var(--primary)]/10 rounded-full blur-3xl animate-pulse" />
-      <div className="absolute bottom-1/4 -right-32 w-96 h-96 bg-[var(--primary)]/5 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
+      {/* Gradient background from palette #245 */}
+      <div className="absolute inset-0" style={{background: 'var(--gradient-background)'}} />
+      {/* Warm earthy blur orbs */}
+      <div className="absolute top-1/4 -left-32 w-96 h-96 bg-[#d4a271]/10 rounded-full blur-3xl animate-pulse" />
+      <div className="absolute bottom-1/4 -right-32 w-96 h-96 bg-[#a47a58]/8 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[#b4c4bb]/5 rounded-full blur-3xl" />
 
       <div className="w-full max-w-md relative z-10">
         <div className="text-center mb-8 animate-fadeIn">
-          <div className="inline-flex items-center justify-center h-16 w-16 rounded-2xl bg-[var(--primary)] text-[var(--primary-foreground)] text-2xl font-bold mb-4 shadow-lg shadow-[var(--primary)]/25">
+          <div className="inline-flex items-center justify-center h-16 w-16 rounded-2xl text-white text-2xl font-bold mb-4 shadow-lg" style={{background: 'var(--gradient-primary)', boxShadow: '0 8px 24px rgba(212,162,113,0.3)'}}>
             KP
           </div>
           <h1 className="text-3xl font-bold text-[var(--foreground)]">KP CRM</h1>
@@ -123,7 +126,8 @@ function LoginForm() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 px-4 rounded-xl bg-[var(--primary)] text-[var(--primary-foreground)] font-semibold hover:opacity-90 transition-all disabled:opacity-50 shadow-lg shadow-[var(--primary)]/25 hover:shadow-xl hover:shadow-[var(--primary)]/30"
+              className="w-full py-3 px-4 rounded-xl text-white font-semibold transition-all duration-200 disabled:opacity-50 shadow-lg hover:shadow-xl"
+              style={{background: 'var(--gradient-primary)'}}
             >
               {loading ? (
                 <span className="flex items-center justify-center gap-2">
@@ -144,8 +148,8 @@ function LoginForm() {
             const Icon = f.icon;
             return (
               <div key={f.title} className="text-center">
-                <div className="inline-flex items-center justify-center h-10 w-10 rounded-xl bg-[var(--primary)]/10 mb-2">
-                  <Icon className="h-5 w-5 text-[var(--primary)]" />
+                <div className="inline-flex items-center justify-center h-10 w-10 rounded-xl mb-2" style={{background: 'rgba(212,162,113,0.12)'}}>
+                  <Icon className="h-5 w-5" style={{color: '#d4a271'}} />
                 </div>
                 <p className="text-xs font-medium text-[var(--foreground)]">{f.title}</p>
                 <p className="text-[10px] text-[var(--muted-foreground)] mt-0.5">{f.desc}</p>

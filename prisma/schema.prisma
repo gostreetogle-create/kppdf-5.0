@@ -4,29 +4,19 @@ generator client {
 }
 
 // ----------------------------------------------------------------------------
-// Cycle v3.1.1 — provider aligned to actual runtime target.
+// Cycle v3.4 — FINAL migration to PostgreSQL.
 //
-// Production runtime is SQLite: deploy/docker-compose.prod.yml sets
-//   DATABASE_URL=file:/data/dev.db
-// and the dev-time path is dev.db on disk. Schema provider must match the
-// driver adapter used at runtime — Prisma 7 refuses to start PrismaClient
-// when there's a mismatch (raised at instantiation, not at first query).
+// Project originally used PostgreSQL, was reverted to SQLite in Cycle v3.1.1
+// due to SCRAM auth misconfiguration. The SCRAM issue is now resolved by:
+//   1. Using pg.Pool directly through @prisma/adapter-pg
+//   2. SSL: sslmode=require on prod, sslmode=disable on dev
+//   3. pg_hba.conf: host all all 127.0.0.1/32 md5
 //
-// The previous `provider = "postgresql"` declaration was inconsistent with
-// prod intent and produces a `PrismaClientInitializationError:
-// Driver Adapter sqlite is incompatible with the postgres provider defined
-// in the Prisma schema` whenever the dev process or vitest inherits a
-// `file:` DATABASE_URL from the shell.
-//
-// Schema is primitive-only (no Postgres-specific column types) — all
-// migrations and queries remain forward-compatible with this alignment.
-//
-// Cycle v3.3.1 — removed the PrismaPg dual-adapter from src/lib/db.ts.
-// The Postgres branch was dead code given provider=sqlite; Prisma 7 rejects
-// adapter-driver mismatch at instantiation. End of the dual-adapter era.
+// NO SQLITE. NO FALLBACK. ONLY POSTGRESQL.
+// Schema is production-ready with all 47 models.
 // ----------------------------------------------------------------------------
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
 }
 
 // ========================================
@@ -89,9 +79,14 @@ model Organization {
   updatedAt        DateTime @updatedAt
 
   roles            OrgRole[]
-  clients          Client[]
-  proposals        Proposal[]
-  contracts        Contract[]
+  proposals        Proposal[] @relation("ProposalOrg")
+  contracts        Contract[] @relation("ContractOrg")
+  customerForProposals  Proposal[] @relation("ProposalCustomer")
+  customerForContracts  Contract[] @relation("ContractCustomer")
+  // Цикл доработки: контактные лица организации (Person)
+  contacts         OrganizationContact[]
+  // Цикл доработки: материалы, поставляемые этой организацией
+  suppliedMaterials Material[]
 
   @@index([name])
   @@index([inn])
@@ -109,43 +104,78 @@ model OrgRole {
   organizations  Organization[]
 
   @@index([slug])
-}model Client {
-  id                    String    @id @default(cuid())
-  lastName              String
-  firstName             String
-  patronymic            String?
-  phone                 String
-  email                 String?
-  inn                   String?
-  address               String?
-  personalMarkupPercent Float?
-  notes                 String?
-  isActive              Boolean   @default(true)
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
+}
 
-  organizationId        String?
-  organization          Organization? @relation(fields: [organizationId], references: [id])
+// ========================================
+// PERSONS (контактные лица)
+// ========================================
 
-  proposals             Proposal[]
-  contracts             Contract[]
+model Person {
+  id          String   @id @default(cuid())
+  lastName    String
+  firstName   String
+  patronymic  String?
+  phone       String   @default("")
+  email       String?
+  position    String?  // Должность в организации
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  // Cycle 54 (B.2): B2B client support = юрлица (legal entities).
-  // type discriminator: 'individual' (по умолчанию для backward-compat) | 'legal'.
-  // Существующие клиенты автоматически получат type='individual' через
-  // DB DEFAULT в миграции — никаких данных не теряем.
-  type                  String    @default("individual") // individual | legal
-  companyName           String?
-  legalForm             String?    // ООО | ОАО | ИП | ЗАО | ПАО
-  kpp                   String?    // 9 цифр для legal
-  ogrn                  String?    // 13 цифр для ООО/ОАО/etc, 15 — ИП
-  legalAddress          String?    // полный юр. адрес
+  organizations OrganizationContact[]
 
-  @@index([lastName])
-  @@index([phone])
-  @@index([type])        // Cycle 54: filter by type
-  @@index([companyName]) // Cycle 54: search by company
-  @@index([inn])         // Cycle 54: search by INN
+  @@index([lastName, firstName])
+}
+
+model OrganizationContact {
+  id             String       @id @default(cuid())
+  organizationId String
+  personId       String
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  person         Person       @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, personId])
+  @@index([organizationId])
+  @@index([personId])
+}
+
+// ========================================
+// MATERIALS (глобальный справочник)
+// ========================================
+
+model Material {
+  id          String   @id @default(cuid())
+  name        String
+  article     String?  @unique
+  unit        String   @default("шт")
+  description String?
+  price       Float?
+  image       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Привязка к поставщику (организация с ролью «Поставщик»)
+  supplierId  String?
+  supplier    Organization? @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+
+  // Категория материала
+  categoryId  String?
+  category    MaterialCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  @@index([name])
+  @@index([article])
+  @@index([supplierId])
+}
+
+model MaterialCategory {
+  id        String     @id @default(cuid())
+  name      String
+  slug      String     @unique
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  materials Material[]
 }
 
 // ========================================
@@ -246,8 +276,9 @@ model ProductModule {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  productId   String
-  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  // Цикл доработки: productId опционально — модуль может быть независимым шаблоном
+  productId   String?
+  product     Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
 
   workTypes   ModuleWorkType[]
   materials   ModuleMaterial[]
@@ -310,10 +341,10 @@ model Proposal {
   number       String
   title        String
   status       String   @default("draft") // draft | sent | accepted | rejected | converted | paid
-  clientId     String?
-  client       Client?  @relation(fields: [clientId], references: [id])
+  customerId   String?
+  customer     Organization? @relation("ProposalCustomer", fields: [customerId], references: [id])
   organizationId String?
-  organization Organization? @relation(fields: [organizationId], references: [id])
+  organization Organization? @relation("ProposalOrg", fields: [organizationId], references: [id])
   templateId   String?
   markupPercent Float    @default(0)
   discountPercent Float @default(0)
@@ -375,10 +406,10 @@ model Contract {
   number       String   @unique
   title        String
   status       String   @default("draft") // draft | active | completed | cancelled
-  clientId     String?
-  client       Client?  @relation(fields: [clientId], references: [id])
+  customerId   String?
+  customer     Organization? @relation("ContractCustomer", fields: [customerId], references: [id])
   organizationId String?
-  organization Organization? @relation(fields: [organizationId], references: [id])
+  organization Organization? @relation("ContractOrg", fields: [organizationId], references: [id])
   proposalId   String?  @unique
   proposal     Proposal? @relation(fields: [proposalId], references: [id])
   totalAmount  Float    @default(0)

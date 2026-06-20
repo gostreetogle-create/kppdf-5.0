@@ -41,9 +41,9 @@ export function PreviewArea() {
               Без шаблона — стандартный бланк
             </p>
           </div>
-          {computed.selectedClient && (
+          {computed.selectedCustomer && (
             <p className="text-[10px] text-[var(--muted-foreground)] mb-2">
-              Клиент: {computed.selectedClient.lastName} {computed.selectedClient.firstName}
+              Клиент: {computed.selectedCustomer.name}
             </p>
           )}
           <table className="w-full text-[10px] border-collapse border border-[var(--border)]">

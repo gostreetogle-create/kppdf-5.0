@@ -45,14 +45,14 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         number,
         title: body.title || `Коммерческое предложение №${number}`,
         status: 'draft',
-        clientId: body.clientId || null,
+        customerId: body.customerId || null,
         organizationId: body.organizationId || null,
         markupPercent: body.markupPercent || 0,
         notes: body.notes || '',
         validUntil: body.validUntil ? new Date(body.validUntil) : null,
         items: { create: proposalItems },
       },
-      include: { items: { include: { product: true } }, client: true, organization: true },
+      include: { items: { include: { product: true } }, customer: { select: { name: true } }, organization: true },
     });
 
     // Очищаем корзину

@@ -9,7 +9,7 @@ export const CreateProductModuleSchema = z.object({
   weight: z.number().min(0).optional(),
   image: z.string().max(2000).optional(),
   sortOrder: z.number().int().min(0).default(0),
-  productId: z.string().cuid(),
+  productId: z.string().cuid().optional(), // Цикл доработки: опционально
   workTypes: z.array(z.object({
     workTypeId: z.string().cuid(),
     estimatedHours: z.number().min(0),

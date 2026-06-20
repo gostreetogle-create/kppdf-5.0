@@ -135,19 +135,19 @@ describe('useProposalEditorState — /api/cart init', () => {
 // ===== Catalog load =====
 
 describe('useProposalEditorState — catalog load', () => {
-  it('должен заполнить products + organizations + clients + templates', async () => {
+  it('должен заполнить products + organizations + customers + templates', async () => {
     setFetch(routeFetchByPrefix({
       '/api/cart': ok({ id: 'c1', items: [] }),
       '/api/products?limit=200': ok({ items: [{ id: 'p1', name: 'P1', sku: 'S1', productType: 'product', isActive: true, basePrice: 100, defaultMarkupPercent: 0, unit: 'шт', category: null }] }),
       '/api/products/categories': ok({ items: [] }),
       '/api/organizations': ok({ items: [{ id: 'o1', name: 'Org', vatRate: 20 }] }),
-      '/api/clients': ok({ items: [{ id: 'cl1', lastName: 'I', firstName: 'I' }] }),
+      '/api/organizations?role=client': ok({ items: [{ id: 'cl1', name: 'Client' }] }),
       '/api/document-templates': ok({ items: [{ id: 't1', name: 'Tpl' }] }),
     }));
     const { result } = renderHook(() => useProposalEditorState());
     await waitFor(() => expect(result.current.state.products.length).toBe(1));
     expect(result.current.state.organizations).toHaveLength(1);
-    expect(result.current.state.clients).toHaveLength(1);
+    expect(result.current.state.customers).toHaveLength(1);
     expect(result.current.state.templates).toHaveLength(1);
   });
 
@@ -160,7 +160,7 @@ describe('useProposalEditorState — catalog load', () => {
       ] }),
       '/api/products/categories': ok({ items: [] }),
       '/api/organizations': ok({ items: [] }),
-      '/api/clients': ok({ items: [] }),
+      '/api/organizations?role=client': ok({ items: [] }),
       '/api/document-templates': ok({ items: [] }),
     }));
     const { result } = renderHook(() => useProposalEditorState());
@@ -181,7 +181,7 @@ describe('useProposalEditorState — filteredProducts', () => {
       ] }),
       '/api/products/categories': ok({ items: [{ id: 'cat-1' }, { id: 'cat-2' }] }),
       '/api/organizations': ok({ items: [] }),
-      '/api/clients': ok({ items: [] }),
+      '/api/organizations?role=client': ok({ items: [] }),
       '/api/document-templates': ok({ items: [] }),
     }));
     const { result } = renderHook(() => useProposalEditorState());
@@ -233,7 +233,7 @@ describe('useProposalEditorState — finance derived object', () => {
       '/api/organizations': ok({ items: [{ id: 'o1', name: 'Org', vatRate: 20 }] }),
       '/api/products?limit=200': ok({ items: [] }),
       '/api/products/categories': ok({ items: [] }),
-      '/api/clients': ok({ items: [] }),
+      '/api/organizations?role=client': ok({ items: [] }),
       '/api/document-templates': ok({ items: [] }),
     }));
     const { result } = renderHook(() => useProposalEditorState());
@@ -251,7 +251,7 @@ describe('useProposalEditorState — proposalBlocks + pdfData invariants', () =>
       '/api/products?limit=200': ok({ items: [] }),
       '/api/products/categories': ok({ items: [] }),
       '/api/organizations': ok({ items: [] }),
-      '/api/clients': ok({ items: [] }),
+      '/api/organizations?role=client': ok({ items: [] }),
       '/api/document-templates': ok({ items: [] }),
     }));
     const { result } = renderHook(() => useProposalEditorState());
@@ -266,7 +266,7 @@ describe('useProposalEditorState — proposalBlocks + pdfData invariants', () =>
       '/api/products?limit=200': ok({ items: [] }),
       '/api/products/categories': ok({ items: [] }),
       '/api/organizations': ok({ items: [] }),
-      '/api/clients': ok({ items: [] }),
+      '/api/organizations?role=client': ok({ items: [] }),
       '/api/document-templates': ok({ items: [{ id: 't1', name: 'Tpl' }] }),
     }));
     const { result } = renderHook(() => useProposalEditorState());
@@ -318,7 +318,7 @@ describe('useProposalEditorState — resetTemplateSelection', () => {
       '/api/products?limit=200': ok({ items: [] }),
       '/api/products/categories': ok({ items: [] }),
       '/api/organizations': ok({ items: [] }),
-      '/api/clients': ok({ items: [] }),
+      '/api/organizations?role=client': ok({ items: [] }),
     }));
     const { result } = renderHook(() => useProposalEditorState());
     await waitFor(() => expect(result.current.state.templates.length).toBe(1));

@@ -3,12 +3,10 @@ import { prisma } from '@/lib/db';
 import { requireAuth, requireRole } from '@/lib/auth';
 import { apiOk, apiError } from '@/lib/api-response';
 import { nextProductionOrderNumber } from '@/lib/counter';
-// Cycle 51 (B.3): live workflow вместо VALID_TRANSITIONS.
 import { assertTransitionAllowed, WorkflowError } from '@/lib/status-workflow';
-// Cycle 55 (B.4): protection to frozen-statuses.
 import { assertNumberImmutable, NumberLockedError } from '@/lib/number-protection';
 
-const include = { items: { include: { product: true } }, client: true, organization: true };
+const include = { items: { include: { product: true } }, customer: { select: { name: true } }, organization: true };
 
 export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -26,19 +24,16 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    // Cycle 52 (B.6): manager-only mutation (admin bypass сохранён в requireRole).
     await requireRole(['manager']);
     const { id } = await params;
     const body = await request.json();
     if (body.number) {
-      // Cycle 42: composite unique @@unique([number, version]) + block superseded
       const cur = await prisma.proposal.findUnique({
         where: { id },
         select: { version: true, supersededAt: true, status: true, number: true },
       });
       if (!cur) return apiError('Не найдено', 404);
       if (cur.supersededAt) return apiError('Нельзя редактировать superseded версию. Создайте новую версию.', 400);
-      // Cycle 55 (B.4): freeze number for sent/accepted/converted/paid statuses.
       try {
         assertNumberImmutable('proposal', cur.status, body.number, cur.number);
       } catch (e) {
@@ -62,7 +57,6 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
 export async function DELETE(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    // Cycle 52 (B.6): manager-only delete.
     await requireRole(['manager']);
     const { id } = await params;
     await prisma.proposal.delete({ where: { id } });
@@ -74,11 +68,8 @@ export async function DELETE(_request: NextRequest, { params }: { params: Promis
   }
 }
 
-// Cycle 51 (B.3): VALID_TRANSITIONS удалён — теперь live query через assertTransitionAllowed.
-
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    // Cycle 52 (B.6): capture user for RBAC в transition check ниже.
     const user = await requireRole(['manager']);
     const { id } = await params;
     const { status } = await request.json();
@@ -92,11 +83,8 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       select: { status: true, supersededAt: true },
     });
     if (!current) return apiError('Не найдено', 404);
-
-    // Cycle 42: hard-block смены статуса для superseded версии
     if (current.supersededAt) return apiError('Нельзя менять статус superseded версии. Создайте новую версию.', 400);
 
-    // Cycle 51 (B.3): live workflow + role-aware transition check.
     try {
       await assertTransitionAllowed('proposal', current.status, status, user.role);
     } catch (error) {
@@ -111,9 +99,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       throw error;
     }
 
-    // Авто-конвертация в ProductionOrder при оплате
     if (status === 'paid') {
-      // Загружаем полное КП с товарами и договором
       const proposal = await prisma.proposal.findUnique({
         where: { id },
         include: {
@@ -131,7 +117,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
               },
             },
           },
-          client: true,
+          customer: { select: { name: true } },
           organization: true,
           contract: true,
         },
@@ -139,21 +125,17 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       if (!proposal) return apiError('Не найдено', 404);
       if (proposal.items.length === 0) return apiError('КП не содержит товаров', 400);
 
-      // Всё в одной транзакции: проверка дубликатов + создание заказа + обновление статуса
       const [productionOrder, updatedProposal] = await prisma.$transaction(async (tx) => {
-        // Проверяем, не создан ли уже производственный заказ
         const existing = await tx.productionOrder.findFirst({
           where: { proposalId: id },
         });
         if (existing) throw new Error('ALREADY_EXISTS');
 
-        // Номер заказа = номер КП. Если занят — авто-генерация ЗК-XXXX
         const duplicate = await tx.productionOrder.findUnique({ where: { number: proposal.number } });
         const orderNumber = duplicate
           ? await nextProductionOrderNumber()
           : proposal.number;
 
-        // Собираем задачи из модулей товаров
         const tasks: Array<{
           title: string;
           description: string;
@@ -209,9 +191,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
             notes: proposal.notes || '',
             proposalId: id,
             contractId: proposal.contract?.id || null,
-            tasks: {
-              create: tasks,
-            },
+            tasks: { create: tasks },
           },
           include: { tasks: true },
         });
@@ -228,7 +208,6 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       return apiOk({ order: productionOrder, proposal: updatedProposal }, `Оплата принята. Производственный заказ №${productionOrder.number} создан автоматически`);
     }
 
-    // Обычная смена статуса (не paid)
     const item = await prisma.proposal.update({ where: { id }, data: { status }, include });
     return apiOk(item);
   } catch (error) {

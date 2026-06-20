@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
         orderBy,
         skip: (page - 1) * limit,
         take: limit,
-        include: { items: { include: { product: true } }, client: true, organization: true },
+        include: { items: { include: { product: true } }, customer: { select: { name: true } }, organization: true },
       }),
       prisma.proposal.count({ where }),
     ]);
@@ -47,7 +47,6 @@ export async function POST(request: NextRequest) {
     if (!validation.success) return validation.error;
 
     const number = validation.data.number || await nextProposalNumber();
-    // Cycle 42: composite unique @@unique([number, version]) — POST creates root proposals (version=1)
     const existing = await prisma.proposal.findFirst({
       where: { number, version: 1 },
       select: { id: true },
@@ -61,7 +60,7 @@ export async function POST(request: NextRequest) {
         number,
         items: items ? { create: items } : undefined,
       },
-      include: { items: { include: { product: true } }, client: true, organization: true },
+      include: { items: { include: { product: true } }, customer: { select: { name: true } }, organization: true },
     });
     return apiOk(item);
   } catch (error) {

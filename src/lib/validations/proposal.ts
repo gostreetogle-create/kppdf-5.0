@@ -14,7 +14,7 @@ export const CreateProposalSchema = z.object({
   title: z.string().min(1, 'Название обязательно').max(500),
   description: z.string().max(2000).optional(),
   status: z.enum(['draft', 'sent', 'accepted', 'rejected', 'paid', 'converted']).default('draft'),
-  clientId: z.string().cuid().optional(),
+  customerId: z.string().cuid().optional(),
   organizationId: z.string().cuid().optional(),
   markupPercent: z.number().min(0).max(100).default(0),
   discountPercent: z.number().min(0).max(100).default(0),

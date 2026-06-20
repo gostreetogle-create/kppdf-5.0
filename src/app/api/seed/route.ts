@@ -91,19 +91,8 @@ export async function POST() {
       prods.push(prod);
     }
 
-    // Clients
-    const clientData = [
-      { lastName: 'Иванов', firstName: 'Иван', patronymic: 'Иванович', phone: '+7 (918) 555-01-01', email: 'ivanov@example.ru', address: 'г. Краснодар, ул. Ленина, д. 10' },
-      { lastName: 'Петров', firstName: 'Пётр', patronymic: 'Сергеевич', phone: '+7 (918) 555-02-02', email: 'petrov@example.ru', organizationId: orgs[0].id },
-      { lastName: 'Сидорова', firstName: 'Анна', patronymic: 'Викторовна', phone: '+7 (918) 555-03-03', personalMarkupPercent: 5, notes: 'Постоянный клиент' },
-      { lastName: 'Кузнецов', firstName: 'Андрей', patronymic: 'Викторович', phone: '+7 (961) 555-04-04', organizationId: orgs[1].id },
-      { lastName: 'Смирнова', firstName: 'Елена', patronymic: 'Игоревна', phone: '+7 (495) 777-88-99', email: 'smirnova@chemreactive.ru', organizationId: orgs[1].id },
-    ];
-    const clients = [];
-    for (const c of clientData) {
-      const cl = await prisma.client.create({ data: c });
-      clients.push(cl);
-    }
+    // Clients — теперь организации с ролью «Клиент»
+    const clientRole = await prisma.orgRole.findUnique({ where: { slug: 'client' } });
 
     // Work Types
     const wtData = [
@@ -164,8 +153,8 @@ export async function POST() {
         number: 'КП-2026-001',
         title: 'Поставка токарных станков для ООО "МеталлПродукт"',
         status: 'sent',
-        clientId: clients[1].id,
-        organizationId: orgs[0].id,
+        customerId: orgs[0].id,
+        organizationId: orgs[1].id,
         markupPercent: 15,
         validUntil: new Date('2026-07-15'),
         items: {
@@ -182,7 +171,6 @@ export async function POST() {
         number: 'КП-2026-002',
         title: 'Комплекс поставки оборудования',
         status: 'draft',
-        clientId: clients[3].id,
         organizationId: orgs[1].id,
         markupPercent: 20,
         validUntil: new Date('2026-08-01'),
@@ -201,8 +189,8 @@ export async function POST() {
         number: 'ДГ-2026-001',
         title: 'Договор поставки станков',
         status: 'active',
-        clientId: clients[1].id,
-        organizationId: orgs[0].id,
+        customerId: orgs[0].id,
+        organizationId: orgs[1].id,
         proposalId: prop1.id,
         totalAmount: 1042700,
         signedAt: new Date('2026-06-01'),

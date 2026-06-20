@@ -58,7 +58,7 @@ async function buildModuleTasks(
   for (const mod of modules) {
     // Определяем количество = минимальное из всех товаров, содержащих этот модуль
     // (на практике модуль привязан к одному товару)
-    const qty = itemQuantities.get(mod.productId) || 1;
+    const qty = (mod.productId ? itemQuantities.get(mod.productId) : undefined) || 1;
 
     for (const wt of mod.workTypes) {
       tasks.push({
@@ -95,7 +95,7 @@ export async function POST(
       where: { id },
       include: {
         items: true,
-        client: true,
+        customer: { select: { name: true } },
         organization: true,
         proposal: {
           include: {

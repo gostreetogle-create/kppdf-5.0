@@ -365,6 +365,279 @@ paths:
         '200':
           description: Договор создан
 
+  /shipments:
+    get:
+      summary: Список отгрузок
+      tags: [Warehouse]
+      responses:
+        '200':
+          description: Список отгрузок
+    post:
+      summary: Создать отгрузку
+      tags: [Warehouse]
+      responses:
+        '201':
+          description: Отгрузка создана
+
+  /shipments/{id}:
+    get:
+      summary: Отгрузка по ID
+      tags: [Warehouse]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Отгрузка
+    put:
+      summary: Обновить отгрузку
+      tags: [Warehouse]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Отгрузка обновлена
+    delete:
+      summary: Удалить отгрузку
+      tags: [Warehouse]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Отгрузка удалена
+
+  /rpp-entries:
+    get:
+      summary: Список РПП записей
+      tags: [Admin]
+      responses:
+        '200':
+          description: Список записей
+    post:
+      summary: Создать РПП запись
+      tags: [Admin]
+      responses:
+        '201':
+          description: Запись создана
+
+  /rpp-entries/{id}:
+    get:
+      summary: РПП запись по ID
+      tags: [Admin]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Запись
+    put:
+      summary: Обновить РПП запись
+      tags: [Admin]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Запись обновлена
+    delete:
+      summary: Удалить РПП запись
+      tags: [Admin]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Запись удалена
+
+  /table-templates:
+    get:
+      summary: Список шаблонов таблиц
+      tags: [Admin]
+      responses:
+        '200':
+          description: Список шаблонов
+    post:
+      summary: Создать шаблон таблицы
+      tags: [Admin]
+      responses:
+        '201':
+          description: Шаблон создан
+
+  /table-templates/{id}:
+    get:
+      summary: Шаблон таблицы по ID
+      tags: [Admin]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Шаблон
+    put:
+      summary: Обновить шаблон таблицы
+      tags: [Admin]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Шаблон обновлён
+    delete:
+      summary: Удалить шаблон таблицы
+      tags: [Admin]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Шаблон удалён
+
+  /document-templates/{id}:
+    get:
+      summary: Шаблон документа по ID
+      tags: [Admin]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Шаблон
+    put:
+      summary: Обновить шаблон документа
+      tags: [Admin]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Шаблон обновлён
+    delete:
+      summary: Удалить шаблон документа
+      tags: [Admin]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Шаблон удалён
+
+  /document-templates/{id}/clone:
+    post:
+      summary: Клонировать шаблон документа
+      tags: [Admin]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '201':
+          description: Шаблон склонирован
+
+  /doc-types:
+    get:
+      summary: Список типов документов
+      tags: [Admin]
+      responses:
+        '200':
+          description: Список типов
+    post:
+      summary: Создать тип документа
+      tags: [Admin]
+      responses:
+        '201':
+          description: Тип создан
+
+  /doc-types/{id}:
+    get:
+      summary: Тип документа по ID
+      tags: [Admin]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Тип
+    put:
+      summary: Обновить тип документа
+      tags: [Admin]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Тип обновлён
+    delete:
+      summary: Удалить тип документа
+      tags: [Admin]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Тип удалён
+
+  /inventor-files:
+    get:
+      summary: Список файлов изобретателя
+      tags: [Admin]
+      responses:
+        '200':
+          description: Список файлов
+    post:
+      summary: Загрузить файл изобретателя
+      tags: [Admin]
+      responses:
+        '201':
+          description: Файл загружен
+
+  /inventor-files/{id}:
+    get:
+      summary: Файл изобретателя по ID
+      tags: [Admin]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Файл
+    put:
+      summary: Обновить файл изобретателя
+      tags: [Admin]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Файл обновлён
+    delete:
+      summary: Удалить файл изобретателя
+      tags: [Admin]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Файл удалён
+
+  /upload:
+    post:
+      summary: Загрузить файл
+      tags: [System]
+      responses:
+        '200':
+          description: Файл загружен
+
+  /order-history:
+    get:
+      summary: История изменений заказа
+      tags: [Production]
+      parameters:
+        - name: orderId
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: История
+
+  /my-tasks:
+    get:
+      summary: Задачи текущего пользователя
+      tags: [Production]
+      responses:
+        '200':
+          description: Список задач
+
+  /procurement-needs:
+    get:
+      summary: Потребности в закупках
+      tags: [Warehouse]
+      responses:
+        '200':
+          description: Список потребностей
+
   /contracts:
     get:
       summary: Список договоров
@@ -435,6 +708,60 @@ paths:
       responses:
         '200':
           description: Заказ создан
+
+  /products/categories:
+    get:
+      summary: Список категорий товаров
+      tags: [Products]
+      responses:
+        '200':
+          description: Список категорий
+    post:
+      summary: Создать категорию товаров
+      tags: [Products]
+      responses:
+        '201':
+          description: Категория создана
+
+  /product-modules:
+    get:
+      summary: Список модулей товаров
+      tags: [Products]
+      responses:
+        '200':
+          description: Список модулей
+    post:
+      summary: Создать модуль товара
+      tags: [Products]
+      responses:
+        '201':
+          description: Модуль создан
+
+  /product-modules/{id}:
+    get:
+      summary: Модуль товара по ID
+      tags: [Products]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Модуль
+    put:
+      summary: Обновить модуль товара
+      tags: [Products]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Модуль обновлён
+    delete:
+      summary: Удалить модуль товара
+      tags: [Products]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Модуль удалён
 
   /production-orders:
     get:
@@ -512,6 +839,38 @@ paths:
       responses:
         '200':
           description: Список задач
+    post:
+      summary: Создать задачу заказа
+      tags: [Production]
+      responses:
+        '201':
+          description: Задача создана
+
+  /order-tasks/{id}:
+    get:
+      summary: Задача по ID
+      tags: [Production]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Задача
+    put:
+      summary: Обновить задачу
+      tags: [Production]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Задача обновлена
+    delete:
+      summary: Удалить задачу
+      tags: [Production]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Задача удалена
 
   /order-tasks/{id}/assign:
     patch:
@@ -523,6 +882,16 @@ paths:
         '200':
           description: Исполнитель назначен
 
+  /order-tasks/{id}/status:
+    patch:
+      summary: Изменить статус задачи
+      tags: [Production]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Статус обновлён
+
   /work-types:
     get:
       summary: Список видов работ
@@ -530,6 +899,38 @@ paths:
       responses:
         '200':
           description: Список видов работ
+    post:
+      summary: Создать вид работ
+      tags: [Production]
+      responses:
+        '201':
+          description: Вид работ создан
+
+  /work-types/{id}:
+    get:
+      summary: Вид работ по ID
+      tags: [Production]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Вид работ
+    put:
+      summary: Обновить вид работ
+      tags: [Production]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Вид работ обновлён
+    delete:
+      summary: Удалить вид работ
+      tags: [Production]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Вид работ удалён
 
   /work-centers:
     get:
@@ -538,6 +939,38 @@ paths:
       responses:
         '200':
           description: Список рабочих центров
+    post:
+      summary: Создать рабочий центр
+      tags: [Production]
+      responses:
+        '201':
+          description: Рабочий центр создан
+
+  /work-centers/{id}:
+    get:
+      summary: Рабочий центр по ID
+      tags: [Production]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Рабочий центр
+    put:
+      summary: Обновить рабочий центр
+      tags: [Production]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Рабочий центр обновлён
+    delete:
+      summary: Удалить рабочий центр
+      tags: [Production]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Рабочий центр удалён
 
   /workers:
     get:
@@ -546,6 +979,38 @@ paths:
       responses:
         '200':
           description: Список работников
+    post:
+      summary: Создать работника
+      tags: [Production]
+      responses:
+        '201':
+          description: Работник создан
+
+  /workers/{id}:
+    get:
+      summary: Работник по ID
+      tags: [Production]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Работник
+    put:
+      summary: Обновить работника
+      tags: [Production]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Работник обновлён
+    delete:
+      summary: Удалить работника
+      tags: [Production]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Работник удалён
 
   /warehouse:
     get:
@@ -554,6 +1019,38 @@ paths:
       responses:
         '200':
           description: Список складов
+    post:
+      summary: Создать склад
+      tags: [Warehouse]
+      responses:
+        '201':
+          description: Склад создан
+
+  /warehouse/{id}:
+    get:
+      summary: Склад по ID
+      tags: [Warehouse]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Склад
+    put:
+      summary: Обновить склад
+      tags: [Warehouse]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Склад обновлён
+    delete:
+      summary: Удалить склад
+      tags: [Warehouse]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Склад удалён
 
   /storage-items:
     get:
@@ -567,6 +1064,38 @@ paths:
       responses:
         '200':
           description: Остатки
+    post:
+      summary: Создать позицию на складе
+      tags: [Warehouse]
+      responses:
+        '201':
+          description: Позиция создана
+
+  /storage-items/{id}:
+    get:
+      summary: Позиция на складе по ID
+      tags: [Warehouse]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Позиция
+    put:
+      summary: Обновить позицию на складе
+      tags: [Warehouse]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Позиция обновлена
+    delete:
+      summary: Удалить позицию со склада
+      tags: [Warehouse]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Позиция удалена
 
   /inventory-movements:
     get:
@@ -581,6 +1110,46 @@ paths:
         '200':
           description: Движения
 
+  /purchase-requests:
+    get:
+      summary: Список заявок на закупку
+      tags: [Warehouse]
+      responses:
+        '200':
+          description: Список заявок
+    post:
+      summary: Создать заявку на закупку
+      tags: [Warehouse]
+      responses:
+        '201':
+          description: Заявка создана
+
+  /purchase-requests/{id}:
+    get:
+      summary: Заявка на закупку по ID
+      tags: [Warehouse]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Заявка
+    put:
+      summary: Обновить заявку на закупку
+      tags: [Warehouse]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Заявка обновлена
+    delete:
+      summary: Удалить заявку на закупку
+      tags: [Warehouse]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Заявка удалена
+
   /supplier-orders:
     get:
       summary: Список заказов поставщикам
@@ -588,6 +1157,46 @@ paths:
       responses:
         '200':
           description: Список заказов
+    post:
+      summary: Создать заказ поставщику
+      tags: [Warehouse]
+      responses:
+        '201':
+          description: Заказ создан
+
+  /supplier-orders/{id}:
+    get:
+      summary: Заказ поставщику по ID
+      tags: [Warehouse]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Заказ
+    put:
+      summary: Обновить заказ поставщику
+      tags: [Warehouse]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Заказ обновлён
+    delete:
+      summary: Удалить заказ поставщику
+      tags: [Warehouse]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Заказ удалён
+    patch:
+      summary: Изменить статус заказа поставщику
+      tags: [Warehouse]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Статус обновлён
 
   /incoming-invoices:
     get:
@@ -596,6 +1205,46 @@ paths:
       responses:
         '200':
           description: Список счетов
+    post:
+      summary: Создать входящий счёт
+      tags: [Finance]
+      responses:
+        '201':
+          description: Счёт создан
+
+  /incoming-invoices/{id}:
+    get:
+      summary: Входящий счёт по ID
+      tags: [Finance]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Счёт
+    put:
+      summary: Обновить входящий счёт
+      tags: [Finance]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Счёт обновлён
+    delete:
+      summary: Удалить входящий счёт
+      tags: [Finance]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Счёт удалён
+    patch:
+      summary: Изменить статус входящего счёта
+      tags: [Finance]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Статус обновлён
 
   /order-closings:
     get:
@@ -604,6 +1253,38 @@ paths:
       responses:
         '200':
           description: Список закрытий
+    post:
+      summary: Создать закрытие заказа
+      tags: [Finance]
+      responses:
+        '201':
+          description: Закрытие создано
+
+  /order-closings/{id}:
+    get:
+      summary: Закрытие заказа по ID
+      tags: [Finance]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Закрытие
+    put:
+      summary: Обновить закрытие заказа
+      tags: [Finance]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Закрытие обновлено
+    delete:
+      summary: Удалить закрытие заказа
+      tags: [Finance]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Закрытие удалено
 
   /reconciliation-acts:
     get:
@@ -612,6 +1293,38 @@ paths:
       responses:
         '200':
           description: Список актов
+    post:
+      summary: Создать акт сверки
+      tags: [Finance]
+      responses:
+        '201':
+          description: Акт создан
+
+  /reconciliation-acts/{id}:
+    get:
+      summary: Акт сверки по ID
+      tags: [Finance]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Акт
+    put:
+      summary: Обновить акт сверки
+      tags: [Finance]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Акт обновлён
+    delete:
+      summary: Удалить акт сверки
+      tags: [Finance]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Акт удалён
 
   /financial-reports:
     get:
@@ -636,6 +1349,46 @@ paths:
       responses:
         '200':
           description: Список пользователей
+    post:
+      summary: Создать пользователя
+      tags: [Admin]
+      responses:
+        '201':
+          description: Пользователь создан
+
+  /users/{id}:
+    get:
+      summary: Пользователь по ID
+      tags: [Admin]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Пользователь
+    put:
+      summary: Обновить пользователя
+      tags: [Admin]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Пользователь обновлён
+    delete:
+      summary: Удалить пользователя
+      tags: [Admin]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Пользователь удалён
+    patch:
+      summary: Частично обновить пользователя
+      tags: [Admin]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Пользователь обновлён
 
   /status-workflows:
     get:
@@ -644,6 +1397,38 @@ paths:
       responses:
         '200':
           description: Правила
+    post:
+      summary: Создать правило перехода
+      tags: [Admin]
+      responses:
+        '201':
+          description: Правило создано
+
+  /status-workflows/{id}:
+    get:
+      summary: Правило по ID
+      tags: [Admin]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Правило
+    put:
+      summary: Обновить правило
+      tags: [Admin]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Правило обновлено
+    delete:
+      summary: Удалить правило
+      tags: [Admin]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Правило удалено
 
   /tenders:
     get:
@@ -652,6 +1437,38 @@ paths:
       responses:
         '200':
           description: Список тендеров
+    post:
+      summary: Создать тендер
+      tags: [Admin]
+      responses:
+        '201':
+          description: Тендер создан
+
+  /tenders/{id}:
+    get:
+      summary: Тендер по ID
+      tags: [Admin]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Тендер
+    put:
+      summary: Обновить тендер
+      tags: [Admin]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Тендер обновлён
+    delete:
+      summary: Удалить тендер
+      tags: [Admin]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Тендер удалён
 
   /certificates:
     get:
@@ -660,6 +1477,38 @@ paths:
       responses:
         '200':
           description: Список сертификатов
+    post:
+      summary: Создать сертификат
+      tags: [Admin]
+      responses:
+        '201':
+          description: Сертификат создан
+
+  /certificates/{id}:
+    get:
+      summary: Сертификат по ID
+      tags: [Admin]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Сертификат
+    put:
+      summary: Обновить сертификат
+      tags: [Admin]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Сертификат обновлён
+    delete:
+      summary: Удалить сертификат
+      tags: [Admin]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Сертификат удалён
 
   /auth/me:
     get:
