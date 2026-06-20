@@ -20,6 +20,10 @@ generator client {
 //
 // Schema is primitive-only (no Postgres-specific column types) — all
 // migrations and queries remain forward-compatible with this alignment.
+//
+// Cycle v3.3.1 — removed the PrismaPg dual-adapter from src/lib/db.ts.
+// The Postgres branch was dead code given provider=sqlite; Prisma 7 rejects
+// adapter-driver mismatch at instantiation. End of the dual-adapter era.
 // ----------------------------------------------------------------------------
 datasource db {
   provider = "sqlite"

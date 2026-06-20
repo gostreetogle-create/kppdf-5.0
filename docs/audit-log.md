@@ -3001,3 +3001,21 @@ Catch up all remaining in-flight cycle work as atomic bulk commit. UI fixes, val
 ### Compliance
 - Rule 6 atomic: yes (single bulk catch-up commit).
 - Rule 7 (audit-log): entry appended.
+
+---
+
+## Cycle v3.3.1 (2026-06-20) — Postgres dead-code removal (PrismaPg branch)
+
+### Theme
+Убрать мёртвую ветку PrismaPg из src/lib/db.ts, оставленную после v3.1.1 SCRAM-fix. Поскольку `prisma/schema.prisma` теперь `provider = "sqlite"`, ветка postgres:// никогда не могла отработать (Prisma 7 throws `PrismaClientInitializationError` при mismatch adapter ↔ provider).
+
+### Changes
+- src/lib/db.ts: удалён import PrismaPg, удалён if (postgres://) branch в createAdapter, error message уточнён (только file:).
+- prisma/schema.prisma: header comment дополнен (Cycle v3.3.1 — end of dual-adapter era).
+
+### Stats
+- 2 files changed, ~5 lines added, ~25 lines removed (dead code).
+- Atomic commit per docs/CONTRIBUTING.md Rule 6.
+
+### Rationale
+User feedback + code-reviewer (v3.1.1 review): "Postgres branch is dead code given the schema provider". The fix aligns code with the actual schema contract — sqlite-only.
