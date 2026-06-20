@@ -3019,3 +3019,17 @@ Catch up all remaining in-flight cycle work as atomic bulk commit. UI fixes, val
 
 ### Rationale
 User feedback + code-reviewer (v3.1.1 review): "Postgres branch is dead code given the schema provider". The fix aligns code with the actual schema contract — sqlite-only.
+
+---
+
+## Cycle v3.3.2 (2026-06-20) — prune orphan dep @prisma/adapter-pg
+
+### Theme
+После удаления импорта `PrismaPg` в v3.3.1 пакет `@prisma/adapter-pg` остался в dependencies, хотя больше нигде не используется. Удалён через `npm uninstall`.
+
+### Stats
+- Removed: @prisma/adapter-pg (~500 KB) from package.json + lockfile.
+- 2 files changed (package.json, package-lock.json).
+
+### Compliance
+- Rule 6 atomic commit per cycle: yes.
