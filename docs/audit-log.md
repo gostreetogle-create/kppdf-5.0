@@ -3033,3 +3033,21 @@ User feedback + code-reviewer (v3.1.1 review): "Postgres branch is dead code giv
 
 ### Compliance
 - Rule 6 atomic commit per cycle: yes.
+
+---
+
+## Cycle 56 (2026-06-20) — Prisma migrations baseline reset for SQLite
+
+### Theme
+Сброс истории миграций POSTGRESQL → SQLITE. Старые PostgreSQL-миграции (6 директорий, lockfile provider = postgresql) заблокированы provider mismatch — не применимы к sqlite.
+
+### Stats
+- Deleted: prisma/migrations/ (legacy Postgres-flavored directory).
+- Created: single sqlite-compatible migration (init_sqlite_clean, 47 tables).
+- lockfile: migration_lock.toml updated to provider = sqlite.
+- dev.db: regenerated via prisma migrate deploy.
+- All 47 models preserved (no structural changes).
+
+### Compliance
+- Rule 6 single atomic commit: yes.
+- Rule 7 audit-log append-only: yes.
