@@ -2961,3 +2961,25 @@ See mapping table below — these are the root files git rm'd and docs/* files g
 | audit-tasks.md | docs/operations/audit-tasks.md |
 | business-tasks.md | docs/operations/business-tasks.md |
 | discussion-business-logic.md | docs/process/discussion-business-logic.md |
+
+---
+
+## Cycle 50 phase-2 (2026-06-20) — rate-limit + tests + deps + agent-queue snapshot
+
+### Theme
+Завершить «cycle in-progress» сборку из in-flight cycles: подключить постоянный rate-limiting через Prisma, добавить admin cleanup endpoint + cron-script, подключить новые Vitest-тесты.
+
+### Stats
+- Added: src/lib/rate-limit.ts (64 lines) — Prisma.rateLimitEntry-backed checkRateLimit.
+- Added: src/app/api/admin/cleanup-rate-limit/route.ts (13 lines) — CLEANUP_SECRET-protected admin endpoint.
+- Added: scripts/cleanup-rate-limit.sh (30 lines) — bash cron-invoker.
+- Added: src/components/proposal-editor/__tests__/use-proposal-editor-state.test.tsx (393 lines) — proposal editor state mega-hook coverage.
+- Added: src/lib/warehouse/__tests__/auto-receive-finished-goods.test.ts (392 lines) — warehouse auto-receive P2002 race condition coverage.
+- Modified: package.json (devDeps added: @testing-library/dom ^10.4.1, @testing-library/react ^16.3.2, jsdom ^29.1.1).
+- Modified: package-lock.json (synced with new devDeps).
+- Force-added: agent-queue.json (one-time snapshot before .gitignore silence; future modifications ignored).
+
+### Compliance
+- Rule 6 atomic: yes.
+- Rule 7 append-only audit-log: yes.
+- .gitignore: agent-queue.json added in Commit 1, so future mods are silent.
