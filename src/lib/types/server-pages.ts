@@ -71,6 +71,7 @@ import type {
   Warehouse,
   ProductCategory,
   Organization,
+  Person,
   Tender,
 } from '../../generated/prisma/client';
 
@@ -223,6 +224,20 @@ export const ORGANIZATION_LIST_QUERY_ARGS: Prisma.OrganizationFindManyArgs = {
 };
 
 export type OrganizationListItem = Organization;
+
+// ============================================================================
+// Person (no includes) — PATTERN (B)
+// ============================================================================
+//
+// page.tsx: src/app/(dashboard)/persons/page.tsx
+// prisma.person.findMany({ orderBy, take })
+
+export const PERSON_LIST_QUERY_ARGS: Prisma.PersonFindManyArgs = {
+  orderBy: { lastName: 'asc' },
+  take: 20,
+};
+
+export type PersonListItem = Person;
 
 // ============================================================================
 // Tender (no includes) — PATTERN (B)

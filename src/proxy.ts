@@ -21,7 +21,43 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { isProd } from '@/lib/env';
 
-export function proxy(_request: NextRequest) {
+// Публичные маршруты — не требуют аутентификации
+const publicRoutes = [
+  '/login',
+  '/api/auth/login',
+  '/api/auth/refresh',
+  '/api/health',
+  '/api/seed',
+];
+
+export function proxy(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+
+  // Auth check — редирект на /login если нет токена (для страниц)
+  // Позволяет bfcache работать и устраняет спиннер в layout
+  //
+  // ВАЖНО: проверяется только НАЛИЧИЕ cookie, а не валидность JWT-подписи.
+  // Любое произвольное значение в accessToken пропускает проверку.
+  // Это сделано намеренно: для bfcache оптимизации достаточно быстрой фильтрации.
+  // Полная верификация JWT происходит в API-роутах (src/lib/auth.ts requireAuth).
+  // Не рассматривать этот блок как полноценную security-границу.
+  if (!publicRoutes.some((route) => pathname.startsWith(route))) {
+    const token = request.cookies.get('accessToken')?.value;
+    if (!token) {
+      // API запросы без токена → 401
+      if (pathname.startsWith('/api/')) {
+        return NextResponse.json(
+          { success: false, message: 'Unauthorized' },
+          { status: 401 }
+        );
+      }
+      // Страницы → редирект на login
+      const loginUrl = new URL('/login', request.url);
+      loginUrl.searchParams.set('backUrl', pathname);
+      return NextResponse.redirect(loginUrl);
+    }
+  }
+
   const response = NextResponse.next();
 
   // Security headers
@@ -39,9 +75,6 @@ export function proxy(_request: NextRequest) {
   }
 
   // CSP — surgical tightening (Cycle 36).
-  // Dev keeps 'unsafe-eval' per Next.js 16 docs (React error stack
-  // reconstruction in the browser); prod does NOT need it. All other
-  // hardening directives are env-agnostic.
   const scriptSrc = isProd
     ? "'self' 'unsafe-inline'"
     : "'self' 'unsafe-inline' 'unsafe-eval'";
@@ -63,5 +96,5 @@ export function proxy(_request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
 };

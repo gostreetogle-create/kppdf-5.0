@@ -1,46 +1,43 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import { Sidebar } from './sidebar';
 import { Topbar } from './topbar';
 import { Breadcrumbs } from '@/components/ui/breadcrumbs';
 import { ErrorBoundary } from '@/components/ui/error-boundary';
-import { AppGuide } from '@/components/ui/app-guide';
 import { useState, useEffect } from 'react';
 import { useAuthStore } from '@/stores/auth-store';
 import { useThemeStore } from '@/stores/theme-store';
-import { useRouter } from 'next/navigation';
+
+// Ленивая загрузка AppGuide — не критичен для первого рендера
+const AppGuide = dynamic(() => import('@/components/ui/app-guide').then(m => ({ default: m.AppGuide })), {
+  ssr: false,
+});
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { user, isLoading, setUser } = useAuthStore();
+  const { user, setUser } = useAuthStore();
   const { setTheme } = useThemeStore();
-  const router = useRouter();
 
+  // Auth check выполняется в middleware — здесь только загрузка данных пользователя
+  // без блокировки рендера (пользователь уже прошёл middleware-проверку)
   useEffect(() => {
-    fetch('/api/auth/me')
-      .then(r => r.json())
-      .then(data => {
-        if (data.success && data.data) {
-          setUser(data.data);
-        } else {
-          router.replace('/login');
-        }
-      })
-      .catch(() => router.replace('/login'));
-  }, [setUser, router]);
+    if (!user) {
+      fetch('/api/auth/me')
+        .then(r => r.json())
+        .then(data => {
+          if (data.success && data.data) {
+            setUser(data.data);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [user, setUser]);
 
   useEffect(() => {
     const stored = localStorage.getItem('theme');
     if (stored) setTheme(stored as 'light' | 'dark');
   }, [setTheme]);
-
-  if (isLoading || !user) {
-    return (
-      <div className="flex h-screen items-center justify-center" style={{background: 'var(--gradient-background)'}}>
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-[var(--primary)] border-t-transparent" />
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen" style={{background: 'var(--gradient-background)'}}>

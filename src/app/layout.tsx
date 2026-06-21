@@ -30,6 +30,12 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <head>
+        {/*
+         * Шрифты Geist загружаются через next/font локально (/_next/static/media/).
+         * Preconnect к Google Fonts не нужен — шрифты не с их CDN.
+         * Preload-ссылки не добавляем вручную: next/font автоматически генерирует
+         * правильные <link rel="preload"> с хешированными именами файлов при сборке.
+         */}
         <script
           dangerouslySetInnerHTML={{
             __html: `
