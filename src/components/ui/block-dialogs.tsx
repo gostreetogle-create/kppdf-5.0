@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { X, Plus, Trash2, Bold, Italic, Underline, Columns } from 'lucide-react';
+import DOMPurify from 'dompurify';
 import type { DocBlock, DocTextColumn, DocBlockSettings } from '@/types';
 
 /* ─────────────────────────────────────
@@ -28,7 +29,7 @@ export function TextBlockDialog({ block, onSave, onClose }: TextBlockDialogProps
     columns.forEach(c => {
       const el = colRefs.current.get(c.id);
       if (el && el.innerHTML !== c.content) {
-        el.innerHTML = c.content || '';
+        el.innerHTML = DOMPurify.sanitize(c.content || '');
       }
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps

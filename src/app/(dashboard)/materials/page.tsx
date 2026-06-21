@@ -1,7 +1,13 @@
+import type { Metadata } from 'next';
 import { prisma } from '@/lib/db';
 import { requireAuthPage } from '@/lib/auth-page';
 import { MaterialsClient } from './client';
 import { MATERIAL_LIST_QUERY_ARGS } from '@/lib/types/server-pages';
+
+export const metadata: Metadata = {
+  title: 'Материалы',
+  description: 'Справочник материалов и сырья для производства',
+};
 
 export default async function MaterialsPage() {
   await requireAuthPage();

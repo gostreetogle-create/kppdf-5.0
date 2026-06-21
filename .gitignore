@@ -49,7 +49,16 @@ mimo.exe
 /agent-queue.json
 /login_test.js
 
+# test reports
+/test-results/
+/playwright-report/
+
+# generated files
+COMMIT_MSG.txt
+отчет.txt
+
 # SQLite dev database (replaced by PostgreSQL in v3.4)
 /dev.db
 *.sqlite
 *.sqlite3
+.aider*

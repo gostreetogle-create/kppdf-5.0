@@ -1,17 +1,20 @@
 openapi: 3.0.3
 info:
   title: KPPDF CRM API
-  description: REST API для системы управления коммерческими предложениями KPPDF CRM
+  description: REST API для системы управления коммерческими предложениями и производством
   version: 1.0.0
 
 servers:
   - url: http://localhost:3000/api
-    description: Development server
+    description: Development
 
 security:
   - BearerAuth: []
 
 paths:
+  # ============================================================
+  # Auth
+  # ============================================================
   /auth/login:
     post:
       summary: Вход в систему
@@ -25,10 +28,8 @@ paths:
               type: object
               required: [username, password]
               properties:
-                username:
-                  type: string
-                password:
-                  type: string
+                username: { type: string }
+                password: { type: string }
       responses:
         '200':
           description: Успешный вход
@@ -37,25 +38,17 @@ paths:
               schema:
                 type: object
                 properties:
-                  success:
-                    type: boolean
+                  success: { type: boolean }
                   data:
                     type: object
                     properties:
-                      user:
-                        $ref: '#/components/schemas/User'
-                      accessToken:
-                        type: string
-          headers:
-            Set-Cookie:
-              description: JWT cookies (accessToken, refreshToken)
-
+                      user: { $ref: '#/components/schemas/User' }
+                      accessToken: { type: string }
     delete:
       summary: Выход из системы
       tags: [Auth]
       responses:
-        '200':
-          description: Cookies удалены
+        '200': { description: Cookies удалены }
 
   /auth/refresh:
     post:
@@ -63,1452 +56,7 @@ paths:
       tags: [Auth]
       security: []
       responses:
-        '200':
-          description: Новый accessToken
-
-  /seed:
-    post:
-      summary: Seed данных (только bootstrap)
-      tags: [System]
-      security: []
-      responses:
-        '200':
-          description: Данные созданы
-
-  /clients:
-    get:
-      summary: Список клиентов
-      tags: [Clients]
-      parameters:
-        - $ref: '#/components/parameters/PageParam'
-        - $ref: '#/components/parameters/LimitParam'
-        - $ref: '#/components/parameters/SearchParam'
-        - name: type
-          in: query
-          schema:
-            type: string
-            enum: [individual, legal]
-      responses:
-        '200':
-          description: Список клиентов
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                  data:
-                    type: object
-                    properties:
-                      items:
-                        type: array
-                        items:
-                          $ref: '#/components/schemas/Client'
-                      total:
-                        type: integer
-
-    post:
-      summary: Создать клиента
-      tags: [Clients]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ClientCreate'
-      responses:
-        '201':
-          description: Клиент создан
-
-  /clients/{id}:
-    get:
-      summary: Клиент по ID
-      tags: [Clients]
-      parameters:
-        - $ref: '#/components/parameters/IdParam'
-      responses:
-        '200':
-          description: Клиент
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                  data:
-                    $ref: '#/components/schemas/Client'
-
-    put:
-      summary: Обновить клиента
-      tags: [Clients]
-      parameters:
-        - $ref: '#/components/parameters/IdParam'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ClientUpdate'
-      responses:
-        '200':
-          description: Клиент обновлён
-
-    delete:
-      summary: Удалить клиента
-      tags: [Clients]
-      parameters:
-        - $ref: '#/components/parameters/IdParam'
-      responses:
-        '200':
-          description: Клиент удалён
-
-  /organizations:
-    get:
-      summary: Список организаций
-      tags: [Organizations]
-      parameters:
-        - $ref: '#/components/parameters/PageParam'
-        - $ref: '#/components/parameters/LimitParam'
-        - $ref: '#/components/parameters/SearchParam'
-      responses:
-        '200':
-          description: Список организаций
-
-    post:
-      summary: Создать организацию
-      tags: [Organizations]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                name:
-                  type: string
-                inn:
-                  type: string
-                kpp:
-                  type: string
-      responses:
-        '201':
-          description: Организация создана
-
-  /organizations/{id}:
-    get:
-      summary: Организация по ID
-      tags: [Organizations]
-      parameters:
-        - $ref: '#/components/parameters/IdParam'
-      responses:
-        '200':
-          description: Организация
-
-    put:
-      summary: Обновить организацию
-      tags: [Organizations]
-      parameters:
-        - $ref: '#/components/parameters/IdParam'
-      responses:
-        '200':
-          description: Организация обновлена
-
-    delete:
-      summary: Удалить организацию
-      tags: [Organizations]
-      parameters:
-        - $ref: '#/components/parameters/IdParam'
-      responses:
-        '200':
-          description: Организация удалена
-
-  /products:
-    get:
-      summary: Список товаров
-      tags: [Products]
-      parameters:
-        - $ref: '#/components/parameters/PageParam'
-        - $ref: '#/components/parameters/LimitParam'
-        - $ref: '#/components/parameters/SearchParam'
-        - name: categoryId
-          in: query
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Список товаров
-
-    post:
-      summary: Создать товар
-      tags: [Products]
-      responses:
-        '201':
-          description: Товар создан
-
-  /products/{id}:
-    get:
-      summary: Товар по ID
-      tags: [Products]
-      parameters:
-        - $ref: '#/components/parameters/IdParam'
-      responses:
-        '200':
-          description: Товар
-
-    put:
-      summary: Обновить товар
-      tags: [Products]
-      parameters:
-        - $ref: '#/components/parameters/IdParam'
-      responses:
-        '200':
-          description: Товар обновлён
-
-    delete:
-      summary: Удалить товар
-      tags: [Products]
-      parameters:
-        - $ref: '#/components/parameters/IdParam'
-      responses:
-        '200':
-          description: Товар удалён
-
-  /proposals:
-    get:
-      summary: Список коммерческих предложений
-      tags: [Proposals]
-      parameters:
-        - $ref: '#/components/parameters/PageParam'
-        - $ref: '#/components/parameters/LimitParam'
-        - $ref: '#/components/parameters/SearchParam'
-        - name: status
-          in: query
-          schema:
-            type: string
-            enum: [draft, sent, accepted, rejected, paid, converted]
-      responses:
-        '200':
-          description: Список КП
-
-    post:
-      summary: Создать КП
-      tags: [Proposals]
-      responses:
-        '201':
-          description: КП создано
-
-  /proposals/{id}:
-    get:
-      summary: КП по ID
-      tags: [Proposals]
-      parameters:
-        - $ref: '#/components/parameters/IdParam'
-      responses:
-        '200':
-          description: КП
-
-    put:
-      summary: Обновить КП
-      tags: [Proposals]
-      parameters:
-        - $ref: '#/components/parameters/IdParam'
-      responses:
-        '200':
-          description: КП обновлено
-
-    patch:
-      summary: Изменить статус КП
-      tags: [Proposals]
-      parameters:
-        - $ref: '#/components/parameters/IdParam'
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                status:
-                  type: string
-                  enum: [draft, sent, accepted, rejected, paid, converted]
-      responses:
-        '200':
-          description: Статус обновлён
-
-    delete:
-      summary: Удалить КП
-      tags: [Proposals]
-      parameters:
-        - $ref: '#/components/parameters/IdParam'
-      responses:
-        '200':
-          description: КП удалено
-
-  /proposals/{id}/versions:
-    post:
-      summary: Создать новую версию КП
-      tags: [Proposals]
-      parameters:
-        - $ref: '#/components/parameters/IdParam'
-      responses:
-        '201':
-          description: Новая версия создана
-
-  /proposals/{id}/convert:
-    post:
-      summary: Конвертировать КП в договор
-      tags: [Proposals]
-      parameters:
-        - $ref: '#/components/parameters/IdParam'
-      responses:
-        '200':
-          description: Договор создан
-
-  /shipments:
-    get:
-      summary: Список отгрузок
-      tags: [Warehouse]
-      responses:
-        '200':
-          description: Список отгрузок
-    post:
-      summary: Создать отгрузку
-      tags: [Warehouse]
-      responses:
-        '201':
-          description: Отгрузка создана
-
-  /shipments/{id}:
-    get:
-      summary: Отгрузка по ID
-      tags: [Warehouse]
-      parameters:
-        - $ref: '#/components/parameters/IdParam'
-      responses:
-        '200':
-          description: Отгрузка
-    put:
-      summary: Обновить отгрузку
-      tags: [Warehouse]
-      parameters:
-        - $ref: '#/components/parameters/IdParam'
-      responses:
-        '200':
-          description: Отгрузка обновлена
-    delete:
-      summary: Удалить отгрузку
-      tags: [Warehouse]
-      parameters:
-        - $ref: '#/components/parameters/IdParam'
-      responses:
-        '200':
-          description: Отгрузка удалена
-
-  /rpp-entries:
-    get:
-      summary: Список РПП записей
-      tags: [Admin]
-      responses:
-        '200':
-          description: Список записей
-    post:
-      summary: Создать РПП запись
-      tags: [Admin]
-      responses:
-        '201':
-          description: Запись создана
-
-  /rpp-entries/{id}:
-    get:
-      summary: РПП запись по ID
-      tags: [Admin]
-      parameters:
-        - $ref: '#/components/parameters/IdParam'
-      responses:
-        '200':
-          description: Запись
-    put:
-      summary: Обновить РПП запись
-      tags: [Admin]
-      parameters:
-        - $ref: '#/components/parameters/IdParam'
-      responses:
-        '200':
-          description: Запись обновлена
-    delete:
-      summary: Удалить РПП запись
-      tags: [Admin]
-      parameters:
-        - $ref: '#/components/parameters/IdParam'
-      responses:
-        '200':
-          description: Запись удалена
-
-  /table-templates:
-    get:
-      summary: Список шаблонов таблиц
-      tags: [Admin]
-      responses:
-        '200':
-          description: Список шаблонов
-    post:
-      summary: Создать шаблон таблицы
-      tags: [Admin]
-      responses:
-        '201':
-          description: Шаблон создан
-
-  /table-templates/{id}:
-    get:
-      summary: Шаблон таблицы по ID
-      tags: [Admin]
-      parameters:
-        - $ref: '#/components/parameters/IdParam'
-      responses:
-        '200':
-          description: Шаблон
-    put:
-      summary: Обновить шаблон таблицы
-      tags: [Admin]
-      parameters:
-        - $ref: '#/components/parameters/IdParam'
-      responses:
-        '200':
-          description: Шаблон обновлён
-    delete:
-      summary: Удалить шаблон таблицы
-      tags: [Admin]
-      parameters:
-        - $ref: '#/components/parameters/IdParam'
-      responses:
-        '200':
-          description: Шаблон удалён
-
-  /document-templates/{id}:
-    get:
-      summary: Шаблон документа по ID
-      tags: [Admin]
-      parameters:
-        - $ref: '#/components/parameters/IdParam'
-      responses:
-        '200':
-          description: Шаблон
-    put:
-      summary: Обновить шаблон документа
-      tags: [Admin]
-      parameters:
-        - $ref: '#/components/parameters/IdParam'
-      responses:
-        '200':
-          description: Шаблон обновлён
-    delete:
-      summary: Удалить шаблон документа
-      tags: [Admin]
-      parameters:
-        - $ref: '#/components/parameters/IdParam'
-      responses:
-        '200':
-          description: Шаблон удалён
-
-  /document-templates/{id}/clone:
-    post:
-      summary: Клонировать шаблон документа
-      tags: [Admin]
-      parameters:
-        - $ref: '#/components/parameters/IdParam'
-      responses:
-        '201':
-          description: Шаблон склонирован
-
-  /doc-types:
-    get:
-      summary: Список типов документов
-      tags: [Admin]
-      responses:
-        '200':
-          description: Список типов
-    post:
-      summary: Создать тип документа
-      tags: [Admin]
-      responses:
-        '201':
-          description: Тип создан
-
-  /doc-types/{id}:
-    get:
-      summary: Тип документа по ID
-      tags: [Admin]
-      parameters:
-        - $ref: '#/components/parameters/IdParam'
-      responses:
-        '200':
-          description: Тип
-    put:
-      summary: Обновить тип документа
-      tags: [Admin]
-      parameters:
-        - $ref: '#/components/parameters/IdParam'
-      responses:
-        '200':
-          description: Тип обновлён
-    delete:
-      summary: Удалить тип документа
-      tags: [Admin]
-      parameters:
-        - $ref: '#/components/parameters/IdParam'
-      responses:
-        '200':
-          description: Тип удалён
-
-  /inventor-files:
-    get:
-      summary: Список файлов изобретателя
-      tags: [Admin]
-      responses:
-        '200':
-          description: Список файлов
-    post:
-      summary: Загрузить файл изобретателя
-      tags: [Admin]
-      responses:
-        '201':
-          description: Файл загружен
-
-  /inventor-files/{id}:
-    get:
-      summary: Файл изобретателя по ID
-      tags: [Admin]
-      parameters:
-        - $ref: '#/components/parameters/IdParam'
-      responses:
-        '200':
-          description: Файл
-    put:
-      summary: Обновить файл изобретателя
-      tags: [Admin]
-      parameters:
-        - $ref: '#/components/parameters/IdParam'
-      responses:
-        '200':
-          description: Файл обновлён
-    delete:
-      summary: Удалить файл изобретателя
-      tags: [Admin]
-      parameters:
-        - $ref: '#/components/parameters/IdParam'
-      responses:
-        '200':
-          description: Файл удалён
-
-  /upload:
-    post:
-      summary: Загрузить файл
-      tags: [System]
-      responses:
-        '200':
-          description: Файл загружен
-
-  /order-history:
-    get:
-      summary: История изменений заказа
-      tags: [Production]
-      parameters:
-        - name: orderId
-          in: query
-          schema:
-            type: string
-      responses:
-        '200':
-          description: История
-
-  /my-tasks:
-    get:
-      summary: Задачи текущего пользователя
-      tags: [Production]
-      responses:
-        '200':
-          description: Список задач
-
-  /procurement-needs:
-    get:
-      summary: Потребности в закупках
-      tags: [Warehouse]
-      responses:
-        '200':
-          description: Список потребностей
-
-  /contracts:
-    get:
-      summary: Список договоров
-      tags: [Contracts]
-      parameters:
-        - $ref: '#/components/parameters/PageParam'
-        - $ref: '#/components/parameters/LimitParam'
-        - $ref: '#/components/parameters/SearchParam'
-        - name: status
-          in: query
-          schema:
-            type: string
-            enum: [draft, active, completed, cancelled]
-      responses:
-        '200':
-          description: Список договоров
-
-    post:
-      summary: Создать договор
-      tags: [Contracts]
-      responses:
-        '201':
-          description: Договор создан
-
-  /contracts/{id}:
-    get:
-      summary: Договор по ID
-      tags: [Contracts]
-      parameters:
-        - $ref: '#/components/parameters/IdParam'
-      responses:
-        '200':
-          description: Договор
-
-    put:
-      summary: Обновить договор
-      tags: [Contracts]
-      parameters:
-        - $ref: '#/components/parameters/IdParam'
-      responses:
-        '200':
-          description: Договор обновлён
-
-    patch:
-      summary: Изменить статус договора
-      tags: [Contracts]
-      parameters:
-        - $ref: '#/components/parameters/IdParam'
-      responses:
-        '200':
-          description: Статус обновлён
-
-    delete:
-      summary: Удалить договор
-      tags: [Contracts]
-      parameters:
-        - $ref: '#/components/parameters/IdParam'
-      responses:
-        '200':
-          description: Договор удалён
-
-  /contracts/{id}/convert-to-production:
-    post:
-      summary: Конвертировать договор в производственный заказ
-      tags: [Contracts]
-      parameters:
-        - $ref: '#/components/parameters/IdParam'
-      responses:
-        '200':
-          description: Заказ создан
-
-  /products/categories:
-    get:
-      summary: Список категорий товаров
-      tags: [Products]
-      responses:
-        '200':
-          description: Список категорий
-    post:
-      summary: Создать категорию товаров
-      tags: [Products]
-      responses:
-        '201':
-          description: Категория создана
-
-  /product-modules:
-    get:
-      summary: Список модулей товаров
-      tags: [Products]
-      responses:
-        '200':
-          description: Список модулей
-    post:
-      summary: Создать модуль товара
-      tags: [Products]
-      responses:
-        '201':
-          description: Модуль создан
-
-  /product-modules/{id}:
-    get:
-      summary: Модуль товара по ID
-      tags: [Products]
-      parameters:
-        - $ref: '#/components/parameters/IdParam'
-      responses:
-        '200':
-          description: Модуль
-    put:
-      summary: Обновить модуль товара
-      tags: [Products]
-      parameters:
-        - $ref: '#/components/parameters/IdParam'
-      responses:
-        '200':
-          description: Модуль обновлён
-    delete:
-      summary: Удалить модуль товара
-      tags: [Products]
-      parameters:
-        - $ref: '#/components/parameters/IdParam'
-      responses:
-        '200':
-          description: Модуль удалён
-
-  /production-orders:
-    get:
-      summary: Список производственных заказов
-      tags: [Production]
-      parameters:
-        - $ref: '#/components/parameters/PageParam'
-        - $ref: '#/components/parameters/LimitParam'
-        - name: status
-          in: query
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Список заказов
-
-    post:
-      summary: Создать производственный заказ
-      tags: [Production]
-      responses:
-        '201':
-          description: Заказ создан
-
-  /production-orders/{id}:
-    get:
-      summary: Заказ по ID
-      tags: [Production]
-      parameters:
-        - $ref: '#/components/parameters/IdParam'
-      responses:
-        '200':
-          description: Заказ
-
-    put:
-      summary: Обновить заказ
-      tags: [Production]
-      parameters:
-        - $ref: '#/components/parameters/IdParam'
-      responses:
-        '200':
-          description: Заказ обновлён
-
-  /production-orders/{id}/status:
-    patch:
-      summary: Изменить статус заказа
-      tags: [Production]
-      parameters:
-        - $ref: '#/components/parameters/IdParam'
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                status:
-                  type: string
-                  enum: [planned, in_progress, manufacturing, painting, shipping, completed, cancelled]
-      responses:
-        '200':
-          description: Статус обновлён
-
-  /order-tasks:
-    get:
-      summary: Список задач заказа
-      tags: [Production]
-      parameters:
-        - name: productionOrderId
-          in: query
-          schema:
-            type: string
-        - name: status
-          in: query
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Список задач
-    post:
-      summary: Создать задачу заказа
-      tags: [Production]
-      responses:
-        '201':
-          description: Задача создана
-
-  /order-tasks/{id}:
-    get:
-      summary: Задача по ID
-      tags: [Production]
-      parameters:
-        - $ref: '#/components/parameters/IdParam'
-      responses:
-        '200':
-          description: Задача
-    put:
-      summary: Обновить задачу
-      tags: [Production]
-      parameters:
-        - $ref: '#/components/parameters/IdParam'
-      responses:
-        '200':
-          description: Задача обновлена
-    delete:
-      summary: Удалить задачу
-      tags: [Production]
-      parameters:
-        - $ref: '#/components/parameters/IdParam'
-      responses:
-        '200':
-          description: Задача удалена
-
-  /order-tasks/{id}/assign:
-    patch:
-      summary: Назначить исполнителя на задачу
-      tags: [Production]
-      parameters:
-        - $ref: '#/components/parameters/IdParam'
-      responses:
-        '200':
-          description: Исполнитель назначен
-
-  /order-tasks/{id}/status:
-    patch:
-      summary: Изменить статус задачи
-      tags: [Production]
-      parameters:
-        - $ref: '#/components/parameters/IdParam'
-      responses:
-        '200':
-          description: Статус обновлён
-
-  /work-types:
-    get:
-      summary: Список видов работ
-      tags: [Production]
-      responses:
-        '200':
-          description: Список видов работ
-    post:
-      summary: Создать вид работ
-      tags: [Production]
-      responses:
-        '201':
-          description: Вид работ создан
-
-  /work-types/{id}:
-    get:
-      summary: Вид работ по ID
-      tags: [Production]
-      parameters:
-        - $ref: '#/components/parameters/IdParam'
-      responses:
-        '200':
-          description: Вид работ
-    put:
-      summary: Обновить вид работ
-      tags: [Production]
-      parameters:
-        - $ref: '#/components/parameters/IdParam'
-      responses:
-        '200':
-          description: Вид работ обновлён
-    delete:
-      summary: Удалить вид работ
-      tags: [Production]
-      parameters:
-        - $ref: '#/components/parameters/IdParam'
-      responses:
-        '200':
-          description: Вид работ удалён
-
-  /work-centers:
-    get:
-      summary: Список рабочих центров
-      tags: [Production]
-      responses:
-        '200':
-          description: Список рабочих центров
-    post:
-      summary: Создать рабочий центр
-      tags: [Production]
-      responses:
-        '201':
-          description: Рабочий центр создан
-
-  /work-centers/{id}:
-    get:
-      summary: Рабочий центр по ID
-      tags: [Production]
-      parameters:
-        - $ref: '#/components/parameters/IdParam'
-      responses:
-        '200':
-          description: Рабочий центр
-    put:
-      summary: Обновить рабочий центр
-      tags: [Production]
-      parameters:
-        - $ref: '#/components/parameters/IdParam'
-      responses:
-        '200':
-          description: Рабочий центр обновлён
-    delete:
-      summary: Удалить рабочий центр
-      tags: [Production]
-      parameters:
-        - $ref: '#/components/parameters/IdParam'
-      responses:
-        '200':
-          description: Рабочий центр удалён
-
-  /workers:
-    get:
-      summary: Список работников
-      tags: [Production]
-      responses:
-        '200':
-          description: Список работников
-    post:
-      summary: Создать работника
-      tags: [Production]
-      responses:
-        '201':
-          description: Работник создан
-
-  /workers/{id}:
-    get:
-      summary: Работник по ID
-      tags: [Production]
-      parameters:
-        - $ref: '#/components/parameters/IdParam'
-      responses:
-        '200':
-          description: Работник
-    put:
-      summary: Обновить работника
-      tags: [Production]
-      parameters:
-        - $ref: '#/components/parameters/IdParam'
-      responses:
-        '200':
-          description: Работник обновлён
-    delete:
-      summary: Удалить работника
-      tags: [Production]
-      parameters:
-        - $ref: '#/components/parameters/IdParam'
-      responses:
-        '200':
-          description: Работник удалён
-
-  /warehouse:
-    get:
-      summary: Список складов
-      tags: [Warehouse]
-      responses:
-        '200':
-          description: Список складов
-    post:
-      summary: Создать склад
-      tags: [Warehouse]
-      responses:
-        '201':
-          description: Склад создан
-
-  /warehouse/{id}:
-    get:
-      summary: Склад по ID
-      tags: [Warehouse]
-      parameters:
-        - $ref: '#/components/parameters/IdParam'
-      responses:
-        '200':
-          description: Склад
-    put:
-      summary: Обновить склад
-      tags: [Warehouse]
-      parameters:
-        - $ref: '#/components/parameters/IdParam'
-      responses:
-        '200':
-          description: Склад обновлён
-    delete:
-      summary: Удалить склад
-      tags: [Warehouse]
-      parameters:
-        - $ref: '#/components/parameters/IdParam'
-      responses:
-        '200':
-          description: Склад удалён
-
-  /storage-items:
-    get:
-      summary: Остатки на складе
-      tags: [Warehouse]
-      parameters:
-        - name: warehouseId
-          in: query
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Остатки
-    post:
-      summary: Создать позицию на складе
-      tags: [Warehouse]
-      responses:
-        '201':
-          description: Позиция создана
-
-  /storage-items/{id}:
-    get:
-      summary: Позиция на складе по ID
-      tags: [Warehouse]
-      parameters:
-        - $ref: '#/components/parameters/IdParam'
-      responses:
-        '200':
-          description: Позиция
-    put:
-      summary: Обновить позицию на складе
-      tags: [Warehouse]
-      parameters:
-        - $ref: '#/components/parameters/IdParam'
-      responses:
-        '200':
-          description: Позиция обновлена
-    delete:
-      summary: Удалить позицию со склада
-      tags: [Warehouse]
-      parameters:
-        - $ref: '#/components/parameters/IdParam'
-      responses:
-        '200':
-          description: Позиция удалена
-
-  /inventory-movements:
-    get:
-      summary: История движения товаров
-      tags: [Warehouse]
-      parameters:
-        - name: storageItemId
-          in: query
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Движения
-
-  /purchase-requests:
-    get:
-      summary: Список заявок на закупку
-      tags: [Warehouse]
-      responses:
-        '200':
-          description: Список заявок
-    post:
-      summary: Создать заявку на закупку
-      tags: [Warehouse]
-      responses:
-        '201':
-          description: Заявка создана
-
-  /purchase-requests/{id}:
-    get:
-      summary: Заявка на закупку по ID
-      tags: [Warehouse]
-      parameters:
-        - $ref: '#/components/parameters/IdParam'
-      responses:
-        '200':
-          description: Заявка
-    put:
-      summary: Обновить заявку на закупку
-      tags: [Warehouse]
-      parameters:
-        - $ref: '#/components/parameters/IdParam'
-      responses:
-        '200':
-          description: Заявка обновлена
-    delete:
-      summary: Удалить заявку на закупку
-      tags: [Warehouse]
-      parameters:
-        - $ref: '#/components/parameters/IdParam'
-      responses:
-        '200':
-          description: Заявка удалена
-
-  /supplier-orders:
-    get:
-      summary: Список заказов поставщикам
-      tags: [Warehouse]
-      responses:
-        '200':
-          description: Список заказов
-    post:
-      summary: Создать заказ поставщику
-      tags: [Warehouse]
-      responses:
-        '201':
-          description: Заказ создан
-
-  /supplier-orders/{id}:
-    get:
-      summary: Заказ поставщику по ID
-      tags: [Warehouse]
-      parameters:
-        - $ref: '#/components/parameters/IdParam'
-      responses:
-        '200':
-          description: Заказ
-    put:
-      summary: Обновить заказ поставщику
-      tags: [Warehouse]
-      parameters:
-        - $ref: '#/components/parameters/IdParam'
-      responses:
-        '200':
-          description: Заказ обновлён
-    delete:
-      summary: Удалить заказ поставщику
-      tags: [Warehouse]
-      parameters:
-        - $ref: '#/components/parameters/IdParam'
-      responses:
-        '200':
-          description: Заказ удалён
-    patch:
-      summary: Изменить статус заказа поставщику
-      tags: [Warehouse]
-      parameters:
-        - $ref: '#/components/parameters/IdParam'
-      responses:
-        '200':
-          description: Статус обновлён
-
-  /incoming-invoices:
-    get:
-      summary: Список входящих счетов
-      tags: [Finance]
-      responses:
-        '200':
-          description: Список счетов
-    post:
-      summary: Создать входящий счёт
-      tags: [Finance]
-      responses:
-        '201':
-          description: Счёт создан
-
-  /incoming-invoices/{id}:
-    get:
-      summary: Входящий счёт по ID
-      tags: [Finance]
-      parameters:
-        - $ref: '#/components/parameters/IdParam'
-      responses:
-        '200':
-          description: Счёт
-    put:
-      summary: Обновить входящий счёт
-      tags: [Finance]
-      parameters:
-        - $ref: '#/components/parameters/IdParam'
-      responses:
-        '200':
-          description: Счёт обновлён
-    delete:
-      summary: Удалить входящий счёт
-      tags: [Finance]
-      parameters:
-        - $ref: '#/components/parameters/IdParam'
-      responses:
-        '200':
-          description: Счёт удалён
-    patch:
-      summary: Изменить статус входящего счёта
-      tags: [Finance]
-      parameters:
-        - $ref: '#/components/parameters/IdParam'
-      responses:
-        '200':
-          description: Статус обновлён
-
-  /order-closings:
-    get:
-      summary: Список закрытий заказов
-      tags: [Finance]
-      responses:
-        '200':
-          description: Список закрытий
-    post:
-      summary: Создать закрытие заказа
-      tags: [Finance]
-      responses:
-        '201':
-          description: Закрытие создано
-
-  /order-closings/{id}:
-    get:
-      summary: Закрытие заказа по ID
-      tags: [Finance]
-      parameters:
-        - $ref: '#/components/parameters/IdParam'
-      responses:
-        '200':
-          description: Закрытие
-    put:
-      summary: Обновить закрытие заказа
-      tags: [Finance]
-      parameters:
-        - $ref: '#/components/parameters/IdParam'
-      responses:
-        '200':
-          description: Закрытие обновлено
-    delete:
-      summary: Удалить закрытие заказа
-      tags: [Finance]
-      parameters:
-        - $ref: '#/components/parameters/IdParam'
-      responses:
-        '200':
-          description: Закрытие удалено
-
-  /reconciliation-acts:
-    get:
-      summary: Список актов сверки
-      tags: [Finance]
-      responses:
-        '200':
-          description: Список актов
-    post:
-      summary: Создать акт сверки
-      tags: [Finance]
-      responses:
-        '201':
-          description: Акт создан
-
-  /reconciliation-acts/{id}:
-    get:
-      summary: Акт сверки по ID
-      tags: [Finance]
-      parameters:
-        - $ref: '#/components/parameters/IdParam'
-      responses:
-        '200':
-          description: Акт
-    put:
-      summary: Обновить акт сверки
-      tags: [Finance]
-      parameters:
-        - $ref: '#/components/parameters/IdParam'
-      responses:
-        '200':
-          description: Акт обновлён
-    delete:
-      summary: Удалить акт сверки
-      tags: [Finance]
-      parameters:
-        - $ref: '#/components/parameters/IdParam'
-      responses:
-        '200':
-          description: Акт удалён
-
-  /financial-reports:
-    get:
-      summary: Финансовые отчёты
-      tags: [Finance]
-      responses:
-        '200':
-          description: Отчёты
-
-  /dashboard:
-    get:
-      summary: Данные для дашборда
-      tags: [Dashboard]
-      responses:
-        '200':
-          description: Агрегированные данные
-
-  /users:
-    get:
-      summary: Список пользователей
-      tags: [Admin]
-      responses:
-        '200':
-          description: Список пользователей
-    post:
-      summary: Создать пользователя
-      tags: [Admin]
-      responses:
-        '201':
-          description: Пользователь создан
-
-  /users/{id}:
-    get:
-      summary: Пользователь по ID
-      tags: [Admin]
-      parameters:
-        - $ref: '#/components/parameters/IdParam'
-      responses:
-        '200':
-          description: Пользователь
-    put:
-      summary: Обновить пользователя
-      tags: [Admin]
-      parameters:
-        - $ref: '#/components/parameters/IdParam'
-      responses:
-        '200':
-          description: Пользователь обновлён
-    delete:
-      summary: Удалить пользователя
-      tags: [Admin]
-      parameters:
-        - $ref: '#/components/parameters/IdParam'
-      responses:
-        '200':
-          description: Пользователь удалён
-    patch:
-      summary: Частично обновить пользователя
-      tags: [Admin]
-      parameters:
-        - $ref: '#/components/parameters/IdParam'
-      responses:
-        '200':
-          description: Пользователь обновлён
-
-  /status-workflows:
-    get:
-      summary: Правила переходов статусов
-      tags: [Admin]
-      responses:
-        '200':
-          description: Правила
-    post:
-      summary: Создать правило перехода
-      tags: [Admin]
-      responses:
-        '201':
-          description: Правило создано
-
-  /status-workflows/{id}:
-    get:
-      summary: Правило по ID
-      tags: [Admin]
-      parameters:
-        - $ref: '#/components/parameters/IdParam'
-      responses:
-        '200':
-          description: Правило
-    put:
-      summary: Обновить правило
-      tags: [Admin]
-      parameters:
-        - $ref: '#/components/parameters/IdParam'
-      responses:
-        '200':
-          description: Правило обновлено
-    delete:
-      summary: Удалить правило
-      tags: [Admin]
-      parameters:
-        - $ref: '#/components/parameters/IdParam'
-      responses:
-        '200':
-          description: Правило удалено
-
-  /tenders:
-    get:
-      summary: Список тендеров
-      tags: [Admin]
-      responses:
-        '200':
-          description: Список тендеров
-    post:
-      summary: Создать тендер
-      tags: [Admin]
-      responses:
-        '201':
-          description: Тендер создан
-
-  /tenders/{id}:
-    get:
-      summary: Тендер по ID
-      tags: [Admin]
-      parameters:
-        - $ref: '#/components/parameters/IdParam'
-      responses:
-        '200':
-          description: Тендер
-    put:
-      summary: Обновить тендер
-      tags: [Admin]
-      parameters:
-        - $ref: '#/components/parameters/IdParam'
-      responses:
-        '200':
-          description: Тендер обновлён
-    delete:
-      summary: Удалить тендер
-      tags: [Admin]
-      parameters:
-        - $ref: '#/components/parameters/IdParam'
-      responses:
-        '200':
-          description: Тендер удалён
-
-  /certificates:
-    get:
-      summary: Список сертификатов
-      tags: [Admin]
-      responses:
-        '200':
-          description: Список сертификатов
-    post:
-      summary: Создать сертификат
-      tags: [Admin]
-      responses:
-        '201':
-          description: Сертификат создан
-
-  /certificates/{id}:
-    get:
-      summary: Сертификат по ID
-      tags: [Admin]
-      parameters:
-        - $ref: '#/components/parameters/IdParam'
-      responses:
-        '200':
-          description: Сертификат
-    put:
-      summary: Обновить сертификат
-      tags: [Admin]
-      parameters:
-        - $ref: '#/components/parameters/IdParam'
-      responses:
-        '200':
-          description: Сертификат обновлён
-    delete:
-      summary: Удалить сертификат
-      tags: [Admin]
-      parameters:
-        - $ref: '#/components/parameters/IdParam'
-      responses:
-        '200':
-          description: Сертификат удалён
+        '200': { description: Новый accessToken }
 
   /auth/me:
     get:
@@ -1522,94 +70,38 @@ paths:
               schema:
                 type: object
                 properties:
-                  success:
-                    type: boolean
-                  data:
-                    $ref: '#/components/schemas/User'
+                  success: { type: boolean }
+                  data: { $ref: '#/components/schemas/User' }
 
+  # ============================================================
+  # System
+  # ============================================================
   /health:
     get:
       summary: Health check
       tags: [System]
       security: []
-      responses:
-        '200':
-          description: Сервер работает
+      responses: { '200': { description: OK } }
 
-  /cart:
-    get:
-      summary: Корзина (сессия)
-      tags: [Cart]
-      responses:
-        '200':
-          description: Данные корзины
-
-  /cart/{id}:
-    get:
-      summary: Корзина по ID
-      tags: [Cart]
-      parameters:
-        - $ref: '#/components/parameters/IdParam'
-      responses:
-        '200':
-          description: Корзина
-
-  /cart/{id}/items:
+  /seed:
     post:
-      summary: Добавить товар в корзину
-      tags: [Cart]
-      parameters:
-        - $ref: '#/components/parameters/IdParam'
-      responses:
-        '201':
-          description: Товар добавлен
+      summary: Заполнить тестовыми данными
+      tags: [System]
+      security: []
+      responses: { '200': { description: Данные созданы } }
 
-  /cart/{id}/items/{itemId}:
-    put:
-      summary: Обновить позицию корзины
-      tags: [Cart]
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: itemId
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Позиция обновлена
-
-    delete:
-      summary: Удалить позицию из корзины
-      tags: [Cart]
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: itemId
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Позиция удалена
-
-  /cart/{id}/convert:
+  /upload:
     post:
-      summary: Конвертировать корзину в КП
-      tags: [Cart]
-      parameters:
-        - $ref: '#/components/parameters/IdParam'
-      responses:
-        '200':
-          description: КП создано
+      summary: Загрузить файл
+      tags: [System]
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file: { type: string, format: binary }
+      responses: { '200': { description: Файл загружен } }
 
   /import/cad:
     post:
@@ -1627,17 +119,2092 @@ paths:
                   items:
                     type: object
                     properties:
-                      name:
-                        type: string
-                      sku:
-                        type: string
-                      modules:
-                        type: array
-                        items:
-                          type: object
+                      name: { type: string }
+                      sku: { type: string }
+      responses: { '200': { description: Импорт выполнен } }
+
+  # ============================================================
+  # Organizations
+  # ============================================================
+  /organizations:
+    get:
+      summary: Список организаций
+      tags: [Organizations]
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/SearchParam'
+        - $ref: '#/components/parameters/SortParam'
+        - name: role
+          in: query
+          schema: { type: string }
+          description: Фильтр по роли (client, supplier, partner)
       responses:
         '200':
-          description: Импорт выполнен
+          description: Список организаций
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    type: object
+                    properties:
+                      items:
+                        type: array
+                        items: { $ref: '#/components/schemas/Organization' }
+                      total: { type: integer }
+    post:
+      summary: Создать организацию
+      tags: [Organizations]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/OrganizationCreate' }
+      responses: { '201': { description: Организация создана } }
+
+  /organizations/{id}:
+    get:
+      summary: Организация по ID
+      tags: [Organizations]
+      parameters: [ { $ref: '#/components/parameters/IdParam' } ]
+      responses:
+        '200':
+          description: Организация
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: '#/components/schemas/Organization' }
+    put:
+      summary: Обновить организацию
+      tags: [Organizations]
+      parameters: [ { $ref: '#/components/parameters/IdParam' } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/OrganizationUpdate' }
+      responses: { '200': { description: Организация обновлена } }
+    delete:
+      summary: Удалить организацию
+      tags: [Organizations]
+      parameters: [ { $ref: '#/components/parameters/IdParam' } ]
+      responses: { '200': { description: Организация удалена } }
+
+  /org-roles:
+    get:
+      summary: Список ролей организаций
+      tags: [Organizations]
+      responses:
+        '200': { description: Список ролей }
+
+  /dadata/find-by-inn:
+    post:
+      summary: Поиск организации по ИНН через DaData
+      tags: [Organizations]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [inn]
+              properties:
+                inn: { type: string }
+      responses: { '200': { description: Данные организации } }
+
+  # ============================================================
+  # Persons
+  # ============================================================
+  /persons:
+    get:
+      summary: Список контактных лиц
+      tags: [Persons]
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/SearchParam'
+        - $ref: '#/components/parameters/SortParam'
+      responses:
+        '200':
+          description: Список контактных лиц
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    type: object
+                    properties:
+                      items:
+                        type: array
+                        items: { $ref: '#/components/schemas/Person' }
+                      total: { type: integer }
+    post:
+      summary: Создать контактное лицо
+      tags: [Persons]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PersonCreate' }
+      responses: { '201': { description: Контактное лицо создано } }
+
+  /persons/{id}:
+    get:
+      summary: Контактное лицо по ID
+      tags: [Persons]
+      parameters: [ { $ref: '#/components/parameters/IdParam' } ]
+      responses:
+        '200':
+          description: Контактное лицо
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: '#/components/schemas/Person' }
+    put:
+      summary: Обновить контактное лицо
+      tags: [Persons]
+      parameters: [ { $ref: '#/components/parameters/IdParam' } ]
+      responses: { '200': { description: Обновлено } }
+    delete:
+      summary: Удалить контактное лицо
+      tags: [Persons]
+      parameters: [ { $ref: '#/components/parameters/IdParam' } ]
+      responses: { '200': { description: Удалено } }
+
+  # ============================================================
+  # Products
+  # ============================================================
+  /products:
+    get:
+      summary: Список товаров
+      tags: [Products]
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/SearchParam'
+        - $ref: '#/components/parameters/SortParam'
+        - name: categoryId
+          in: query
+          schema: { type: string }
+      responses:
+        '200':
+          description: Список товаров
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    type: object
+                    properties:
+                      items:
+                        type: array
+                        items: { $ref: '#/components/schemas/Product' }
+                      total: { type: integer }
+    post:
+      summary: Создать товар
+      tags: [Products]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ProductCreate' }
+      responses: { '201': { description: Товар создан } }
+
+  /products/{id}:
+    get:
+      summary: Товар по ID
+      tags: [Products]
+      parameters: [ { $ref: '#/components/parameters/IdParam' } ]
+      responses:
+        '200':
+          description: Товар
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: '#/components/schemas/Product' }
+    put:
+      summary: Обновить товар
+      tags: [Products]
+      parameters: [ { $ref: '#/components/parameters/IdParam' } ]
+      responses: { '200': { description: Товар обновлён } }
+    delete:
+      summary: Удалить товар
+      tags: [Products]
+      parameters: [ { $ref: '#/components/parameters/IdParam' } ]
+      responses: { '200': { description: Товар удалён } }
+
+  /products/categories:
+    get:
+      summary: Список категорий товаров
+      tags: [Products]
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: Список категорий
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    type: object
+                    properties:
+                      items:
+                        type: array
+                        items: { $ref: '#/components/schemas/ProductCategory' }
+                      total: { type: integer }
+    post:
+      summary: Создать категорию
+      tags: [Products]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string }
+                description: { type: string }
+      responses: { '201': { description: Категория создана } }
+
+  # ============================================================
+  # Product Modules
+  # ============================================================
+  /product-modules:
+    get:
+      summary: Список модулей продуктов
+      tags: [Products]
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: Список модулей
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    type: object
+                    properties:
+                      items:
+                        type: array
+                        items: { $ref: '#/components/schemas/ProductModule' }
+                      total: { type: integer }
+    post:
+      summary: Создать модуль продукта
+      tags: [Products]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ProductModuleCreate' }
+      responses: { '201': { description: Модуль создан } }
+
+  /product-modules/{id}:
+    get:
+      summary: Модуль продукта по ID
+      tags: [Products]
+      parameters: [ { $ref: '#/components/parameters/IdParam' } ]
+      responses:
+        '200':
+          description: Модуль
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: '#/components/schemas/ProductModule' }
+    put:
+      summary: Обновить модуль
+      tags: [Products]
+      parameters: [ { $ref: '#/components/parameters/IdParam' } ]
+      responses: { '200': { description: Модуль обновлён } }
+    delete:
+      summary: Удалить модуль
+      tags: [Products]
+      parameters: [ { $ref: '#/components/parameters/IdParam' } ]
+      responses: { '200': { description: Модуль удалён } }
+
+  # ============================================================
+  # Materials
+  # ============================================================
+  /materials:
+    get:
+      summary: Список материалов
+      tags: [Materials]
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/SearchParam'
+        - $ref: '#/components/parameters/SortParam'
+        - name: categoryId
+          in: query
+          schema: { type: string }
+      responses:
+        '200':
+          description: Список материалов
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    type: object
+                    properties:
+                      items:
+                        type: array
+                        items: { $ref: '#/components/schemas/Material' }
+                      total: { type: integer }
+    post:
+      summary: Создать материал
+      tags: [Materials]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/MaterialCreate' }
+      responses: { '201': { description: Материал создан } }
+
+  /materials/{id}:
+    get:
+      summary: Материал по ID
+      tags: [Materials]
+      parameters: [ { $ref: '#/components/parameters/IdParam' } ]
+      responses:
+        '200':
+          description: Материал
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: '#/components/schemas/Material' }
+    put:
+      summary: Обновить материал
+      tags: [Materials]
+      parameters: [ { $ref: '#/components/parameters/IdParam' } ]
+      responses: { '200': { description: Материал обновлён } }
+    delete:
+      summary: Удалить материал
+      tags: [Materials]
+      parameters: [ { $ref: '#/components/parameters/IdParam' } ]
+      responses: { '200': { description: Материал удалён } }
+
+  /materials/categories:
+    get:
+      summary: Список категорий материалов
+      tags: [Materials]
+      responses:
+        '200':
+          description: Список категорий
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    type: object
+                    properties:
+                      items:
+                        type: array
+                        items: { $ref: '#/components/schemas/MaterialCategory' }
+                      total: { type: integer }
+
+  # ============================================================
+  # Proposals
+  # ============================================================
+  /proposals:
+    get:
+      summary: Список КП
+      tags: [Proposals]
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/SearchParam'
+        - $ref: '#/components/parameters/SortParam'
+        - $ref: '#/components/parameters/StatusParam'
+      responses:
+        '200':
+          description: Список КП
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    type: object
+                    properties:
+                      items:
+                        type: array
+                        items: { $ref: '#/components/schemas/Proposal' }
+                      total: { type: integer }
+    post:
+      summary: Создать КП
+      tags: [Proposals]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ProposalCreate' }
+      responses: { '201': { description: КП создано } }
+
+  /proposals/{id}:
+    get:
+      summary: КП по ID
+      tags: [Proposals]
+      parameters: [ { $ref: '#/components/parameters/IdParam' } ]
+      responses:
+        '200':
+          description: КП
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: '#/components/schemas/Proposal' }
+    put:
+      summary: Обновить КП
+      tags: [Proposals]
+      parameters: [ { $ref: '#/components/parameters/IdParam' } ]
+      responses: { '200': { description: КП обновлено } }
+    patch:
+      summary: Изменить статус КП
+      tags: [Proposals]
+      parameters: [ { $ref: '#/components/parameters/IdParam' } ]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum: [draft, sent, accepted, rejected, paid, converted]
+      responses: { '200': { description: Статус обновлён } }
+    delete:
+      summary: Удалить КП
+      tags: [Proposals]
+      parameters: [ { $ref: '#/components/parameters/IdParam' } ]
+      responses: { '200': { description: КП удалено } }
+
+  /proposals/{id}/versions:
+    post:
+      summary: Создать версию КП
+      tags: [Proposals]
+      parameters: [ { $ref: '#/components/parameters/IdParam' } ]
+      responses: { '201': { description: Версия создана } }
+
+  /proposals/{id}/convert:
+    post:
+      summary: Конвертировать КП в договор
+      tags: [Proposals]
+      parameters: [ { $ref: '#/components/parameters/IdParam' } ]
+      responses: { '200': { description: Договор создан } }
+
+  # ============================================================
+  # Contracts
+  # ============================================================
+  /contracts:
+    get:
+      summary: Список договоров
+      tags: [Contracts]
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/SearchParam'
+        - $ref: '#/components/parameters/SortParam'
+        - $ref: '#/components/parameters/StatusParam'
+      responses:
+        '200':
+          description: Список договоров
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    type: object
+                    properties:
+                      items:
+                        type: array
+                        items: { $ref: '#/components/schemas/Contract' }
+                      total: { type: integer }
+    post:
+      summary: Создать договор
+      tags: [Contracts]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ContractCreate' }
+      responses: { '201': { description: Договор создан } }
+
+  /contracts/{id}:
+    get:
+      summary: Договор по ID
+      tags: [Contracts]
+      parameters: [ { $ref: '#/components/parameters/IdParam' } ]
+      responses:
+        '200':
+          description: Договор
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: '#/components/schemas/Contract' }
+    put:
+      summary: Обновить договор
+      tags: [Contracts]
+      parameters: [ { $ref: '#/components/parameters/IdParam' } ]
+      responses: { '200': { description: Договор обновлён } }
+    patch:
+      summary: Изменить статус договора
+      tags: [Contracts]
+      parameters: [ { $ref: '#/components/parameters/IdParam' } ]
+      responses: { '200': { description: Статус обновлён } }
+    delete:
+      summary: Удалить договор
+      tags: [Contracts]
+      parameters: [ { $ref: '#/components/parameters/IdParam' } ]
+      responses: { '200': { description: Договор удалён } }
+
+  /contracts/{id}/convert-to-production:
+    post:
+      summary: Конвертировать в производственный заказ
+      tags: [Contracts]
+      parameters: [ { $ref: '#/components/parameters/IdParam' } ]
+      responses: { '200': { description: Заказ создан } }
+
+  # ============================================================
+  # Production
+  # ============================================================
+  /production-orders:
+    get:
+      summary: Список производственных заказов
+      tags: [Production]
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/SearchParam'
+        - $ref: '#/components/parameters/SortParam'
+        - $ref: '#/components/parameters/StatusParam'
+      responses:
+        '200':
+          description: Список заказов
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    type: object
+                    properties:
+                      items:
+                        type: array
+                        items: { $ref: '#/components/schemas/ProductionOrder' }
+                      total: { type: integer }
+    post:
+      summary: Создать производственный заказ
+      tags: [Production]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ProductionOrderCreate' }
+      responses: { '201': { description: Заказ создан } }
+
+  /production-orders/{id}:
+    get:
+      summary: Заказ по ID
+      tags: [Production]
+      parameters: [ { $ref: '#/components/parameters/IdParam' } ]
+      responses:
+        '200':
+          description: Заказ
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: '#/components/schemas/ProductionOrder' }
+    put:
+      summary: Обновить заказ
+      tags: [Production]
+      parameters: [ { $ref: '#/components/parameters/IdParam' } ]
+      responses: { '200': { description: Заказ обновлён } }
+
+  /production-orders/{id}/status:
+    patch:
+      summary: Изменить статус заказа
+      tags: [Production]
+      parameters: [ { $ref: '#/components/parameters/IdParam' } ]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum: [planned, in_progress, manufacturing, painting, shipping, completed, cancelled]
+      responses: { '200': { description: Статус обновлён } }
+
+  /order-tasks:
+    get:
+      summary: Список задач
+      tags: [Production]
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - name: productionOrderId
+          in: query
+          schema: { type: string }
+        - $ref: '#/components/parameters/StatusParam'
+      responses:
+        '200':
+          description: Список задач
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    type: object
+                    properties:
+                      items:
+                        type: array
+                        items: { $ref: '#/components/schemas/OrderTask' }
+                      total: { type: integer }
+    post:
+      summary: Создать задачу
+      tags: [Production]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/OrderTaskCreate' }
+      responses: { '201': { description: Задача создана } }
+
+  /order-tasks/{id}:
+    get:
+      summary: Задача по ID
+      tags: [Production]
+      parameters: [ { $ref: '#/components/parameters/IdParam' } ]
+      responses:
+        '200':
+          description: Задача
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: '#/components/schemas/OrderTask' }
+    put:
+      summary: Обновить задачу
+      tags: [Production]
+      parameters: [ { $ref: '#/components/parameters/IdParam' } ]
+      responses: { '200': { description: Задача обновлена } }
+    delete:
+      summary: Удалить задачу
+      tags: [Production]
+      parameters: [ { $ref: '#/components/parameters/IdParam' } ]
+      responses: { '200': { description: Задача удалена } }
+
+  /order-tasks/{id}/status:
+    patch:
+      summary: Изменить статус задачи
+      tags: [Production]
+      parameters: [ { $ref: '#/components/parameters/IdParam' } ]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum: [pending, in_progress, completed, blocked, cancelled]
+      responses: { '200': { description: Статус обновлён } }
+
+  /order-tasks/{id}/assign:
+    patch:
+      summary: Назначить исполнителя
+      tags: [Production]
+      parameters: [ { $ref: '#/components/parameters/IdParam' } ]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [workerId]
+              properties:
+                workerId: { type: string }
+      responses: { '200': { description: Исполнитель назначен } }
+
+  /my-tasks:
+    get:
+      summary: Мои задачи
+      tags: [Production]
+      parameters:
+        - name: workerId
+          in: query
+          schema: { type: string }
+      responses:
+        '200':
+          description: Список задач
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    type: object
+                    properties:
+                      worker: { $ref: '#/components/schemas/Worker' }
+                      tasks:
+                        type: array
+                        items: { $ref: '#/components/schemas/OrderTask' }
+
+  /order-history:
+    get:
+      summary: История изменений заказа
+      tags: [Production]
+      parameters:
+        - name: orderId
+          in: query
+          required: true
+          schema: { type: string }
+      responses: { '200': { description: История } }
+
+  /procurement-needs:
+    get:
+      summary: Потребности в закупках
+      tags: [Production]
+      responses:
+        '200':
+          description: Потребности с учётом остатков
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    type: object
+                    properties:
+                      items:
+                        type: array
+                        items: { $ref: '#/components/schemas/ProcurementNeed' }
+                      totalOrders: { type: integer }
+
+  # ============================================================
+  # Work Types / Centers / Workers
+  # ============================================================
+  /work-types:
+    get:
+      summary: Список видов работ
+      tags: [Production]
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: Список видов работ
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    type: object
+                    properties:
+                      items:
+                        type: array
+                        items: { $ref: '#/components/schemas/WorkType' }
+                      total: { type: integer }
+    post:
+      summary: Создать вид работ
+      tags: [Production]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string }
+                description: { type: string }
+                hourlyRate: { type: number }
+      responses: { '201': { description: Вид работ создан } }
+
+  /work-types/{id}:
+    get:
+      summary: Вид работ по ID
+      tags: [Production]
+      parameters: [ { $ref: '#/components/parameters/IdParam' } ]
+      responses:
+        '200':
+          description: Вид работ
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: '#/components/schemas/WorkType' }
+    put:
+      summary: Обновить вид работ
+      tags: [Production]
+      parameters: [ { $ref: '#/components/parameters/IdParam' } ]
+      responses: { '200': { description: Обновлён } }
+    delete:
+      summary: Удалить вид работ
+      tags: [Production]
+      parameters: [ { $ref: '#/components/parameters/IdParam' } ]
+      responses: { '200': { description: Удалён } }
+
+  /work-centers:
+    get:
+      summary: Список рабочих центров
+      tags: [Production]
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: Список рабочих центров
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    type: object
+                    properties:
+                      items:
+                        type: array
+                        items: { $ref: '#/components/schemas/WorkCenter' }
+                      total: { type: integer }
+    post:
+      summary: Создать рабочий центр
+      tags: [Production]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string }
+                description: { type: string }
+                capacity: { type: number }
+      responses: { '201': { description: Рабочий центр создан } }
+
+  /work-centers/{id}:
+    get:
+      summary: Рабочий центр по ID
+      tags: [Production]
+      parameters: [ { $ref: '#/components/parameters/IdParam' } ]
+      responses:
+        '200':
+          description: Рабочий центр
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: '#/components/schemas/WorkCenter' }
+    put:
+      summary: Обновить рабочий центр
+      tags: [Production]
+      parameters: [ { $ref: '#/components/parameters/IdParam' } ]
+      responses: { '200': { description: Обновлён } }
+    delete:
+      summary: Удалить рабочий центр
+      tags: [Production]
+      parameters: [ { $ref: '#/components/parameters/IdParam' } ]
+      responses: { '200': { description: Удалён } }
+
+  /workers:
+    get:
+      summary: Список работников
+      tags: [Production]
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/SearchParam'
+      responses:
+        '200':
+          description: Список работников
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    type: object
+                    properties:
+                      items:
+                        type: array
+                        items: { $ref: '#/components/schemas/Worker' }
+                      total: { type: integer }
+    post:
+      summary: Создать работника
+      tags: [Production]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [firstName, lastName]
+              properties:
+                firstName: { type: string }
+                lastName: { type: string }
+                phone: { type: string }
+                role: { type: string }
+      responses: { '201': { description: Работник создан } }
+
+  /workers/{id}:
+    get:
+      summary: Работник по ID
+      tags: [Production]
+      parameters: [ { $ref: '#/components/parameters/IdParam' } ]
+      responses:
+        '200':
+          description: Работник
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: '#/components/schemas/Worker' }
+    put:
+      summary: Обновить работника
+      tags: [Production]
+      parameters: [ { $ref: '#/components/parameters/IdParam' } ]
+      responses: { '200': { description: Обновлён } }
+    delete:
+      summary: Удалить работника
+      tags: [Production]
+      parameters: [ { $ref: '#/components/parameters/IdParam' } ]
+      responses: { '200': { description: Удалён } }
+
+  # ============================================================
+  # Warehouse
+  # ============================================================
+  /warehouses:
+    get:
+      summary: Список складов
+      tags: [Warehouse]
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/SearchParam'
+      responses:
+        '200':
+          description: Список складов
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    type: object
+                    properties:
+                      items:
+                        type: array
+                        items: { $ref: '#/components/schemas/Warehouse' }
+                      total: { type: integer }
+    post:
+      summary: Создать склад
+      tags: [Warehouse]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string }
+                address: { type: string }
+      responses: { '201': { description: Склад создан } }
+
+  /warehouses/{id}:
+    get:
+      summary: Склад по ID
+      tags: [Warehouse]
+      parameters: [ { $ref: '#/components/parameters/IdParam' } ]
+      responses:
+        '200':
+          description: Склад
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: '#/components/schemas/Warehouse' }
+    put:
+      summary: Обновить склад
+      tags: [Warehouse]
+      parameters: [ { $ref: '#/components/parameters/IdParam' } ]
+      responses: { '200': { description: Склад обновлён } }
+    delete:
+      summary: Удалить склад
+      tags: [Warehouse]
+      parameters: [ { $ref: '#/components/parameters/IdParam' } ]
+      responses: { '200': { description: Склад удалён } }
+
+  /storage-items:
+    get:
+      summary: Остатки на складах
+      tags: [Warehouse]
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - name: warehouseId
+          in: query
+          schema: { type: string }
+        - name: productId
+          in: query
+          schema: { type: string }
+      responses:
+        '200':
+          description: Остатки
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    type: object
+                    properties:
+                      items:
+                        type: array
+                        items: { $ref: '#/components/schemas/StorageItem' }
+                      total: { type: integer }
+    post:
+      summary: Создать складскую позицию
+      tags: [Warehouse]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [warehouseId, productId, quantity]
+              properties:
+                warehouseId: { type: string }
+                productId: { type: string }
+                quantity: { type: number }
+                minQuantity: { type: number }
+      responses: { '201': { description: Позиция создана } }
+
+  /storage-items/{id}:
+    get:
+      summary: Позиция по ID
+      tags: [Warehouse]
+      parameters: [ { $ref: '#/components/parameters/IdParam' } ]
+      responses:
+        '200':
+          description: Позиция
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: '#/components/schemas/StorageItem' }
+    put:
+      summary: Обновить позицию
+      tags: [Warehouse]
+      parameters: [ { $ref: '#/components/parameters/IdParam' } ]
+      responses: { '200': { description: Позиция обновлена } }
+    delete:
+      summary: Удалить позицию
+      tags: [Warehouse]
+      parameters: [ { $ref: '#/components/parameters/IdParam' } ]
+      responses: { '200': { description: Позиция удалена } }
+
+  /inventory-movements:
+    get:
+      summary: Движения товаров
+      tags: [Warehouse]
+      parameters:
+        - name: storageItemId
+          in: query
+          schema: { type: string }
+        - name: type
+          in: query
+          schema: { type: string, enum: [incoming, outgoing, transfer] }
+      responses:
+        '200':
+          description: Движения
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    type: object
+                    properties:
+                      items:
+                        type: array
+                        items: { $ref: '#/components/schemas/InventoryMovement' }
+                      total: { type: integer }
+    post:
+      summary: Создать движение
+      tags: [Warehouse]
+      responses: { '201': { description: Движение создано } }
+
+  /shipments:
+    get:
+      summary: Список отгрузок
+      tags: [Warehouse]
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/SearchParam'
+      responses:
+        '200':
+          description: Список отгрузок
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    type: object
+                    properties:
+                      items:
+                        type: array
+                        items: { $ref: '#/components/schemas/Shipment' }
+                      total: { type: integer }
+    post:
+      summary: Создать отгрузку
+      tags: [Warehouse]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ShipmentCreate' }
+      responses: { '201': { description: Отгрузка создана } }
+
+  /shipments/{id}:
+    get:
+      summary: Отгрузка по ID
+      tags: [Warehouse]
+      parameters: [ { $ref: '#/components/parameters/IdParam' } ]
+      responses:
+        '200':
+          description: Отгрузка
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: '#/components/schemas/Shipment' }
+    put:
+      summary: Обновить отгрузку
+      tags: [Warehouse]
+      parameters: [ { $ref: '#/components/parameters/IdParam' } ]
+      responses: { '200': { description: Отгрузка обновлена } }
+    delete:
+      summary: Удалить отгрузку
+      tags: [Warehouse]
+      parameters: [ { $ref: '#/components/parameters/IdParam' } ]
+      responses: { '200': { description: Отгрузка удалена } }
+
+  /purchase-requests:
+    get:
+      summary: Заявки на закупку
+      tags: [Warehouse]
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/SearchParam'
+      responses:
+        '200':
+          description: Список заявок
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    type: object
+                    properties:
+                      items:
+                        type: array
+                        items: { $ref: '#/components/schemas/PurchaseRequest' }
+                      total: { type: integer }
+    post:
+      summary: Создать заявку
+      tags: [Warehouse]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PurchaseRequestCreate' }
+      responses: { '201': { description: Заявка создана } }
+
+  /purchase-requests/{id}:
+    get:
+      summary: Заявка по ID
+      tags: [Warehouse]
+      parameters: [ { $ref: '#/components/parameters/IdParam' } ]
+      responses:
+        '200':
+          description: Заявка
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: '#/components/schemas/PurchaseRequest' }
+    put:
+      summary: Обновить заявку
+      tags: [Warehouse]
+      parameters: [ { $ref: '#/components/parameters/IdParam' } ]
+      responses: { '200': { description: Заявка обновлена } }
+    delete:
+      summary: Удалить заявку
+      tags: [Warehouse]
+      parameters: [ { $ref: '#/components/parameters/IdParam' } ]
+      responses: { '200': { description: Заявка удалена } }
+
+  /supplier-orders:
+    get:
+      summary: Заказы поставщикам
+      tags: [Warehouse]
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: Список заказов
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    type: object
+                    properties:
+                      items:
+                        type: array
+                        items: { $ref: '#/components/schemas/SupplierOrder' }
+                      total: { type: integer }
+    post:
+      summary: Создать заказ поставщику
+      tags: [Warehouse]
+      responses: { '201': { description: Заказ создан } }
+
+  /supplier-orders/{id}:
+    get:
+      summary: Заказ поставщику по ID
+      tags: [Warehouse]
+      parameters: [ { $ref: '#/components/parameters/IdParam' } ]
+      responses:
+        '200':
+          description: Заказ
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: '#/components/schemas/SupplierOrder' }
+    put:
+      summary: Обновить заказ
+      tags: [Warehouse]
+      parameters: [ { $ref: '#/components/parameters/IdParam' } ]
+      responses: { '200': { description: Заказ обновлён } }
+    delete:
+      summary: Удалить заказ
+      tags: [Warehouse]
+      parameters: [ { $ref: '#/components/parameters/IdParam' } ]
+      responses: { '200': { description: Заказ удалён } }
+    patch:
+      summary: Изменить статус заказа поставщику
+      tags: [Warehouse]
+      parameters: [ { $ref: '#/components/parameters/IdParam' } ]
+      responses: { '200': { description: Статус обновлён } }
+
+  # ============================================================
+  # Finance
+  # ============================================================
+  /incoming-invoices:
+    get:
+      summary: Входящие счета
+      tags: [Finance]
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: Список счетов
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    type: object
+                    properties:
+                      items:
+                        type: array
+                        items: { $ref: '#/components/schemas/IncomingInvoice' }
+                      total: { type: integer }
+    post:
+      summary: Создать счёт
+      tags: [Finance]
+      responses: { '201': { description: Счёт создан } }
+
+  /incoming-invoices/{id}:
+    get:
+      summary: Счёт по ID
+      tags: [Finance]
+      parameters: [ { $ref: '#/components/parameters/IdParam' } ]
+      responses:
+        '200':
+          description: Счёт
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: '#/components/schemas/IncomingInvoice' }
+    put:
+      summary: Обновить счёт
+      tags: [Finance]
+      parameters: [ { $ref: '#/components/parameters/IdParam' } ]
+      responses: { '200': { description: Счёт обновлён } }
+    patch:
+      summary: Изменить статус счёта
+      tags: [Finance]
+      parameters: [ { $ref: '#/components/parameters/IdParam' } ]
+      responses: { '200': { description: Статус обновлён } }
+    delete:
+      summary: Удалить счёт
+      tags: [Finance]
+      parameters: [ { $ref: '#/components/parameters/IdParam' } ]
+      responses: { '200': { description: Счёт удалён } }
+
+  /order-closings:
+    get:
+      summary: Закрытия заказов
+      tags: [Finance]
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: Список закрытий
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    type: object
+                    properties:
+                      items:
+                        type: array
+                        items: { $ref: '#/components/schemas/OrderClosing' }
+                      total: { type: integer }
+    post:
+      summary: Создать закрытие
+      tags: [Finance]
+      responses: { '201': { description: Закрытие создано } }
+
+  /order-closings/{id}:
+    get:
+      summary: Закрытие по ID
+      tags: [Finance]
+      parameters: [ { $ref: '#/components/parameters/IdParam' } ]
+      responses:
+        '200':
+          description: Закрытие
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: '#/components/schemas/OrderClosing' }
+    put:
+      summary: Обновить закрытие
+      tags: [Finance]
+      parameters: [ { $ref: '#/components/parameters/IdParam' } ]
+      responses: { '200': { description: Закрытие обновлено } }
+    delete:
+      summary: Удалить закрытие
+      tags: [Finance]
+      parameters: [ { $ref: '#/components/parameters/IdParam' } ]
+      responses: { '200': { description: Закрытие удалено } }
+
+  /reconciliation-acts:
+    get:
+      summary: Акты сверки
+      tags: [Finance]
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: Список актов
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    type: object
+                    properties:
+                      items:
+                        type: array
+                        items: { $ref: '#/components/schemas/ReconciliationAct' }
+                      total: { type: integer }
+    post:
+      summary: Создать акт сверки
+      tags: [Finance]
+      responses: { '201': { description: Акт создан } }
+
+  /reconciliation-acts/{id}:
+    get:
+      summary: Акт по ID
+      tags: [Finance]
+      parameters: [ { $ref: '#/components/parameters/IdParam' } ]
+      responses:
+        '200':
+          description: Акт
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: '#/components/schemas/ReconciliationAct' }
+    put:
+      summary: Обновить акт
+      tags: [Finance]
+      parameters: [ { $ref: '#/components/parameters/IdParam' } ]
+      responses: { '200': { description: Акт обновлён } }
+    delete:
+      summary: Удалить акт
+      tags: [Finance]
+      parameters: [ { $ref: '#/components/parameters/IdParam' } ]
+      responses: { '200': { description: Акт удалён } }
+
+  /financial-reports:
+    get:
+      summary: Финансовые отчёты
+      tags: [Finance]
+      responses: { '200': { description: Данные отчёта } }
+
+  # ============================================================
+  # Admin
+  # ============================================================
+  /users:
+    get:
+      summary: Список пользователей
+      tags: [Admin]
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/SearchParam'
+      responses:
+        '200':
+          description: Список пользователей
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    type: object
+                    properties:
+                      items:
+                        type: array
+                        items: { $ref: '#/components/schemas/User' }
+                      total: { type: integer }
+    post:
+      summary: Создать пользователя
+      tags: [Admin]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, password]
+              properties:
+                username: { type: string }
+                password: { type: string }
+                displayName: { type: string }
+                email: { type: string }
+                role:
+                  type: string
+                  enum: [admin, manager, viewer, production, storekeeper, accountant]
+      responses: { '201': { description: Пользователь создан } }
+
+  /users/{id}:
+    get:
+      summary: Пользователь по ID
+      tags: [Admin]
+      parameters: [ { $ref: '#/components/parameters/IdParam' } ]
+      responses:
+        '200':
+          description: Пользователь
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: '#/components/schemas/User' }
+    put:
+      summary: Обновить пользователя
+      tags: [Admin]
+      parameters: [ { $ref: '#/components/parameters/IdParam' } ]
+      responses: { '200': { description: Пользователь обновлён } }
+    patch:
+      summary: Частичное обновление
+      tags: [Admin]
+      parameters: [ { $ref: '#/components/parameters/IdParam' } ]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                isActive: { type: boolean }
+      responses: { '200': { description: Пользователь обновлён } }
+    delete:
+      summary: Удалить пользователя
+      tags: [Admin]
+      parameters: [ { $ref: '#/components/parameters/IdParam' } ]
+      responses: { '200': { description: Пользователь удалён } }
+
+  /status-workflows:
+    get:
+      summary: Правила переходов статусов
+      tags: [Admin]
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: Список правил
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    type: object
+                    properties:
+                      items:
+                        type: array
+                        items: { $ref: '#/components/schemas/StatusWorkflow' }
+                      total: { type: integer }
+    post:
+      summary: Создать правило
+      tags: [Admin]
+      responses: { '201': { description: Правило создано } }
+
+  /status-workflows/{id}:
+    get:
+      summary: Правило по ID
+      tags: [Admin]
+      parameters: [ { $ref: '#/components/parameters/IdParam' } ]
+      responses:
+        '200':
+          description: Правило
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: '#/components/schemas/StatusWorkflow' }
+    put:
+      summary: Обновить правило
+      tags: [Admin]
+      parameters: [ { $ref: '#/components/parameters/IdParam' } ]
+      responses: { '200': { description: Правило обновлено } }
+    delete:
+      summary: Удалить правило
+      tags: [Admin]
+      parameters: [ { $ref: '#/components/parameters/IdParam' } ]
+      responses: { '200': { description: Правило удалено } }
+
+  /tenders:
+    get:
+      summary: Список тендеров
+      tags: [Admin]
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: Список тендеров
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    type: object
+                    properties:
+                      items:
+                        type: array
+                        items: { $ref: '#/components/schemas/Tender' }
+                      total: { type: integer }
+    post:
+      summary: Создать тендер
+      tags: [Admin]
+      responses: { '201': { description: Тендер создан } }
+
+  /tenders/{id}:
+    get:
+      summary: Тендер по ID
+      tags: [Admin]
+      parameters: [ { $ref: '#/components/parameters/IdParam' } ]
+      responses:
+        '200':
+          description: Тендер
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: '#/components/schemas/Tender' }
+    put:
+      summary: Обновить тендер
+      tags: [Admin]
+      parameters: [ { $ref: '#/components/parameters/IdParam' } ]
+      responses: { '200': { description: Тендер обновлён } }
+    delete:
+      summary: Удалить тендер
+      tags: [Admin]
+      parameters: [ { $ref: '#/components/parameters/IdParam' } ]
+      responses: { '200': { description: Тендер удалён } }
+
+  /certificates:
+    get:
+      summary: Список сертификатов
+      tags: [Admin]
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/SearchParam'
+      responses:
+        '200':
+          description: Список сертификатов
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    type: object
+                    properties:
+                      items:
+                        type: array
+                        items: { $ref: '#/components/schemas/Certificate' }
+                      total: { type: integer }
+    post:
+      summary: Создать сертификат
+      tags: [Admin]
+      responses: { '201': { description: Сертификат создан } }
+
+  /certificates/{id}:
+    get:
+      summary: Сертификат по ID
+      tags: [Admin]
+      parameters: [ { $ref: '#/components/parameters/IdParam' } ]
+      responses:
+        '200':
+          description: Сертификат
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: '#/components/schemas/Certificate' }
+    put:
+      summary: Обновить сертификат
+      tags: [Admin]
+      parameters: [ { $ref: '#/components/parameters/IdParam' } ]
+      responses: { '200': { description: Сертификат обновлён } }
+    delete:
+      summary: Удалить сертификат
+      tags: [Admin]
+      parameters: [ { $ref: '#/components/parameters/IdParam' } ]
+      responses: { '200': { description: Сертификат удалён } }
+
+  /rpp-entries:
+    get:
+      summary: Список РПП записей
+      tags: [Admin]
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/SearchParam'
+      responses:
+        '200':
+          description: Список записей
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    type: object
+                    properties:
+                      items:
+                        type: array
+                        items: { $ref: '#/components/schemas/RppEntry' }
+                      total: { type: integer }
+    post:
+      summary: Создать РПП запись
+      tags: [Admin]
+      responses: { '201': { description: Запись создана } }
+
+  /rpp-entries/{id}:
+    get:
+      summary: РПП запись по ID
+      tags: [Admin]
+      parameters: [ { $ref: '#/components/parameters/IdParam' } ]
+      responses:
+        '200':
+          description: Запись
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: '#/components/schemas/RppEntry' }
+    put:
+      summary: Обновить запись
+      tags: [Admin]
+      parameters: [ { $ref: '#/components/parameters/IdParam' } ]
+      responses: { '200': { description: Запись обновлена } }
+    delete:
+      summary: Удалить запись
+      tags: [Admin]
+      parameters: [ { $ref: '#/components/parameters/IdParam' } ]
+      responses: { '200': { description: Запись удалена } }
+
+  /doc-types:
+    get:
+      summary: Типы документов
+      tags: [Admin]
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: Список типов
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    type: object
+                    properties:
+                      items:
+                        type: array
+                        items: { $ref: '#/components/schemas/DocType' }
+                      total: { type: integer }
+    post:
+      summary: Создать тип документа
+      tags: [Admin]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, slug]
+              properties:
+                name: { type: string }
+                slug: { type: string }
+                description: { type: string }
+      responses: { '201': { description: Тип создан } }
+
+  /doc-types/{id}:
+    get:
+      summary: Тип документа по ID
+      tags: [Admin]
+      parameters: [ { $ref: '#/components/parameters/IdParam' } ]
+      responses:
+        '200':
+          description: Тип
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: '#/components/schemas/DocType' }
+    put:
+      summary: Обновить тип
+      tags: [Admin]
+      parameters: [ { $ref: '#/components/parameters/IdParam' } ]
+      responses: { '200': { description: Тип обновлён } }
+    delete:
+      summary: Удалить тип
+      tags: [Admin]
+      parameters: [ { $ref: '#/components/parameters/IdParam' } ]
+      responses: { '200': { description: Тип удалён } }
+
+  /document-templates:
+    get:
+      summary: Шаблоны документов
+      tags: [Admin]
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: Список шаблонов
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    type: object
+                    properties:
+                      items:
+                        type: array
+                        items: { $ref: '#/components/schemas/DocumentTemplate' }
+                      total: { type: integer }
+    post:
+      summary: Создать шаблон
+      tags: [Admin]
+      responses: { '201': { description: Шаблон создан } }
+
+  /document-templates/{id}:
+    get:
+      summary: Шаблон по ID
+      tags: [Admin]
+      parameters: [ { $ref: '#/components/parameters/IdParam' } ]
+      responses:
+        '200':
+          description: Шаблон
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: '#/components/schemas/DocumentTemplate' }
+    put:
+      summary: Обновить шаблон
+      tags: [Admin]
+      parameters: [ { $ref: '#/components/parameters/IdParam' } ]
+      responses: { '200': { description: Шаблон обновлён } }
+    delete:
+      summary: Удалить шаблон
+      tags: [Admin]
+      parameters: [ { $ref: '#/components/parameters/IdParam' } ]
+      responses: { '200': { description: Шаблон удалён } }
+
+  /document-templates/{id}/clone:
+    post:
+      summary: Клонировать шаблон
+      tags: [Admin]
+      parameters: [ { $ref: '#/components/parameters/IdParam' } ]
+      responses: { '201': { description: Шаблон склонирован } }
+
+  /table-templates:
+    get:
+      summary: Шаблоны таблиц
+      tags: [Admin]
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: Список шаблонов
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    type: object
+                    properties:
+                      items:
+                        type: array
+                        items: { $ref: '#/components/schemas/TableTemplate' }
+                      total: { type: integer }
+    post:
+      summary: Создать шаблон таблицы
+      tags: [Admin]
+      responses: { '201': { description: Шаблон создан } }
+
+  /table-templates/{id}:
+    get:
+      summary: Шаблон таблицы по ID
+      tags: [Admin]
+      parameters: [ { $ref: '#/components/parameters/IdParam' } ]
+      responses:
+        '200':
+          description: Шаблон
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: '#/components/schemas/TableTemplate' }
+    put:
+      summary: Обновить шаблон
+      tags: [Admin]
+      parameters: [ { $ref: '#/components/parameters/IdParam' } ]
+      responses: { '200': { description: Шаблон обновлён } }
+    delete:
+      summary: Удалить шаблон
+      tags: [Admin]
+      parameters: [ { $ref: '#/components/parameters/IdParam' } ]
+      responses: { '200': { description: Шаблон удалён } }
+
+  /inventor-files:
+    get:
+      summary: CAD-файлы
+      tags: [Admin]
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/SearchParam'
+      responses:
+        '200':
+          description: Список файлов
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    type: object
+                    properties:
+                      items:
+                        type: array
+                        items: { $ref: '#/components/schemas/InventorFile' }
+                      total: { type: integer }
+    post:
+      summary: Загрузить CAD-файл
+      tags: [Admin]
+      responses: { '201': { description: Файл загружен } }
+
+  /inventor-files/{id}:
+    get:
+      summary: CAD-файл по ID
+      tags: [Admin]
+      parameters: [ { $ref: '#/components/parameters/IdParam' } ]
+      responses:
+        '200':
+          description: Файл
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: '#/components/schemas/InventorFile' }
+    put:
+      summary: Обновить файл
+      tags: [Admin]
+      parameters: [ { $ref: '#/components/parameters/IdParam' } ]
+      responses: { '200': { description: Файл обновлён } }
+    delete:
+      summary: Удалить файл
+      tags: [Admin]
+      parameters: [ { $ref: '#/components/parameters/IdParam' } ]
+      responses: { '200': { description: Файл удалён } }
+
+  /admin/cleanup-rate-limit:
+    post:
+      summary: Очистить rate limit (admin)
+      tags: [Admin]
+      responses: { '200': { description: Rate limit очищен } }
 
   /activity-log:
     get:
@@ -1646,31 +2213,162 @@ paths:
       parameters:
         - name: userId
           in: query
-          schema:
-            type: string
+          schema: { type: string }
         - name: entity
           in: query
-          schema:
-            type: string
+          schema: { type: string }
+        - name: action
+          in: query
+          schema: { type: string }
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
       responses:
         '200':
           description: Записи журнала
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    type: object
+                    properties:
+                      items:
+                        type: array
+                        items: { $ref: '#/components/schemas/ActivityLogEntry' }
+                      total: { type: integer }
 
+  # ============================================================
+  # Cart
+  # ============================================================
+  /cart:
+    post:
+      summary: Создать корзину
+      tags: [Cart]
+      responses: { '201': { description: Корзина создана } }
+
+  /cart/{id}:
+    get:
+      summary: Корзина по ID
+      tags: [Cart]
+      parameters: [ { $ref: '#/components/parameters/IdParam' } ]
+      responses:
+        '200':
+          description: Корзина
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: '#/components/schemas/Cart' }
+    delete:
+      summary: Удалить корзину
+      tags: [Cart]
+      parameters: [ { $ref: '#/components/parameters/IdParam' } ]
+      responses: { '200': { description: Корзина удалена } }
+
+  /cart/{id}/items:
+    post:
+      summary: Добавить товар в корзину
+      tags: [Cart]
+      parameters: [ { $ref: '#/components/parameters/IdParam' } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [productId, quantity]
+              properties:
+                productId: { type: string }
+                quantity: { type: number }
+      responses: { '201': { description: Товар добавлен } }
+
+  /cart/{id}/items/{itemId}:
+    patch:
+      summary: Обновить количество
+      tags: [Cart]
+      parameters:
+        - { $ref: '#/components/parameters/IdParam' }
+        - name: itemId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                quantity: { type: number }
+      responses: { '200': { description: Количество обновлено } }
+    delete:
+      summary: Удалить позицию из корзины
+      tags: [Cart]
+      parameters:
+        - { $ref: '#/components/parameters/IdParam' }
+        - name: itemId
+          in: path
+          required: true
+          schema: { type: string }
+      responses: { '200': { description: Позиция удалена } }
+
+  /cart/{id}/convert:
+    post:
+      summary: Конвертировать корзину в КП
+      tags: [Cart]
+      parameters: [ { $ref: '#/components/parameters/IdParam' } ]
+      responses: { '200': { description: КП создано } }
+
+  # ============================================================
+  # Dashboard
+  # ============================================================
   /dashboard/stats:
     get:
       summary: Статистика дашборда
       tags: [Dashboard]
-      responses:
-        '200':
-          description: Статистика
+      responses: { '200': { description: Статистика } }
 
   /dashboard/aggregated:
     get:
-      summary: Агрегированные данные дашборда
+      summary: Агрегированные данные
       tags: [Dashboard]
       responses:
         '200':
           description: Агрегированные данные
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    type: object
+                    properties:
+                      overview:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            title: { type: string }
+                            count: { type: integer }
+                            href: { type: string }
+                      proposalStats:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            status: { type: string }
+                            count: { type: integer }
+                      categoryStats:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            name: { type: string }
+                            count: { type: integer }
 
 components:
   securitySchemes:
@@ -1685,207 +2383,642 @@ components:
       name: id
       in: path
       required: true
-      schema:
-        type: string
+      schema: { type: string }
 
     PageParam:
       name: page
       in: query
-      schema:
-        type: integer
-        default: 1
+      schema: { type: integer, default: 1, minimum: 1 }
+      description: Номер страницы
 
     LimitParam:
       name: limit
       in: query
-      schema:
-        type: integer
-        default: 20
+      schema: { type: integer, default: 20, minimum: 1, maximum: 500 }
+      description: Количество записей на странице
 
     SearchParam:
       name: search
       in: query
-      schema:
-        type: string
+      schema: { type: string }
       description: Поиск по названию/номеру
 
+    SortParam:
+      name: sort
+      in: query
+      schema: { type: string }
+      description: Поле для сортировки (createdAt, name, number)
+
+    StatusParam:
+      name: status
+      in: query
+      schema: { type: string }
+      description: Фильтр по статусу
+
   schemas:
+    # ---------- Auth ----------
     User:
       type: object
       properties:
-        id:
-          type: string
-        username:
-          type: string
-        displayName:
-          type: string
-        email:
-          type: string
-        phone:
-          type: string
+        id: { type: string }
+        username: { type: string }
+        displayName: { type: string }
+        email: { type: string, nullable: true }
+        phone: { type: string, nullable: true }
         role:
           type: string
           enum: [admin, manager, viewer, production, storekeeper, accountant]
-        isActive:
-          type: boolean
+        isActive: { type: boolean }
 
-    Client:
-      type: object
-      properties:
-        id:
-          type: string
-        lastName:
-          type: string
-        firstName:
-          type: string
-        phone:
-          type: string
-        email:
-          type: string
-        type:
-          type: string
-          enum: [individual, legal]
-        companyName:
-          type: string
-        inn:
-          type: string
-
-    ClientCreate:
-      type: object
-      required: [lastName, firstName]
-      properties:
-        lastName:
-          type: string
-        firstName:
-          type: string
-        phone:
-          type: string
-        email:
-          type: string
-        type:
-          type: string
-          enum: [individual, legal]
-          default: individual
-        companyName:
-          type: string
-        inn:
-          type: string
-        kpp:
-          type: string
-        ogrn:
-          type: string
-        legalAddress:
-          type: string
-
-    ClientUpdate:
-      type: object
-      properties:
-        lastName:
-          type: string
-        firstName:
-          type: string
-        phone:
-          type: string
-        email:
-          type: string
-        type:
-          type: string
-        companyName:
-          type: string
-        inn:
-          type: string
-
-    Proposal:
-      type: object
-      properties:
-        id:
-          type: string
-        number:
-          type: string
-        status:
-          type: string
-        version:
-          type: integer
-        discountPercent:
-          type: number
-        vatRate:
-          type: number
-        clientId:
-          type: string
-        organizationId:
-          type: string
-        createdAt:
-          type: string
-          format: date-time
-
-    Contract:
-      type: object
-      properties:
-        id:
-          type: string
-        number:
-          type: string
-        status:
-          type: string
-        totalAmount:
-          type: number
-        clientId:
-          type: string
-        organizationId:
-          type: string
-        signedAt:
-          type: string
-          format: date-time
-        validUntil:
-          type: string
-          format: date-time
-
-    ProductionOrder:
-      type: object
-      properties:
-        id:
-          type: string
-        number:
-          type: string
-        status:
-          type: string
-        contractId:
-          type: string
-        proposalId:
-          type: string
-        startDate:
-          type: string
-          format: date
-        endDate:
-          type: string
-          format: date
-
+    # ---------- Organization ----------
     Organization:
       type: object
       properties:
-        id:
-          type: string
-        name:
-          type: string
-        inn:
-          type: string
-        kpp:
-          type: string
-        legalAddress:
-          type: string
+        id: { type: string }
+        name: { type: string }
+        inn: { type: string, nullable: true }
+        kpp: { type: string, nullable: true }
+        ogrn: { type: string, nullable: true }
+        legalAddress: { type: string, nullable: true }
+        actualAddress: { type: string, nullable: true }
+        phone: { type: string, nullable: true }
+        email: { type: string, nullable: true }
+        role: { type: string, nullable: true }
+        isActive: { type: boolean }
+        createdAt: { type: string, format: date-time }
 
+    OrganizationCreate:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string }
+        inn: { type: string }
+        kpp: { type: string }
+        ogrn: { type: string }
+        legalAddress: { type: string }
+        phone: { type: string }
+        email: { type: string }
+        role: { type: string }
+
+    OrganizationUpdate:
+      type: object
+      properties:
+        name: { type: string }
+        inn: { type: string }
+        kpp: { type: string }
+        legalAddress: { type: string }
+        phone: { type: string }
+        email: { type: string }
+
+    # ---------- Person ----------
+    Person:
+      type: object
+      properties:
+        id: { type: string }
+        lastName: { type: string }
+        firstName: { type: string }
+        patronymic: { type: string, nullable: true }
+        phone: { type: string, nullable: true }
+        email: { type: string, nullable: true }
+        position: { type: string, nullable: true }
+        organizationId: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+
+    PersonCreate:
+      type: object
+      required: [lastName, firstName]
+      properties:
+        lastName: { type: string }
+        firstName: { type: string }
+        patronymic: { type: string }
+        phone: { type: string }
+        email: { type: string }
+        position: { type: string }
+        organizationId: { type: string }
+
+    # ---------- Product ----------
     Product:
       type: object
       properties:
-        id:
+        id: { type: string }
+        name: { type: string }
+        sku: { type: string }
+        unit: { type: string }
+        defaultMarkupPercent: { type: number }
+        categoryId: { type: string, nullable: true }
+        description: { type: string, nullable: true }
+        price: { type: number, nullable: true }
+        isActive: { type: boolean }
+        createdAt: { type: string, format: date-time }
+
+    ProductCreate:
+      type: object
+      required: [name, sku, unit]
+      properties:
+        name: { type: string }
+        sku: { type: string }
+        unit: { type: string }
+        defaultMarkupPercent: { type: number }
+        categoryId: { type: string }
+        description: { type: string }
+        price: { type: number }
+
+    ProductCategory:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        description: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+
+    ProductModule:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        article: { type: string, nullable: true }
+        productId: { type: string, nullable: true }
+        width: { type: number, nullable: true }
+        height: { type: number, nullable: true }
+        depth: { type: number, nullable: true }
+        weight: { type: number, nullable: true }
+        sortOrder: { type: integer }
+        product: { $ref: '#/components/schemas/Product' }
+        workTypes: { type: array, items: { $ref: '#/components/schemas/ProductModuleWorkType' } }
+        materials: { type: array, items: { $ref: '#/components/schemas/ProductModuleMaterial' } }
+
+    ProductModuleCreate:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string }
+        article: { type: string }
+        productId: { type: string }
+        width: { type: number }
+        height: { type: number }
+        depth: { type: number }
+        weight: { type: number }
+
+    ProductModuleWorkType:
+      type: object
+      properties:
+        workTypeId: { type: string }
+        estimatedHours: { type: number }
+        sortOrder: { type: integer }
+
+    ProductModuleMaterial:
+      type: object
+      properties:
+        name: { type: string }
+        quantity: { type: number }
+        unit: { type: string }
+        isPurchased: { type: boolean }
+
+    # ---------- Material ----------
+    Material:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        article: { type: string, nullable: true }
+        unit: { type: string }
+        price: { type: number, nullable: true }
+        description: { type: string, nullable: true }
+        categoryId: { type: string, nullable: true }
+        supplierId: { type: string, nullable: true }
+        isPurchased: { type: boolean }
+        createdAt: { type: string, format: date-time }
+
+    MaterialCreate:
+      type: object
+      required: [name, unit]
+      properties:
+        name: { type: string }
+        article: { type: string }
+        unit: { type: string }
+        price: { type: number }
+        description: { type: string }
+        categoryId: { type: string }
+        supplierId: { type: string }
+        isPurchased: { type: boolean }
+
+    MaterialCategory:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        description: { type: string, nullable: true }
+
+    # ---------- Proposal ----------
+    Proposal:
+      type: object
+      properties:
+        id: { type: string }
+        number: { type: string }
+        title: { type: string }
+        status:
           type: string
-        name:
+          enum: [draft, sent, accepted, rejected, paid, converted]
+        version: { type: integer }
+        discountPercent: { type: number }
+        vatRate: { type: number }
+        clientId: { type: string }
+        organizationId: { type: string }
+        createdAt: { type: string, format: date-time }
+
+    ProposalCreate:
+      type: object
+      properties:
+        clientId: { type: string }
+        organizationId: { type: string }
+        templateId: { type: string }
+
+    # ---------- Contract ----------
+    Contract:
+      type: object
+      properties:
+        id: { type: string }
+        number: { type: string }
+        title: { type: string }
+        status:
           type: string
-        sku:
+          enum: [draft, active, completed, cancelled]
+        totalAmount: { type: number }
+        clientId: { type: string }
+        organizationId: { type: string }
+        proposalId: { type: string, nullable: true }
+        signedAt: { type: string, format: date-time, nullable: true }
+        validUntil: { type: string, format: date-time, nullable: true }
+        createdAt: { type: string, format: date-time }
+
+    ContractCreate:
+      type: object
+      properties:
+        clientId: { type: string }
+        organizationId: { type: string }
+        proposalId: { type: string }
+        title: { type: string }
+        totalAmount: { type: number }
+
+    # ---------- Production ----------
+    ProductionOrder:
+      type: object
+      properties:
+        id: { type: string }
+        number: { type: string }
+        title: { type: string }
+        status:
           type: string
-        unit:
+          enum: [draft, planned, in_progress, manufacturing, painting, shipping, completed, cancelled]
+        contractId: { type: string, nullable: true }
+        proposalId: { type: string, nullable: true }
+        clientId: { type: string, nullable: true }
+        plannedStart: { type: string, format: date, nullable: true }
+        plannedEnd: { type: string, format: date, nullable: true }
+        actualStart: { type: string, format: date, nullable: true }
+        actualEnd: { type: string, format: date, nullable: true }
+        notes: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+
+    ProductionOrderCreate:
+      type: object
+      properties:
+        title: { type: string }
+        clientId: { type: string }
+        contractId: { type: string }
+        proposalId: { type: string }
+        plannedStart: { type: string, format: date }
+        plannedEnd: { type: string, format: date }
+
+    OrderTask:
+      type: object
+      properties:
+        id: { type: string }
+        title: { type: string }
+        description: { type: string, nullable: true }
+        status:
           type: string
-        defaultMarkupPercent:
-          type: number
-        categoryId:
-          type: string
+          enum: [pending, in_progress, completed, blocked, cancelled]
+        productionOrderId: { type: string }
+        workTypeId: { type: string, nullable: true }
+        workCenterId: { type: string, nullable: true }
+        workerId: { type: string, nullable: true }
+        estimatedHours: { type: number, nullable: true }
+        actualHours: { type: number, nullable: true }
+        plannedStart: { type: string, nullable: true }
+        plannedEnd: { type: string, nullable: true }
+        sortOrder: { type: integer }
+        createdAt: { type: string, format: date-time }
+
+    OrderTaskCreate:
+      type: object
+      required: [title, productionOrderId]
+      properties:
+        title: { type: string }
+        productionOrderId: { type: string }
+        workTypeId: { type: string }
+        estimatedHours: { type: number }
+
+    # ---------- Production refs ----------
+    WorkType:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        description: { type: string, nullable: true }
+        hourlyRate: { type: number, nullable: true }
+        createdAt: { type: string, format: date-time }
+
+    WorkCenter:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        description: { type: string, nullable: true }
+        capacity: { type: number, nullable: true }
+        createdAt: { type: string, format: date-time }
+
+    Worker:
+      type: object
+      properties:
+        id: { type: string }
+        firstName: { type: string }
+        lastName: { type: string }
+        phone: { type: string, nullable: true }
+        role: { type: string, nullable: true }
+        isActive: { type: boolean }
+        createdAt: { type: string, format: date-time }
+
+    ProcurementNeed:
+      type: object
+      properties:
+        name: { type: string }
+        unit: { type: string }
+        totalQuantity: { type: number }
+        inStock: { type: number }
+        deficit: { type: number }
+
+    # ---------- Warehouse ----------
+    Warehouse:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        address: { type: string, nullable: true }
+        isActive: { type: boolean }
+        createdAt: { type: string, format: date-time }
+
+    StorageItem:
+      type: object
+      properties:
+        id: { type: string }
+        warehouseId: { type: string }
+        productId: { type: string, nullable: true }
+        materialId: { type: string, nullable: true }
+        quantity: { type: number }
+        reservedQty: { type: number }
+        minQuantity: { type: number }
+        warehouse: { $ref: '#/components/schemas/Warehouse' }
+        product: { $ref: '#/components/schemas/Product' }
+
+    InventoryMovement:
+      type: object
+      properties:
+        id: { type: string }
+        storageItemId: { type: string }
+        type: { type: string, enum: [incoming, outgoing, transfer] }
+        quantity: { type: number }
+        referenceType: { type: string }
+        referenceId: { type: string }
+        createdAt: { type: string, format: date-time }
+
+    Shipment:
+      type: object
+      properties:
+        id: { type: string }
+        number: { type: string }
+        orderId: { type: string, nullable: true }
+        status: { type: string, enum: [draft, partially, shipped, cancelled] }
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              name: { type: string }
+              quantity: { type: number }
+              unit: { type: string }
+              shipped: { type: number }
+        photos:
+          type: array
+          items:
+            type: object
+            properties:
+              url: { type: string }
+              caption: { type: string }
+        notes: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+
+    ShipmentCreate:
+      type: object
+      required: [number]
+      properties:
+        number: { type: string }
+        orderId: { type: string }
+        status: { type: string }
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              name: { type: string }
+              quantity: { type: number }
+              unit: { type: string }
+        notes: { type: string }
+
+    PurchaseRequest:
+      type: object
+      properties:
+        id: { type: string }
+        number: { type: string }
+        title: { type: string }
+        status: { type: string }
+        notes: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+
+    PurchaseRequestCreate:
+      type: object
+      required: [title]
+      properties:
+        title: { type: string }
+        notes: { type: string }
+
+    SupplierOrder:
+      type: object
+      properties:
+        id: { type: string }
+        number: { type: string }
+        supplierId: { type: string }
+        status: { type: string }
+        totalAmount: { type: number }
+        expectedAt: { type: string, format: date, nullable: true }
+        createdAt: { type: string, format: date-time }
+
+    # ---------- Finance ----------
+    IncomingInvoice:
+      type: object
+      properties:
+        id: { type: string }
+        number: { type: string }
+        supplierId: { type: string }
+        amount: { type: number }
+        vatAmount: { type: number }
+        status: { type: string }
+        invoiceDate: { type: string, format: date }
+        dueDate: { type: string, format: date, nullable: true }
+        createdAt: { type: string, format: date-time }
+
+    OrderClosing:
+      type: object
+      properties:
+        id: { type: string }
+        number: { type: string }
+        orderId: { type: string }
+        closingType: { type: string, enum: [full, partial] }
+        totalAmount: { type: number }
+        status: { type: string }
+        notes: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+
+    ReconciliationAct:
+      type: object
+      properties:
+        id: { type: string }
+        number: { type: string }
+        organizationId: { type: string }
+        periodStart: { type: string, format: date }
+        periodEnd: { type: string, format: date }
+        totalDebit: { type: number }
+        totalCredit: { type: number }
+        status: { type: string }
+        createdAt: { type: string, format: date-time }
+
+    # ---------- Admin ----------
+    StatusWorkflow:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        entity: { type: string }
+        fromStatus: { type: string }
+        toStatus: { type: string }
+        roles: { type: string }
+        isActive: { type: boolean }
+        createdAt: { type: string, format: date-time }
+
+    Tender:
+      type: object
+      properties:
+        id: { type: string }
+        number: { type: string }
+        title: { type: string }
+        status: { type: string }
+        createdAt: { type: string, format: date-time }
+
+    Certificate:
+      type: object
+      properties:
+        id: { type: string }
+        number: { type: string }
+        title: { type: string }
+        issuer: { type: string, nullable: true }
+        issuedAt: { type: string, format: date, nullable: true }
+        expiresAt: { type: string, format: date, nullable: true }
+        status: { type: string }
+        createdAt: { type: string, format: date-time }
+
+    RppEntry:
+      type: object
+      properties:
+        id: { type: string }
+        number: { type: string }
+        title: { type: string }
+        status: { type: string }
+        notes: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+
+    DocType:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        slug: { type: string }
+        description: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+
+    DocumentTemplate:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        description: { type: string, nullable: true }
+        pageSize: { type: string }
+        isDefault: { type: boolean }
+        docTypeId: { type: string, nullable: true }
+        blocks: { type: array, items: { type: object } }
+        createdAt: { type: string, format: date-time }
+
+    TableTemplate:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        description: { type: string, nullable: true }
+        columns: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+
+    InventorFile:
+      type: object
+      properties:
+        id: { type: string }
+        filename: { type: string }
+        fileType: { type: string }
+        fileSize: { type: number, nullable: true }
+        url: { type: string, nullable: true }
+        description: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+
+    # ---------- Cart ----------
+    Cart:
+      type: object
+      properties:
+        id: { type: string }
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: string }
+              productId: { type: string }
+              product:
+                type: object
+                properties:
+                  id: { type: string }
+                  name: { type: string }
+                  sku: { type: string }
+                  unit: { type: string }
+                  price: { type: number }
+              quantity: { type: number }
+              markupPercent: { type: number }
+        createdAt: { type: string, format: date-time }
+
+    # ---------- Common ----------
+    ActivityLogEntry:
+      type: object
+      properties:
+        id: { type: string }
+        userId: { type: string }
+        action: { type: string }
+        entity: { type: string }
+        entityId: { type: string }
+        details: { type: object, nullable: true }
+        createdAt: { type: string, format: date-time }

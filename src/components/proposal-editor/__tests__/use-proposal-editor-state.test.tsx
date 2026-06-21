@@ -56,9 +56,12 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-async function flushPromises() {
-  await new Promise((resolve) => setTimeout(resolve, 0));
-  await new Promise((resolve) => setTimeout(resolve, 0));
+/** Wrapped in act() so async state updates don't trigger 'not wrapped in act' warnings */
+async function settle() {
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
 }
 
 // Cast helper for vi.fn as fetch stub (satisfies tsc strict mode)
@@ -79,6 +82,7 @@ describe('useProposalEditorState — initial state', () => {
     expect(result.current.state.loading).toBe(true);
     expect(result.current.state.cartId).toBeNull();
     expect(result.current.state.cart).toBeNull();
+    await settle();
   });
 
   it('должен иметь initial defaults для proposalMeta + flags + discountPercent', async () => {
@@ -89,6 +93,7 @@ describe('useProposalEditorState — initial state', () => {
     expect(result.current.state.ralCode).toBe('');
     expect(result.current.state.error).toBe('');
     expect(result.current.state.success).toBe(false);
+    await settle();
   });
 
   it('должен предоставить actions: 20 функций', async () => {
@@ -98,6 +103,7 @@ describe('useProposalEditorState — initial state', () => {
     expect(typeof result.current.actions.setSearchQuery).toBe('function');
     expect(typeof result.current.actions.createProposal).toBe('function');
     expect(typeof result.current.actions.resetTemplateSelection).toBe('function');
+    await settle();
   });
 });
 
@@ -108,7 +114,7 @@ describe('useProposalEditorState — /api/cart init', () => {
     const fetchSpy = vi.fn<FetchFn>(async () => ({ ok: true, status: 200, json: async () => ({ success: false }) }));
     setFetch(fetchSpy);
     renderHook(() => useProposalEditorState());
-    await flushPromises();
+    await settle();
     const calls = fetchSpy.mock.calls.filter(
       (c) => typeof c[0] === 'string' && c[0].includes('/api/cart') && (c[1] as { method?: string } | undefined)?.method === 'POST',
     );

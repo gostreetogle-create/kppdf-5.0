@@ -1,7 +1,13 @@
+import type { Metadata } from 'next';
 import { prisma } from '@/lib/db';
 import { requireAuthPage } from '@/lib/auth-page';
 import { WarehouseClient } from './client';
 import { WAREHOUSE_LIST_QUERY_ARGS } from '@/lib/types/server-pages';
+
+export const metadata: Metadata = {
+  title: 'Склад',
+  description: 'Управление складами и складскими остатками',
+};
 
 export default async function WarehousePage() {
   await requireAuthPage();

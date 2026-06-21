@@ -12,7 +12,10 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
   try {
     await requireAuth();
     const { id } = await params;
-    const item = await prisma.organization.findUnique({ where: { id }, include: { roles: true } });
+    const item = await prisma.organization.findUnique({
+      where: { id },
+      include: { roles: true, contacts: { include: { person: { select: { lastName: true, firstName: true, patronymic: true } } } } },
+    });
     if (!item) return apiError('Не найдено', 404);
     return apiOk(item);
   } catch (error) {
@@ -29,7 +32,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     const body = await request.json();
     const validation = validateBody(body, UpdateOrganizationSchema);
     if (!validation.success) return validation.error;
-    const { roleIds, ...orgData } = validation.data;
+    const { roleIds, contactPersonIds, ...orgData } = validation.data;
     const item = await prisma.organization.update({
       where: { id },
       data: {
@@ -37,8 +40,15 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         roles: roleIds?.length
           ? { set: [], connect: roleIds.map((id: string) => ({ id })) }
           : undefined,
+        // Замена контактов: удаляем старые, добавляем новые
+        contacts: contactPersonIds !== undefined
+          ? {
+              deleteMany: {},
+              create: contactPersonIds.map((personId: string) => ({ personId })),
+            }
+          : undefined,
       },
-      include: { roles: true },
+      include: { roles: true, contacts: { include: { person: { select: { lastName: true, firstName: true, patronymic: true } } } } },
     });
     invalidateByPrefix(CACHE_PREFIX);
     return apiOk(item);

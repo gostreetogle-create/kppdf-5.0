@@ -10,6 +10,16 @@ interface OrgRole {
   slug: string;
 }
 
+interface OrgContact {
+  id: string;
+  personId: string;
+  person: {
+    lastName: string;
+    firstName: string;
+    patronymic: string | null;
+  };
+}
+
 interface Organization {
   [key: string]: unknown;
   id: string;
@@ -29,6 +39,7 @@ interface Organization {
   vatRate: number;
   isActive: boolean;
   roles?: OrgRole[];
+  contacts?: OrgContact[];
 }
 
 function OrganizationForm({ item, onClose }: { item: Organization | null; onClose: () => void }) {
@@ -55,12 +66,39 @@ function OrganizationForm({ item, onClose }: { item: Organization | null; onClos
   const [selectedRoles, setSelectedRoles] = useState<string[]>(
     (item?.roles as OrgRole[] | undefined)?.map((r) => r.id) ?? [],
   );
+  // Person контакты
+  const [personList, setPersonList] = useState<{ id: string; lastName: string; firstName: string; patronymic: string | null }[]>([]);
+  const [selectedPersonIds, setSelectedPersonIds] = useState<string[]>(
+    (item?.contacts as OrgContact[] | undefined)?.map((c) => c.personId) ?? [],
+  );
+  const [personSearch, setPersonSearch] = useState('');
 
   useEffect(() => {
     fetch('/api/org-roles').then(r => r.json()).then(d => {
       if (d.success) setRoleList(d.data);
     }).catch(() => {});
+    // Загружаем список Person для выпадающего списка
+    fetch('/api/persons?limit=500').then(r => r.json()).then(d => {
+      if (d.success) setPersonList(d.data.items);
+    }).catch(() => {});
   }, []);
+
+  const getPersonName = (p: { lastName: string; firstName: string; patronymic: string | null }) =>
+    `${p.lastName} ${p.firstName}${p.patronymic ? ' ' + p.patronymic : ''}`;
+
+  const togglePerson = (personId: string) => {
+    setSelectedPersonIds((prev) =>
+      prev.includes(personId)
+        ? prev.filter((id) => id !== personId)
+        : [...prev, personId],
+    );
+  };
+
+  const filteredPersons = personSearch
+    ? personList.filter((p) =>
+        getPersonName(p).toLowerCase().includes(personSearch.toLowerCase()),
+      )
+    : personList;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -68,7 +106,7 @@ function OrganizationForm({ item, onClose }: { item: Organization | null; onClos
     try {
       const method = item?.id ? 'PUT' : 'POST';
       const url = item?.id ? `/api/organizations/${item.id}` : '/api/organizations';
-      const payload = { ...form, roleIds: selectedRoles };
+      const payload = { ...form, roleIds: selectedRoles, contactPersonIds: selectedPersonIds };
       await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
       onClose();
     } catch (err) {
@@ -153,6 +191,45 @@ function OrganizationForm({ item, onClose }: { item: Organization | null; onClos
         {inp('Расчётный счёт', 'bankAccount')}
         {inp('Подписывающее лицо', 'signerName')}
         {inp('Должность', 'signerPosition')}
+        {/* Контактные лица — выпадающий список Person */}
+        <div className="sm:col-span-2 border border-[var(--border)] rounded-lg p-3">
+          <label className="block text-sm font-medium text-[var(--foreground)] mb-2">
+            Контактные лица
+            <span className="ml-1 text-xs text-[var(--muted-foreground)]" title="Выберите контактных лиц организации из справочника. Можно выбрать несколько.">ⓘ</span>
+          </label>
+          <input type="text" value={personSearch} onChange={(e) => setPersonSearch(e.target.value)}
+            placeholder="Поиск контактных лиц..."
+            className="w-full px-3 py-1.5 rounded-lg border border-[var(--input)] bg-[var(--background)] text-[var(--foreground)] text-sm mb-2 focus:outline-none focus:ring-2 focus:ring-[var(--ring)]" />
+          <div className="max-h-40 overflow-y-auto space-y-1">
+            {filteredPersons.length === 0 && (
+              <p className="text-xs text-[var(--muted-foreground)] py-2 text-center">
+                {personSearch ? 'Ничего не найдено' : 'Нет контактных лиц. Создайте в разделе «Контактные лица»'}
+              </p>
+            )}
+            {filteredPersons.map((p) => (
+              <label key={p.id}
+                className={`flex items-center gap-2 px-2 py-1 rounded text-sm cursor-pointer transition-colors hover:bg-[var(--muted)] ${selectedPersonIds.includes(p.id) ? 'bg-[var(--primary)]/10 text-[var(--primary)] font-medium' : ''}`}>
+                <input type="checkbox" checked={selectedPersonIds.includes(p.id)}
+                  onChange={() => togglePerson(p.id)}
+                  className="rounded border-[var(--border)] text-[var(--primary)] focus:ring-[var(--ring)]" />
+                {getPersonName(p)}
+              </label>
+            ))}
+          </div>
+          {selectedPersonIds.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-1">
+              {selectedPersonIds.map((pid) => {
+                const p = personList.find((x) => x.id === pid);
+                return p ? (
+                  <span key={pid} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[var(--primary)]/10 text-xs text-[var(--primary)] border border-[var(--primary)]/20">
+                    {getPersonName(p)}
+                    <button type="button" onClick={() => togglePerson(pid)} className="hover:text-[var(--destructive)] transition-colors">×</button>
+                  </span>
+                ) : null;
+              })}
+            </div>
+          )}
+        </div>
         {inp('НДС, %', 'vatRate', 'number')}
       </div>
 

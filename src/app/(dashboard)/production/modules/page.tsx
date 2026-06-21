@@ -146,217 +146,38 @@ function ModuleForm({ item, onClose }: { item: ProductModule | null; onClose: ()
   const addMaterial = () => setMaterials([...materials, { name: '', quantity: 1, unit: 'шт', isPurchased: true }]);
   const removeMaterial = (idx: number) => setMaterials(materials.filter((_, i) => i !== idx));
 
+  const inp = (label: string, key: string, type = 'text') => (
+    <div key={key}>
+      <label className="block text-sm font-medium text-[var(--foreground)] mb-1">{label}</label>
+      <input type={type} value={form[key as keyof typeof form] as string}
+        onChange={(e) => setForm({ ...form, [key]: e.target.value })}
+        className="w-full px-3 py-2 rounded-lg border border-[var(--input)] bg-[var(--background)] text-[var(--foreground)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ring)]" />
+    </div>
+  );
+
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <h2 className="text-lg font-semibold text-[var(--foreground)]">
         {item?.id ? 'Редактировать модуль' : 'Новый модуль'}
       </h2>
 
-      {/* Main fields */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-[var(--foreground)] mb-1">Название *</label>
-          <input type="text" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-[var(--input)] bg-[var(--background)] text-[var(--foreground)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ring)]" required />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-[var(--foreground)] mb-1">Артикул</label>
-          <input type="text" value={form.article} onChange={(e) => setForm({ ...form, article: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-[var(--input)] bg-[var(--background)] text-[var(--foreground)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ring)]" />
-        </div>
+        {inp('Название *', 'name')}
+        {inp('Артикул', 'article')}
         <div className="sm:col-span-2">
-          <label className="block text-sm font-medium text-[var(--foreground)] mb-1">
-            Продукт
-            <span className="ml-1 text-xs text-[var(--muted-foreground)]" title="Модуль можно создать без привязки к продукту — как самостоятельный шаблон">ⓘ</span>
-          </label>
-          <select value={form.productId} onChange={(e) => setForm({ ...form, productId: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-[var(--input)] bg-[var(--background)] text-[var(--foreground)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ring)] appearance-none">
-            <option value="">— Не привязан (самостоятельный модуль) —</option>
-            {products.map((p) => (
-              <option key={p.id} value={p.id}>{p.name} ({p.sku})</option>
-            ))}
+          <label className="block text-sm font-medium text-[var(--foreground)] mb-1">Продукт</label>
+          <select value={form.productId as string} onChange={(e) => setForm({ ...form, productId: e.target.value })}
+            className="w-full px-3 py-2 rounded-lg border border-[var(--input)] bg-[var(--background)] text-[var(--foreground)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ring)] appearance-none">
+            <option value="">— Не привязан —</option>
+            {products.map((p) => <option key={p.id} value={p.id}>{p.name} ({p.sku})</option>)}
           </select>
         </div>
-        <div>
-          <label className="block text-sm font-medium text-[var(--foreground)] mb-1">Ширина (мм)</label>
-          <input type="number" value={form.width} onChange={(e) => setForm({ ...form, width: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-[var(--input)] bg-[var(--background)] text-[var(--foreground)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ring)]" step="0.1" min="0" />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-[var(--foreground)] mb-1">Высота (мм)</label>
-          <input type="number" value={form.height} onChange={(e) => setForm({ ...form, height: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-[var(--input)] bg-[var(--background)] text-[var(--foreground)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ring)]" step="0.1" min="0" />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-[var(--foreground)] mb-1">Глубина (мм)</label>
-          <input type="number" value={form.depth} onChange={(e) => setForm({ ...form, depth: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-[var(--input)] bg-[var(--background)] text-[var(--foreground)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ring)]" step="0.1" min="0" />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-[var(--foreground)] mb-1">Вес (кг)</label>
-          <input type="number" value={form.weight} onChange={(e) => setForm({ ...form, weight: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-[var(--input)] bg-[var(--background)] text-[var(--foreground)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ring)]" step="0.01" min="0" />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-[var(--foreground)] mb-1">Изображение</label>
-          <div className="flex gap-2">
-            <input type="file" accept="image/jpeg,image/png,image/webp,image/gif"
-              onChange={async (e) => {
-                const file = e.target.files?.[0];
-                if (!file) return;
-                const fd = new FormData();
-                fd.append('file', file);
-                try {
-                  const res = await fetch('/api/upload', { method: 'POST', body: fd });
-                  const d = await res.json();
-                  if (d.success) setForm({ ...form, image: d.data.url });
-                } catch {}
-              }}
-              className="w-full px-3 py-2 rounded-lg border border-[var(--input)] bg-[var(--background)] text-sm file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:bg-[var(--primary)] file:text-white file:text-xs file:cursor-pointer" />
-          </div>
-          {form.image && (
-            <div className="mt-2 flex items-center gap-2">
-              <img src={form.image} alt="preview" className="h-12 w-12 rounded-lg object-cover border border-[var(--border)]" />
-              <button type="button" onClick={() => setForm({ ...form, image: '' })}
-                className="text-xs text-[var(--muted-foreground)] hover:text-destructive transition-colors">Удалить</button>
-            </div>
-          )}
-          <div className="mt-1">
-            <label className="text-xs text-[var(--muted-foreground)]">Или введите URL:
-              <input type="text" value={form.image || ''} onChange={(e) => setForm({ ...form, image: e.target.value })}
-                className="ml-2 px-2 py-0.5 rounded border border-[var(--input)] bg-[var(--background)] text-xs focus:outline-none focus:ring-1 focus:ring-[var(--ring)]" placeholder="https://..." />
-            </label>
-          </div>
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-[var(--foreground)] mb-1">
-            Порядок
-            <span className="ml-1 text-xs text-[var(--muted-foreground)]" title="Порядок сортировки модуля внутри карточки продукта. Меньшее значение = выше в списке.">ⓘ</span>
-          </label>
-          <input type="number" value={form.sortOrder} onChange={(e) => setForm({ ...form, sortOrder: Number(e.target.value) })} className="w-full px-3 py-2 rounded-lg border border-[var(--input)] bg-[var(--background)] text-[var(--foreground)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ring)]" min={0} />
-        </div>
+        {inp('Ширина (мм)', 'width', 'number')}
+        {inp('Высота (мм)', 'height', 'number')}
+        {inp('Глубина (мм)', 'depth', 'number')}
+        {inp('Вес (кг)', 'weight', 'number')}
+        {inp('Порядок сортировки', 'sortOrder', 'number')}
       </div>
-
-      {/* Work Types sub-form */}
-      <div className="border-t border-[var(--border)] pt-4">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-semibold text-[var(--foreground)]">Виды работ модуля</h3>
-          <div className="flex gap-2">
-            <Button type="button" variant="ghost" size="xs" onClick={() => setShowCreateWorkType(true)}>
-              + Создать вид работ
-            </Button>
-            <Button type="button" variant="ghost" size="icon-sm" onClick={addWorkType} title="Добавить существующий вид работ">
-              <Plus className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-        {workTypes.length === 0 && (
-          <p className="text-xs text-[var(--muted-foreground)]">Нет видов работ. Нажмите + чтобы добавить.</p>
-        )}
-        {workTypes.map((wt, idx) => (
-          <div key={idx} className="grid grid-cols-[1fr,120px,40px] gap-2 mb-2 items-end">
-            <div>
-              <label className="block text-xs text-[var(--muted-foreground)] mb-0.5">Вид работы</label>
-              <select value={wt.workTypeId} onChange={(e) => {
-                const updated = [...workTypes];
-                updated[idx].workTypeId = e.target.value;
-                setWorkTypes(updated);
-              }} className="w-full px-2 py-1.5 rounded border border-[var(--input)] bg-[var(--background)] text-[var(--foreground)] text-xs focus:outline-none focus:ring-1 focus:ring-[var(--ring)] appearance-none">
-                <option value="">— Выбрать —</option>
-                {workTypesList.map((wtl) => (
-                  <option key={wtl.id} value={wtl.id}>{wtl.name}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs text-[var(--muted-foreground)] mb-0.5">Часы</label>
-              <input type="number" value={wt.estimatedHours} onChange={(e) => {
-                const updated = [...workTypes];
-                updated[idx].estimatedHours = Number(e.target.value);
-                setWorkTypes(updated);
-              }} className="w-full px-2 py-1.5 rounded border border-[var(--input)] bg-[var(--background)] text-[var(--foreground)] text-xs focus:outline-none focus:ring-1 focus:ring-[var(--ring)]" min={0} step="0.5" />
-            </div>
-            <button type="button" onClick={() => removeWorkType(idx)} className="p-1.5 text-[var(--muted-foreground)] hover:text-destructive transition-colors">
-              <Trash2 className="h-4 w-4" />
-            </button>
-          </div>
-        ))}
-      </div>
-
-      {/* Materials sub-form — компактные карточки */}
-      <div className="border-t border-[var(--border)] pt-4">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-semibold text-[var(--foreground)]">Материалы модуля</h3>
-          <Button type="button" variant="ghost" size="xs" onClick={addMaterial}>
-            <Plus className="h-3.5 w-3.5" /> Добавить материал
-          </Button>
-        </div>
-        {materials.length === 0 && (
-          <p className="text-xs text-[var(--muted-foreground)]">Нет материалов. Нажмите «Добавить материал».</p>
-        )}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {materials.map((m, idx) => (
-            <div key={idx}
-              className="rounded-lg border border-[var(--border)] bg-gradient-card p-3 space-y-2 relative group">
-              <button type="button" onClick={() => removeMaterial(idx)}
-                className="absolute -top-2 -right-2 p-1 rounded-full bg-destructive text-white opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
-                title="Удалить материал">
-                <Trash2 className="h-3 w-3" />
-              </button>
-              <input type="text" value={m.name} onChange={(e) => {
-                const updated = [...materials];
-                updated[idx].name = e.target.value;
-                setMaterials(updated);
-              }} className="w-full px-2 py-1.5 rounded-md border border-[var(--input)] bg-[var(--background)] text-sm font-medium focus:outline-none focus:ring-1 focus:ring-[var(--ring)]" placeholder="Название материала" />
-              <div className="flex gap-2">
-                <div className="flex-1">
-                  <label className="block text-[10px] text-[var(--muted-foreground)] mb-0.5">Кол-во</label>
-                  <input type="number" value={m.quantity} onChange={(e) => {
-                    const updated = [...materials];
-                    updated[idx].quantity = Number(e.target.value);
-                    setMaterials(updated);
-                  }} className="w-full px-2 py-1 rounded-md border border-[var(--input)] bg-[var(--background)] text-xs focus:outline-none focus:ring-1 focus:ring-[var(--ring)]" min={0} step="0.01" />
-                </div>
-                <div className="w-16">
-                  <label className="block text-[10px] text-[var(--muted-foreground)] mb-0.5">Ед.</label>
-                  <input type="text" value={m.unit} onChange={(e) => {
-                    const updated = [...materials];
-                    updated[idx].unit = e.target.value;
-                    setMaterials(updated);
-                  }} className="w-full px-2 py-1 rounded-md border border-[var(--input)] bg-[var(--background)] text-xs focus:outline-none focus:ring-1 focus:ring-[var(--ring)]" />
-                </div>
-                <div className="flex items-end pb-1">
-                  <label className="flex items-center gap-1 cursor-pointer" title="Отметьте, если материал закупается у поставщика, а не производится своими силами">
-                    <input type="checkbox" checked={m.isPurchased} onChange={(e) => {
-                      const updated = [...materials];
-                      updated[idx].isPurchased = e.target.checked;
-                      setMaterials(updated);
-                    }} className="w-3.5 h-3.5 rounded border-[var(--input)] text-[var(--primary)] focus:ring-[var(--ring)]" />
-                    <span className="text-[10px] text-[var(--muted-foreground)]">Покупной</span>
-                  </label>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Modal: Create Work Type */}
-      {showCreateWorkType && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setShowCreateWorkType(false)}>
-          <div className="bg-[var(--background)] rounded-xl shadow-lg border border-[var(--border)] p-6 w-full max-w-sm mx-4" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-sm font-semibold text-[var(--foreground)] mb-4">Создать вид работ</h3>
-            <div className="mb-4">
-              <label className="block text-xs text-[var(--muted-foreground)] mb-1">Название *</label>
-              <input type="text" value={newWorkTypeName} onChange={(e) => setNewWorkTypeName(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') handleCreateWorkType(); }}
-                className="w-full px-3 py-2 rounded-lg border border-[var(--input)] bg-[var(--background)] text-[var(--foreground)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ring)]"
-                placeholder="Например: Сварка" autoFocus />
-            </div>
-            <div className="flex justify-end gap-2">
-              <button type="button" onClick={() => { setShowCreateWorkType(false); setNewWorkTypeName(''); }}
-                className="px-3 py-1.5 rounded-lg border border-[var(--border)] text-xs hover:bg-[var(--muted)] transition-colors">Отмена</button>
-              <button type="button" onClick={handleCreateWorkType} disabled={creatingWorkType || !newWorkTypeName.trim()}
-                className="px-3 py-1.5 rounded-lg bg-[var(--primary)] text-[var(--primary-foreground)] text-xs font-medium hover:opacity-90 transition-opacity disabled:opacity-50">
-                {creatingWorkType ? 'Создание...' : 'Создать'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       <div className="flex justify-end gap-2 pt-4 border-t border-[var(--border)]">
         <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg border border-[var(--border)] text-sm hover:bg-[var(--muted)] transition-colors">Отмена</button>

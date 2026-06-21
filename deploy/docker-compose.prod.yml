@@ -20,8 +20,9 @@ services:
       - "3000:3000"
     environment:
       - NODE_ENV=production
-      - JWT_SECRET=${JWT_SECRET:?JWT_SECRET is required}
-      - DATABASE_URL=${DATABASE_URL:?DATABASE_URL is required. Example: postgresql://user:pass@host:5432/kppdf}
+      - JWT_SECRET=${JWT_SECRET}
+      - DATABASE_URL=${DATABASE_URL}
+      - DADATA_API_KEY=${DADATA_API_KEY}
       - HOSTNAME=0.0.0.0
       - PORT=3000
     volumes:
@@ -33,6 +34,11 @@ services:
       timeout: 10s
       retries: 5
       start_period: 40s
+
+networks:
+  default:
+    external:
+      name: kppdf50-net
 
 volumes:
   kppdf50_uploads:

@@ -1,23 +1,24 @@
 import { requireAuth, requireRole } from '@/lib/auth';
 import { apiOk, apiError } from '@/lib/api-response';
 import { prisma } from '@/lib/db';
+import { isProd } from '@/lib/env';
 import bcrypt from 'bcryptjs';
 
 export async function POST() {
   try {
-    // Bootstrap escape hatch (Option A, per advisor review):
-    // Если в БД нет ни одного admin-user, открываем seed без авторизации
-    // (разово, идемпотентно). После первого запуска adminCount > 0 → последующие
-    // вызовы ОБЯЗАНЫ быть с действующей admin-сессией. Это снимает
-    // chicken-and-egg deadlock: чтобы создать admin, нужно было admin-логиниться.
-    // Safe в проде (Zero-day init) И в dev (старт dev-сервера без пред-настройки).
+    // Seed отключён в production — используйте миграции и admin-панель.
+    if (isProd) {
+      return apiError('Seed отключён в production', 403);
+    }
+
+    // Bootstrap: если в БД нет ни одного admin-user, требуем создать вручную.
     const adminCount = await prisma.user.count({ where: { role: 'admin' } });
     if (adminCount === 0) {
-      console.warn('[seed] BOOTSTRAP MODE: no admins in DB, allowing unauthenticated seed');
-    } else {
-      await requireAuth();
-      await requireRole(['admin']);
+      return apiError('Нет ни одного admin-аккаунта. Создайте его через admin-панель или выполните начальную настройку вручную.', 403);
     }
+
+    await requireAuth();
+    await requireRole(['admin']);
 
     // Users
     const adminPass = await bcrypt.hash('admin123', 10);
@@ -295,6 +296,6 @@ export async function POST() {
     return apiOk(null, 'Данные успешно загружены');
   } catch (error) {
     console.error('Seed error:', error);
-    return apiError(`Ошибка种子: ${error instanceof Error ? error.message : 'Unknown'}`, 500);
+    return apiError('Ошибка при загрузке seed-данных', 500);
   }
 }

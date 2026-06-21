@@ -14,8 +14,23 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "KP CRM",
+  title: {
+    default: "KP CRM",
+    template: "%s — KP CRM",
+  },
   description: "Система управления коммерческими предложениями и производством",
+  openGraph: {
+    title: 'KP CRM',
+    description: 'Система управления коммерческими предложениями и производством',
+    siteName: 'KP CRM',
+    locale: 'ru_RU',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'KP CRM',
+    description: 'Система управления коммерческими предложениями и производством',
+  },
 };
 
 export default function RootLayout({
@@ -49,7 +64,17 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-full flex flex-col" suppressHydrationWarning>
-        <Providers>{children}</Providers>
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[9999] focus:px-4 focus:py-2 focus:bg-[var(--primary)] focus:text-[var(--primary-foreground)] focus:rounded-lg focus:shadow-lg focus:outline-none"
+        >
+          Пропустить навигацию
+        </a>
+        <Providers>
+          <main id="main-content" className="flex-1 flex flex-col">
+            {children}
+          </main>
+        </Providers>
       </body>
     </html>
   );

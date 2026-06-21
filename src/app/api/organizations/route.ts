@@ -58,13 +58,16 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validation = validateBody(body, CreateOrganizationSchema);
     if (!validation.success) return validation.error;
-    const { roleIds, ...orgData } = validation.data;
+    const { roleIds, contactPersonIds, ...orgData } = validation.data;
     const item = await prisma.organization.create({
       data: {
         ...orgData,
         roles: roleIds?.length ? { connect: roleIds.map((id: string) => ({ id })) } : undefined,
+        contacts: contactPersonIds?.length
+          ? { create: contactPersonIds.map((personId: string) => ({ personId })) }
+          : undefined,
       },
-      include: { roles: true },
+      include: { roles: true, contacts: { include: { person: { select: { lastName: true, firstName: true, patronymic: true } } } } },
     });
     invalidateByPrefix(CACHE_PREFIX);
     return apiOk(item);

@@ -1,12 +1,16 @@
 import type { NextConfig } from "next";
+import { isProd } from "@/lib/env";
 
 const nextConfig: NextConfig = {
   // Standalone сборка для Docker
   output: 'standalone',
 
+  // Скрыть заголовок X-Powered-By
+  poweredByHeader: false,
+
   // Удаление console.log/debug в продакшене, но сохраняем warn/error для мониторинга
   compiler: {
-    removeConsole: process.env.NODE_ENV === 'production'
+    removeConsole: isProd
       ? { exclude: ['error', 'warn'] }
       : false,
   },
@@ -34,8 +38,15 @@ const nextConfig: NextConfig = {
     ],
   },
 
-  // Кеширование статики
+  // Кеширование статики + безопасность
   headers: async () => [
+    {
+      source: '/(.*)',
+      headers: [
+        { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' },
+        { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
+      ],
+    },
     {
       source: '/uploads/:path*',
       headers: [

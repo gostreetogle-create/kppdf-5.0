@@ -1,6 +1,6 @@
 # Текущий чек-лист kppdf-5.0 (обновляется каждый цикл)
 
-**Дата последнего обновления**: 2026-06-20 (после cycle-bootstrap-escape DONE; мideliverable cycles 48-49 DEFERRED)
+**Дата последнего обновления**: 2026-06-21 (полный аудит проекта)
 **Назначение**: при обрыве интернета или потере контекста — сразу понятно, на чём остановились. Файл обновляется **перед началом** и **после завершения** каждого цикла.
 
 ---
@@ -26,8 +26,8 @@
 | **54** | **B.2 — Client юрлица (B2B)** | ✅ **DONE** (2026-06-20) | cycle-54 commit (2e638fb) | Business-critical layer — Client.type discriminator +5 fields + Zod DU + search insensitive. ADR-004. |
 | **44** | **🆕 3.1 — `ProposalEditor` refactor (architectural)** | ✅ **DONE** (2026-06-20) | cycle-44 commit | Extraction: 449-line monolith → 11 sub-components + types + provider + thin page wrapper (15 lines). ADR-005. |
 | **45** | **🆕 3.1 — `<ProposalEditor>` polish (memo audit + ESLint cleanup)** | ✅ **DONE** (2026-06-20) | cycle-45 commit (5344998) | Eliminated `ProposalPdfDataLike` → direct `ProposalPdfData` reuse. Created `ProposalEditorFinance` derived object → proposalBlocks deps 9→4, pdfData deps 11→7. pdfData function → useMemo + lazy useState Date.now(). New `resetTemplateSelection` action (eliminates setState-in-effect). Tsc 0 / vitest 88/88 / eslint 0. |
-| **46** | **🆕 Cleanup: ESLint src/lib/auth.ts (cycle 39 re-export debt)** | ✅ **DONE** (2026-06-20) | cycle-46 commit (pending) | Removed 3 unused re-export imports (`signAccessToken`, `signRefreshToken`, `type JwtPayload`) from local `import { ... } from './jwt';`. Kept `verifyToken` (used in `requireAuth()` body). Explicit re-export line at bottom retained for backwards compat. Resolves 1 error + 3 unused-import warnings pre-existing from cycle 39. auth.ts lint clean. |
-| **47** | **🆕 B.6-extension: cycle-52-extension requireAuth→requireRole (partial silo migration)** | ✅ **DONE (partial)** (2026-06-20) | cycle-47 commit (pending) | Mechanical substitution via `scripts/cycle-52-extension-apply.py` in 9 routes actively using `requireAuth()` in write handlers (warehouses, storage-items, inventory-movements, reconciliation-acts, order-closings, proposals-convert, contracts-convert-to-production, tenders, order-tasks-assign). 18 other target routes already had `requireEditor()` from cycle 52; kept at `requireEditor()` floor (blocks viewer only). Strict silo upgrade (requireEditor → requireRole(specific)) deferred to cycle 47-ext per code-reviewer verdict. tsc 0 / vitest 88/88 / eslint clean in auth.ts. |
+| **46** | **🆕 Cleanup: ESLint src/lib/auth.ts (cycle 39 re-export debt)** | ✅ **DONE** (2026-06-20) | cycle-46 | ESLint clean — устранены 3 unused-import warnings `(signAccessToken, signRefreshToken, JwtPayload)`. |
+| **47** | **🆕 B.6-extension: requireAuth→requireRole (partial silo migration)** | ✅ **DONE** (2026-06-20) | cycle-47 | 9 write-handler routes upgraded: requireAuth→requireRole(specific). Остальные 18 с requireEditor() оставлены как viewer-floor (Tier C). |
 
 **Foundation layer стартовал параллельно** — разные файлы, готовит B.1+B.2.
 
@@ -95,11 +95,12 @@
 
 ```
 $ npx tsc --noEmit      → exit 0 ✅
-$ npx vitest run        → 88/88 (6 suites) ✅
-$ npx eslint src ...    → 0 errors (3 cosmetic warnings) ✅
+$ npx vitest run        → 272/272 (16 suites) ✅
+$ npm run build         → exit 0 ✅
+$ npx eslint src ...    → 0 errors ✅
 ```
 
-Ожидается сохранение (не ухудшение) gate-результатов после cycles 51+52.
+Ожидается сохранение (не ухудшение) gate-результатов.
 
 ---
 
@@ -109,11 +110,12 @@ $ npx eslint src ...    → 0 errors (3 cosmetic warnings) ✅
 
 ### Известные не-блокеры
 
-- Working tree содержит uncommitted изменения до cycle 39 (sortable-block, image-aware preview). Cleanup deferred — вне scope.
-- 3 cosmetic lint warnings в `src/lib/auth.ts` (unused imports: signAccessToken, signRefreshToken, JwtPayload — pre-existing re-exports). Fix deferred до очередного touch-up.
-- Тестов PDF не существует (Tier B API frozen; cycles 48-49 добавят).
-- Тестов env.ts не существует (Tier C candidate; cycles 48-49 добавят).
-- Тестов StatusWorkflow/requireRole НЕ существуют (cycles 48-49).
+- Рабочее дерево содержит uncommitted изменения (sortable-block, image-aware preview). Cleanup deferred.
+- Тестов PDF не существует (Tier B API frozen).
+- Тестов env.ts не существует (Tier C candidate).
+- Тестов StatusWorkflow/requireRole не существуют (Tier D — cycles 48-49 deferred).
+- 30+ API-роутов всё ещё используют `requireAuth()` без role guard (viewer может читать).
+- ⚠️ Prettier: 320 файлов не отформатированы (косметика, не влияет на сборку).
 
 ---
 
@@ -147,7 +149,13 @@ $ npx eslint src ...    → 0 errors (3 cosmetic warnings) ✅
 | [`business-tasks.md`](business-tasks.md) | Детальный план B-циклов |
 | [`discussion.md`](discussion.md) | Тех-дискуссия |
 | [`discussion-business-logic.md`](discussion-business-logic.md) | Бизнес-дискуссия (Round 1+2+FINAL) |
-| [`tasks/current-task.md`](tasks/current-task.md) | **Текущая спецификация активных циклов (51+52)** |
+| [`tasks/current-task.md`](tasks/current-task.md) | Текущая спецификация активных циклов |
+| [`docs/tasks/PARALLEL_WORK_LOG.md`](../tasks/PARALLEL_WORK_LOG.md) | Журнал параллельной работы (бизнес-логика) |
+| [`docs/checklists/QUALITY.md`](../checklists/QUALITY.md) | Стандарт проверки модулей |
+| [`docs/checklists/IMPLEMENTATION.md`](../checklists/IMPLEMENTATION.md) | Чек-лист реализации (33/33 задач) |
+| [`docs/tasks/SKELETONS_CHECKLIST.md`](../tasks/SKELETONS_CHECKLIST.md) | Cкелетоны загрузки (✅ завершён) |
+| [`docs/tasks/BUSINESS_LOGIC_REFACTOR_CHECKLIST.md`](../tasks/BUSINESS_LOGIC_REFACTOR_CHECKLIST.md) | Бизнес-логика (⚠️ 1 пункт остался) |
+| [`docs/tasks/DB_MIGRATION_CHECKLIST.md`](../tasks/DB_MIGRATION_CHECKLIST.md) | Миграция PG (⏸️ ожидает) |
 | [`audit-log.md`](audit-log.md) | Полная история циклов |
 
 ---

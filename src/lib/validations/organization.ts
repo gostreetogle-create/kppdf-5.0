@@ -16,7 +16,10 @@ export const CreateOrganizationSchema = z.object({
   bankAccount: z.string().max(50).default(''),
   signerName: z.string().max(200).default(''),
   signerPosition: z.string().max(200).default(''),
+  // Оставляем contactPerson для обратной совместимости + DaData
   contactPerson: z.string().max(200).default(''),
+  // Связь с Person (контактные лица организации)
+  contactPersonIds: z.array(z.string()).default([]),
   paymentTermDays: z.number().int().min(0).default(0),
   vatRate: z.number().min(0).max(100).default(20),
   isActive: z.boolean().default(true),

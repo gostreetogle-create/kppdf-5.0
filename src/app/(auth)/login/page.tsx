@@ -3,6 +3,7 @@
 import { Suspense, useState, useEffect, FormEvent } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuthStore } from '@/stores/auth-store';
+import { isProd } from '@/lib/env';
 import { Eye, EyeOff, Shield, Zap, BarChart3, AlertTriangle } from 'lucide-react';
 
 const ERROR_MESSAGES: Record<string, string> = {
@@ -81,10 +82,11 @@ function LoginForm() {
         </div>
 
         <div className="bg-[var(--card)]/80 backdrop-blur-xl border border-[var(--border)] rounded-2xl shadow-2xl p-8 animate-fadeIn" style={{ animationDelay: '0.1s' }}>
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={handleSubmit} className="space-y-5" aria-label="Форма входа">
             <div>
-              <label className="block text-sm font-medium text-[var(--foreground)] mb-2">Логин</label>
+              <label htmlFor="login-username" className="block text-sm font-medium text-[var(--foreground)] mb-2">Логин</label>
               <input
+                id="login-username"
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
@@ -92,19 +94,22 @@ function LoginForm() {
                 placeholder="Введите логин"
                 autoFocus
                 required
+                aria-required="true"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-[var(--foreground)] mb-2">Пароль</label>
+              <label htmlFor="login-password" className="block text-sm font-medium text-[var(--foreground)] mb-2">Пароль</label>
               <div className="relative">
                 <input
+                  id="login-password"
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full px-4 py-3 pr-12 rounded-xl border border-[var(--input)] bg-[var(--background)] text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)] focus:border-transparent transition-all"
                   placeholder="Введите пароль"
                   required
+                  aria-required="true"
                 />
                 <button
                   type="button"
@@ -126,6 +131,7 @@ function LoginForm() {
             <button
               type="submit"
               disabled={loading}
+              aria-label="Войти в систему"
               className="w-full py-3 px-4 rounded-xl text-white font-semibold transition-all duration-200 disabled:opacity-50 shadow-lg hover:shadow-xl"
               style={{background: 'var(--gradient-primary)'}}
             >
@@ -138,9 +144,11 @@ function LoginForm() {
             </button>
           </form>
 
-          <p className="mt-6 text-center text-xs text-[var(--muted-foreground)]">
-            Demo: admin / admin123
-          </p>
+          {!isProd && (
+            <p className="mt-6 text-center text-xs text-[var(--muted-foreground)]">
+              Demo: admin / admin123
+            </p>
+          )}
         </div>
 
         <div className="grid grid-cols-3 gap-4 mt-8 animate-fadeIn" style={{ animationDelay: '0.2s' }}>

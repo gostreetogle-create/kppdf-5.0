@@ -1,6 +1,6 @@
 # Чек-лист доработки бизнес-логики
 
-## Статус: ✅ Выполнено (кроме одного пункта)
+## Статус: ✅ Полностью выполнено
 
 ### Принятые архитектурные решения:
 1. ✅ **Client → Organization + роль «Клиент»** — Client удалён, данные перенесены, customerId в Proposal/Contract
@@ -20,7 +20,7 @@
 - [x] Модель `Material` (name, article, unit, description, price?, image?, supplierId?, category?)
 - [x] Модель `MaterialCategory` (name)
 - [x] `ProductModule.productId` → optional
-- [ ] `Organization` → удалить contactPerson, signerName, signerPosition (перенести в Person) — **ОСТАЛОСЬ**: заменить текстовое поле contactPerson на выпадающий список Person
+- [x] `Organization` → добавлен выпадающий список Person для выбора контактных лиц (**✅ выполнено 21.06.2026**): `contactPersonIds` в валидации + API + форма
 - [x] `prisma db push`
 
 ### Этап 2: Валидации (Zod)

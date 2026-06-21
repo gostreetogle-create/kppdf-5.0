@@ -1,4 +1,10 @@
+import type { Metadata } from 'next';
 import { FinanceCards } from './client';
+
+export const metadata: Metadata = {
+  title: 'Финансы',
+  description: 'Учёт закрытия заказов, акты сверки и финансовые отчёты',
+};
 
 const sections = [
   {

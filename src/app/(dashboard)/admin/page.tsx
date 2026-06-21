@@ -1,8 +1,14 @@
+import type { Metadata } from 'next';
 import { prisma } from '@/lib/db';
 import { requireAuthPage } from '@/lib/auth-page';
 import { AdminStatsCards, AdminQuickLinks, AdminSystemInfo } from './client';
 import { H1, Muted } from '@/components/ui/typography';
 import { Stack, Grid } from '@/components/ui/layout';
+
+export const metadata: Metadata = {
+  title: 'Администрирование',
+  description: 'Обзор системы, управление пользователями, статусами и настройками',
+};
 
 export default async function AdminDashboardPage() {
   await requireAuthPage();

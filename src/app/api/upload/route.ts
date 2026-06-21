@@ -6,7 +6,7 @@ import path from 'path';
 
 const UPLOAD_DIR = 'public/uploads';
 const MAX_SIZE = 10 * 1024 * 1024; // 10MB
-const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml'];
+const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 
 export async function POST(request: NextRequest) {
   try {
@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (!ALLOWED_TYPES.includes(file.type)) {
-      return apiError('Недопустимый тип файла. Разрешены: JPEG, PNG, WebP, GIF, SVG', 400);
+      return apiError('Недопустимый тип файла. Разрешены: JPEG, PNG, WebP, GIF', 400);
     }
 
     if (file.size > MAX_SIZE) {
@@ -42,7 +42,8 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true, data: { url, filename } });
   } catch (error) {
+    console.error('Upload error:', error);
     if (error instanceof Error && error.message === 'UNAUTHORIZED') return apiError('Не авторизован', 401);
-    return apiError(String(error), 500);
+    return apiError('Внутренняя ошибка сервера', 500);
   }
 }

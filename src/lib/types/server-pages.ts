@@ -73,6 +73,10 @@ import type {
   Organization,
   Person,
   Tender,
+  WorkCenter,
+  WorkType,
+  Worker,
+  PurchaseRequest,
 } from '../../generated/prisma/client';
 
 // PAGE-SIZE CONTRACT (Cycle 26 ADR — closes prior `TODO pagination`):
@@ -273,3 +277,72 @@ export const MATERIAL_LIST_QUERY_ARGS = {
 } satisfies Prisma.MaterialFindManyArgs;
 
 export type MaterialListItem = Prisma.MaterialGetPayload<typeof MATERIAL_LIST_QUERY_ARGS>;
+
+// ============================================================================
+// WorkCenter (no includes) — PATTERN (B)
+// ============================================================================
+//
+// page.tsx: src/app/(dashboard)/production/work-centers/page.tsx
+
+export const WORK_CENTER_LIST_QUERY_ARGS: Prisma.WorkCenterFindManyArgs = {
+  orderBy: { name: 'asc' },
+  take: 20,
+};
+
+export type WorkCenterListItem = WorkCenter;
+
+// ============================================================================
+// WorkType (no includes) — PATTERN (B)
+// ============================================================================
+//
+// page.tsx: src/app/(dashboard)/production/work-types/page.tsx
+
+export const WORK_TYPE_LIST_QUERY_ARGS: Prisma.WorkTypeFindManyArgs = {
+  orderBy: { name: 'asc' },
+  take: 20,
+};
+
+export type WorkTypeListItem = WorkType;
+
+// ============================================================================
+// Worker (no includes) — PATTERN (B)
+// ============================================================================
+//
+// page.tsx: src/app/(dashboard)/production/workers/page.tsx
+
+export const WORKER_LIST_QUERY_ARGS: Prisma.WorkerFindManyArgs = {
+  orderBy: { lastName: 'asc' },
+  take: 20,
+};
+
+export type WorkerListItem = Worker;
+
+// ============================================================================
+// StorageItem (with includes) — PATTERN (A)
+// ============================================================================
+//
+// page.tsx: src/app/(dashboard)/warehouse/positions/page.tsx
+
+export const STORAGE_ITEM_LIST_QUERY_ARGS = {
+  orderBy: { warehouseId: 'asc' },
+  take: 20,
+  include: {
+    warehouse: { select: { name: true } },
+    product: { select: { name: true } },
+  },
+} satisfies Prisma.StorageItemFindManyArgs;
+
+export type StorageItemListItem = Prisma.StorageItemGetPayload<typeof STORAGE_ITEM_LIST_QUERY_ARGS>;
+
+// ============================================================================
+// PurchaseRequest (no includes) — PATTERN (B)
+// ============================================================================
+//
+// page.tsx: src/app/(dashboard)/warehouse/purchases/page.tsx
+
+export const PURCHASE_REQUEST_LIST_QUERY_ARGS: Prisma.PurchaseRequestFindManyArgs = {
+  orderBy: { createdAt: 'desc' },
+  take: 20,
+};
+
+export type PurchaseRequestListItem = PurchaseRequest;

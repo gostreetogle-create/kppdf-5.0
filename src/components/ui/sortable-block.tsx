@@ -3,6 +3,7 @@
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Trash2, Pencil } from 'lucide-react';
+import DOMPurify from 'dompurify';
 import type { DocBlock } from '@/types';
 
 interface SortableBlockProps {
@@ -116,7 +117,7 @@ function TextBlockContent({ block }: { block: DocBlock }) {
           >
             <div
               className="whitespace-pre-wrap break-words overflow-hidden"
-              dangerouslySetInnerHTML={{ __html: col.content || 'Текст' }}
+              dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(col.content || 'Текст') }}
             />
           </div>
         ))}
@@ -135,7 +136,7 @@ function TextBlockContent({ block }: { block: DocBlock }) {
     >
       <div
         className="whitespace-pre-wrap break-words"
-        dangerouslySetInnerHTML={{ __html: block.content || 'Текстовый блок' }}
+        dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(block.content || 'Текстовый блок') }}
       />
     </div>
   );

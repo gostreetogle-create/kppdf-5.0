@@ -63,11 +63,12 @@ COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/public ./public
 
-# Копируем Prisma: CLI + Client engine + миграции
+# Копируем Prisma: schema + миграции + клиент + CLI + конфиг
 COPY --from=builder /app/prisma ./prisma
-COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
-COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
+COPY --from=builder /app/src/generated ./src/generated
+# Копируем node_modules целиком из builder (нужно для prisma CLI в runtime)
+COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./package.json
 
 USER nextjs
@@ -77,10 +78,5 @@ EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
 
-# Entrypoint: применяем миграции, запускаем Next.js
-# DATABASE_URL должен быть установлен в docker-compose или в окружении контейнера.
-CMD ["sh", "-c", "\
-  npx prisma migrate deploy 2>&1 | grep -v 'ready in' && \
-  echo '🚀 starting Next.js production server (PostgreSQL)' && \
-  node server.js \
-"]
+# Entrypoint: запускаем Next.js (prisma db push запускается отдельно через docker run)
+CMD ["node", "server.js"]

@@ -58,13 +58,17 @@ export function useDraftAutosave<T>(
     };
   }, [saveDraft, interval, enabled]);
 
+  // Сохраняем черновик при скрытии страницы (visibilitychange) —
+  // не блокирует bfcache в отличие от beforeunload.
   useEffect(() => {
-    const handleBeforeUnload = () => {
-      saveDraft();
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        saveDraft();
+      }
     };
 
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [saveDraft]);
 
   return {
