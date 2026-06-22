@@ -39,7 +39,7 @@
 | 45 | 🆕 3.1 — `<ProposalEditor>` polish (memo audit + ESLint cleanup) | ✅ done (2026-06-20) | cycle 44 ✅ |
 | 46-47 | 4.1 — Proposal editor 3-panel UX | 📋 planned | 3.1 |
 | 48-49 | 6.1 — Tests isolation / integration | 📋 planned | нет |
-| 50 | 7.1 — Zustand refresh TTL + silent preempt | 📋 planned | нет |
+| **50** | **🆕 7.1 — Zustand refresh TTL + silent preempt** | ✅ **DONE** (2026-06-22) | нет | NEW `src/stores/auth-refresh.ts` (parseJwtExpiry + createRefreshScheduler) + extended `src/stores/auth-store.ts` (tokenExpiryAt + module-level scheduler singleton) + 12 vitest tests. ADR-006. Tier C candidate. Tier A `jwt.ts` НЕ тронут. |
 
 ## 📋 ПЛАНИРУЕМЫЕ ЦИКЛЫ (бизнес-план v2)
 
@@ -218,3 +218,4 @@ $ npm run build             → exit 0 ✅ (production-ready)
 | 2026-06-21 (audit) | **GENERAL AUDIT** (see cycle A1-A4 below): npm install + prisma generate unblocked gates; MASTER-CHECKLIST.md создан; 16 ESLint warnings → 0; BUSINESS-LOGIC.md stages 5-12 syncronized с реальностью; `npm run build` lazy proxy fix в db.ts. |
 | 2026-06-21 (cycle 54-fix) | **Cycle 54 schema integration** копия реального изменения: добавлен Organization.type discriminator (`legal \| entrepreneur \| individual`); миграция `20260622000000_add_organization_type_discriminator/migration.sql` (ALTER + CREATE INDEX); `src/lib/validations/organization.ts` переписан с Zod `discriminatedUnion` + type-aware Update + `applyTypeAwareValidation` helper. Gates: tsc 0 / vitest 272/272 / prisma generated. |
 | 2026-06-22 (cycle 55+56 sync) | **Cycles 55 + 56 DONE** — B.4 защита номеров (5 PATCH routes + 11 vitest tests + number-protection.ts + frozen-statuses.ts) + B.5 OrderClosing FK relation (already in schema as `productionOrder ProductionOrder? @relation(... onDelete: SetNull)`). Docs синхронизированы в CURRENT-CHECKLIST.md + audit-tasks-business.md (📋 planned → ✅ DONE). Gates: tsc 0 / vitest 272/272 (11 new tests pass) / eslint 0 warnings. |
+| 2026-06-22 (cycle 50) | **Cycle 50 DONE (7.1 silent refresh preempt)** — NEW `src/stores/auth-refresh.ts` (parseJwtExpiry + createRefreshScheduler with 5min default lead) + extended `src/stores/auth-store.ts` (tokenExpiresAt + module-level scheduler singleton + 3-mode failure handling) + 12 vitest tests in `src/lib/__tests__/auth-refresh.test.ts` (5 parseJwtExpiry paths + 7 scheduler paths using vi.advanceTimersByTime + Promise.resolve microtask drain). ADR-006. Gates: tsc 0 / vitest 284/284 / eslint 0. Tier A `jwt.ts` НЕ тронут. |

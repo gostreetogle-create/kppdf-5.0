@@ -86,6 +86,7 @@
 | `src/lib/proposals/clone-items.ts` | 43 | ✅ 0 | ❌ нет тестов | pending (Round 3 discussion) | ✅ manual | **CANDIDATE** — требует тестов из cycle 48-49 |
 | `src/lib/status-workflow.ts` | 51 | ✅ 0 | ❌ нет тестов | ADR-003 (accepted) | ✅ manual | **CANDIDATE** — требует тестов из cycle 48-49 (cache + 5 PATCH routes integration) |
 | `src/lib/warehouse/auto-receive-finished-goods.ts` | 53 | ✅ 0 | ❌ нет тестов | ADR-004 (accepted) | ✅ manual | **CANDIDATE** — требует тестов из cycle 48-49 (race conditions + $transaction integrity + UNIQUE violation swallow) |
+| `src/stores/auth-refresh.ts` | 50 | ✅ 0 | ✅ 12/12 (auth-refresh.test.ts) | ADR-006 (accepted) | ✅ manual | **CANDIDATE** — tests passing, ready for Tier A promotion when cycles 48-49 land |
 
 **Promotion criterion (Tier C → Tier A)**:
 - Должны появиться vitest тесты с покрытием всех экспортируемых функций.
@@ -141,3 +142,4 @@
 | 2026-06-20 | Tier C expansion: warehouse/auto-receive-finished-goods.ts (NEW lib, cycle 53) — B.1 finished goods IN helper. Tier A/B/C unchanged (jwt.ts, pdf/index.ts, status-workflow.ts NOT touched). | 53+54 |
 | 2026-06-20 | Tier D expansion: 11 new files in `src/components/proposal-editor/` + `src/types/proposal-editor.ts` (cycle 44) — Block 3.1 refactor. Tier A/B/C unchanged. | 44 |
 | 2026-06-20 | Tier D polish (cycle 45) — Eliminated `ProposalPdfDataLike` (direct `ProposalPdfData` reuse); `ProposalEditorFinance` derived object → proposalBlocks deps 9→4 + pdfData deps 11→7; pdfData converted function → useMemo + lazy `useState(() => ({number, createdAt}))` Date.now() pattern; new `resetTemplateSelection` action replaces setState-in-effect. tsc 0 / vitest 88/88 / eslint 0. Tier A/B/C unchanged. | 45 |
+| 2026-06-22 | Tier C expansion (cycle 50): `auth-refresh.ts` (NEW helper, silent preemptive refresh). 12 vitest tests (parseJwtExpiry + createRefreshScheduler). tsc 0 / vitest 284/284 / eslint 0. Tier A `jwt.ts` NOT touched per Rule 3. ADR-006. | 50 |
