@@ -66,7 +66,7 @@
 | ID | Задача | Effort | Impact |
 |----|--------|--------|--------|
 | **P0.1** | ➜ **DONE**: prisma generate + node_modules install | — | ✅ |
-| **P0.2** | Sync `BUSINESS-LOGIC.md` с реальностью (stages 5-12) — иначе команда видит ложно 🔴 | 30 min | Высокий |
+| **P0.2** | ➜ **DONE (2026-06-22)**: Sync `BUSINESS-LOGIC.md` с реальностью — §4 stages 5/6/9/10/12, §6.2 all 7 counters, §7 all 6 FK relations flipped 🔴 → ✅ с ссылками на код | 30 min | Высокий |
 
 ### 🟧 P1 — Быстрые победы (минуты)
 
@@ -74,8 +74,9 @@
 |----|--------|--------|--------|
 | **P1.1** | ➜ **DONE в этом audit**: fix `gantt-skeleton.tsx:42` — `Math.random()` during render → deterministic by `i` | — | ✅ |
 | **P1.2** | ➜ **DONE**: fix `number-protection.test.ts:7` — remove `as any` (literal `proposal` passes TS) | — | ✅ |
-| **P1.3** | Cleanup remaining 16 ESLint warnings | ~30 min | Чистота |
-| **P1.4** | Re-run `npm run build` — проверить production build | 5 min | Уверенность |
+| **P1.3** | ➜ **DONE (2026-06-22)**: ESLint warnings cleanup — 0 warnings, 0 errors (`npx eslint src --max-warnings=999`) | — | Чистота |
+| **P1.4** | ➜ **DONE (2026-06-22)**: Verify `npm run build` — production build SUCCESS, Static + Dynamic/Proxy routes confirmed | — | Уверенность |
+| **P1.PERF-AUDIT** | ➜ **DONE (2026-06-22)**: `PERFORMANCE_CHECKLIST.md` audit — добавлен header reference на ✅ `PERFORMANCE_OPTIMIZATION_CHECKLIST.md` (8/8 шагов плана реализованы) | — | Навигация |
 
 ### 🟨 P2 — Завершение начатых циклов
 
@@ -123,17 +124,22 @@
 
 ## 6. 🚀 РЕКОМЕНДУЕМЫЙ ПОРЯДОК ИМПЛЕМЕНТАЦИИ
 
-### Фаза 1: Гигиена (1-2 ч)
-1. Fix P1.3 (ESLint warnings cleanup) — **micro-batch**
-2. Run `npm run build` (P1.4) — confirm prod build
-3. Sync `BUSINESS-LOGIC.md` (P0.2)
+### Фаза 1: Гигиена (1-2 ч) — ✅ DONE 2026-06-22
+1. ✅ Fix P1.3 (ESLint warnings cleanup) — **0 warnings** at audit
+2. ✅ Run `npm run build` (P1.4) — production build green
+3. ✅ Sync `BUSINESS-LOGIC.md` (P0.2) — stages 5/6/9/10/12 + § 6.2 + § 7 synced
+4. ✅ PERFORMANCE_CHECKLIST.md — header note points to ✅ OPTIMIZATION
 
-### Фаза 2: Завершение начатых циклов (6-8 ч)
-1. Cycle 54 schema discriminator (P2.1)
-2. Verify cycle 47 на 9 entity routes (P2.2, P2.3)
+### Фаза 2: Завершение начатых циклов (6-8 ч) — 📋 NEXT
+1. Cycle 54 schema discriminator (P2.1) — Organization.type discriminator
+2. Verify cycle 47 на 9 entity routes (P2.2, P2.3) — requireRole coverage
 
 ### Фаза 3: Business-logic expansion — выбор по приоритету бизнеса
 *(зависит от решения пользователя — какие feature важнее)*
+- D-A3 Гантт DnD (6-8h)
+- D-A4 Снабжение auto-form (6-10h)
+- D-A5 Shipment UI (6-10h)
+- D-A6 Ролевая панель UI (4-8h)
 
 ### Фаза 4: Quality gate (продолжающаяся)
 - После каждой P* фазы — re-run `tsc`, `vitest`, `eslint`, `build`.

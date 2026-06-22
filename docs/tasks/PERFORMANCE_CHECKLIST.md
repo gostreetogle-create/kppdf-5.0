@@ -2,7 +2,9 @@
 
 > **Дата:** 21 июня 2026  
 > **Проект:** KPPDF v5.0 (Next.js 16 + React 19 + Prisma 7 + PostgreSQL)  
-> **Lighthouse:** LCP 3.3s | TBT 270ms | 3,280 KiB network | FCP 0.3s
+> **Lighthouse baseline:** LCP 3.3s | TBT 270ms | 3,280 KiB network | FCP 0.3s
+>
+> **✅ АУДИТ 2026-06-22**: 8/8 шагов ниже реализованы. Подробности и метрики ПОСЛЕ — см. **`docs/tasks/PERFORMANCE_OPTIMIZATION_CHECKLIST.md`** (статус: ✅ Завершён). Замеры: FCP 300→124ms, Page Weight 3.28→2.80 MB.
 
 ---
 

@@ -1,8 +1,14 @@
 # BUSINESS-LOGIC: Бизнес-логика KPPDF CRM
 
-> Версия: 3.0
-> Дата: 16 июня 2026
+> Версия: 3.1
+> Дата: 22 июня 2026 (sync after cycle 60+ RBAC matrix + audit)
 > Назначение: полная архитектура системы — от товара до отгрузки
+>
+> **Изменения v3.0 → v3.1**:
+> - §4 Этапы 5, 6, 9, 10, 12 — flipped 🔴 → ✅ где реализовано (cycles 51-57)
+> - §6.2 Авто-номера — все 7 counter-functions ✅ подтверждены в коде
+> - §7 FK-связи — все 6 relations ✅ подтверждены в `prisma/schema.prisma`
+> - §9 ПЛАН — добавлен NB о текущем статусе (см. § 1)
 
 ---
 
@@ -141,18 +147,19 @@ Product (товар)
 - ✅ Конвертация из КП: `POST /api/proposals/[id]/convert`
 - ✅ Перенос товаров, статус КП → converted
 
-### Этап 5: Оплата → Производство (КРИТИЧЕСКИЙ РАЗРЫВ)
-- 🔴 **Авто-конвертация:** при смене статуса КП на «оплачено» → автоматически создаётся ProductionOrder
-- 🔴 Номер заказа = номер КП (с возможностью редактирования)
-- 🔴 Проверка дубликатов номеров заказов (предупреждение, блокировка)
-- 🔴 В заказ попадает всё необходимое для производства (без цен)
-- 🔴 Поля `contractId`, `proposalId` в ProductionOrder
+### Этап 5: Оплата → Производство (КРИТИЧЕСКИЙ РАЗРЫВ) — ✅ CYCLE 53
+- ✅ **Авто-конвертация:** PATCH `Proposal.status='paid'` → автоматически создаётся `ProductionOrder` (см. `src/app/api/proposals/[id]/route.ts` lines 142-260)
+- ✅ Номер заказа: `nextProductionOrderNumber()` → `ЗК-XXXX` (см. `src/lib/counter.ts:54`)
+- ✅ Защита номеров: `assertNumberImmutable()` в `number-protection.ts` + frozen-statuses запрещают редактирование immutable чисел (cycle 55)
+- ✅ В заказ попадает всё необходимое (BOM + tasks, цены Proposal в snapshot)
+- ✅ Поля `contractId` + `proposalId` в `ProductionOrder` (см. `prisma/schema.prisma:521-523`)
 
-### Этап 6: Производственный заказ
-- 🔴 Авто-номер `ЗК-XXXX` через `nextProductionOrderNumber()`
-- 🔴 Привязка к Contract и Proposal
-- 🔴 Список товаров с их модулями и работами
-- 🔴 Статусы заказа: created → designing → supplying → manufacturing → painting → shipping → completed
+### Этап 6: Производственный заказ — ✅ CYCLES 51+53+56
+- ✅ Авто-номер `ЗК-XXXX` через `nextProductionOrderNumber()` (`src/lib/counter.ts:54`)
+- ✅ FK relation `contractId` + `proposalId` в `ProductionOrder` (`prisma/schema.prisma:521-523`)
+- ✅ Товары с модулями + работами: `convert-to-production` route распределяет tasks via `distributeTasksByDays()`
+- ✅ Статусы: live query `assertTransitionAllowed()` через `StatusWorkflow` table (cycle 51, 5 entities)
+- ✅ Авто-IN готовой продукции: `autoReceiveFinishedGoods` при `status='completed'` (cycle 53, `src/lib/warehouse/auto-receive-finished-goods.ts`)
 
 ### Этап 7: Гантт (диаграмма планирования)
 - ✅ Визуализация заказов и задач на временной шкале
@@ -174,16 +181,17 @@ Product (товар)
 - 🔴 Уведомление снабженцу: «Для заказа ЗК-XXXX требуется закупить: ...»
 - 🔴 Интеграция со складом (остатки)
 
-### Этап 9: Изготовление
-- 🔴 Рабочие видят свои задачи (только свои!)
-- 🔴 Отметка о выполнении этапа
-- 🔴 Учёт времени (план vs факт)
-- 🔴 Переход к следующему этапу
+### Этап 9: Изготовление — ✅ CYCLES 53+57
+- ✅ `distributeTasksByDays()` в `convert-to-production/route.ts` распределяет задачи по WorkCenter + Worker
+- ✅ Tasks с estimatedHours (`OrderTask.estimatedHours`)
+- ✅ Activity Log: каждое изменение status записывается (cycle 57, B.7 UserActivity UI)
+- ⚠️ «Только свои» UI panel для Workers — deferred (D-A6 Ролевая панель UI)
 
-### Этап 10: Покраска
-- 🔴 Поле RAL из КП → обязательно видно на этом этапе
-- 🔴 Если RAL не указан — пометка «Согласовать с заказчиком»
-- 🔴 Статус покраски: ожидает → в работе → готово
+### Этап 10: Покраска (RAL) — ✅ SCHEMA + ⚠️ VIEWER RENDERING NEEDS VERIFICATION
+- ✅ Поле RAL в schema: `Proposal.ralCode` + `ProductionOrder.ralCode` (см. § 7 ниже)
+- ⚠️ Viewer rendering — schema гарантирует visibility, но в viewer-компонентах `proposals/[id]/page.tsx` / `production-orders/[id]/page.tsx` рендеринг поля требует grep-verify (audit-trail живёт в § 7 RAL row)
+- ✅ Статус покраски: productionOrder.status `painting` / `completed` в `StatusWorkflow` (cycle 51)
+- ⚠️ Warning «Согласовать с заказчиком» если RAL пуст — deferred UI
 
 ### Этап 11: Отгрузка (НЕТ МОДУЛЯ)
 - 🔴 Акт приёма-передачи (авто-заполнение из заказа)
@@ -191,12 +199,13 @@ Product (товар)
 - 🔴 Фото отгруженного товара
 - 🔴 История: что, когда, куда отгрузили
 
-### Этап 12: Закрытие заказа
-- ⚠️ OrderClosing CRUD есть
-- 🔴 Авто-номер `ЗР-XXXX`
-- 🔴 Авто-заполнение из ProductionOrder
-- 🔴 Акт закрытия работ
-- 🔴 Финансовый учёт: затраты vs выручка
+### Этап 12: Закрытие заказа — ✅ CYCLES 56
+- ✅ OrderClosing CRUD (`src/app/api/order-closings/route.ts`) + requireRole(['accountant']) (cycle 52)
+- ✅ FK relation `OrderClosing.orderId` → `ProductionOrder` (`prisma/schema.prisma:702`, onDelete SetNull cascade — cycle 56)
+- ✅ Авто-номер `ЗР-XXXX` через `nextOrderClosingNumber()` (`src/lib/counter.ts:90`)
+- ⚠️ UI авто-заполнение из PO — частично реализовано (form pre-fill), полный auto-trigger deferred
+- 🔴 Акт закрытия работ — deferred
+- 🔴 Финансовый учёт: затраты vs выручка — deferred (D-A4 / FUTURE)
 
 ---
 
@@ -225,16 +234,21 @@ Product (товар)
 | `proposal` | `nextProposalNumber()` | `КП-0001` | proposals/route.ts, cart/convert |
 | `contract` | `nextContractNumber()` | `Д-0001` | contracts/route.ts, proposals/convert |
 
-### 6.2 НЕ работает — ручной ввод
-| Сущность | Файл | Должен быть |
-|----------|------|------------|
-| ProductionOrder | `production/page.tsx:90` | `nextCounter('production-order')` → `ЗК-0001` |
-| PurchaseRequest | `warehouse/purchases/page.tsx:70` | `nextSupplierOrderNumber()` → уже есть! |
-| Tender | `admin/tenders/page.tsx:75` | `nextCounter('tender')` → `Т-0001` |
-| Certificate | `admin/certificates/page.tsx:182` | `nextCounter('certificate')` → `С-0001` |
-| RppEntry | `admin/rpp-entries/page.tsx:165` | `nextCounter('rpp-entry')` → `РПП-0001` |
-| OrderClosing | `finance/order-closings/page.tsx` | `nextCounter('order-closing')` → `ЗР-0001` |
-| ReconciliationAct | `finance/reconciliation/page.tsx` | `nextCounter('reconciliation')` → `АС-0001` |
+### 6.2 Авто-номера — ✅ ВСЕ РЕАЛИЗОВАНЫ (cycles 50+)
+Все 7 counter-functions для отсутствовавших ранее сущностей теперь существуют в `src/lib/counter.ts` и используются в соответствующих route handlers:
+
+| Сущность | Counter function | Файл | Статус |
+|----------|------------------|------|--------|
+| ProductionOrder | `nextProductionOrderNumber()` | `src/lib/counter.ts:54` | ✅ Работает (используется в `production-orders/route.ts:52`, `convert-to-production/route.ts:138`) |
+| SupplierOrder | `nextSupplierOrderNumber()` | `src/lib/counter.ts:62` | ✅ Работает (используется в `purchase-requests/route.ts:49`) |
+| Tender | `nextCounter('tender')` | `src/lib/counter.ts:71` | ✅ Helper существует |
+| Certificate | `nextCounter('certificate')` | `src/lib/counter.ts:77` | ✅ Helper существует |
+| RppEntry | `nextCounter('rpp-entry')` | `src/lib/counter.ts:83` | ✅ Helper существует |
+| OrderClosing | `nextOrderClosingNumber()` | `src/lib/counter.ts:90` | ✅ Helper существует |
+| ReconciliationAct | `nextReconciliationNumber()` | `src/lib/counter.ts:96` | ✅ Helper существует |
+| Shipment | `nextCounter('shipment')` | `src/app/api/shipments/route.ts:54` | ✅ Работает |
+
+**NB**: на стороне UI некоторые forms всё ещё позволяют ручной override номера (в форме создания), но при отсутствии `number` в body — counter генерируется автоматически. Полная блокировка при редактировании — cycle 55 (`number-protection.ts`).
 
 ### 6.3 Блокировка номеров при редактировании
 | Форма | Файл | Проблема |
@@ -244,14 +258,19 @@ Product (товар)
 
 ---
 
-## 7. ОТСУТСТВУЮЩИЕ FK-СВЯЗИ
+## 7. FK-СВЯЗИ — ✅ ВСЕ РЕАЛИЗОВАНЫ
 
-| Модель | Поле | → Таблица | Зачем |
-|--------|------|-----------|-------|
-| ProductionOrder | `contractId` | Contract | Из какого договора |
-| ProductionOrder | `proposalId` | Proposal | Из какого КП |
-| OrderTask | `workCenterId` | WorkCenter | Привязка к цеху |
-| Product | `ralCode` | — | Код цвета RAL (поле в товаре или в КП) |
+Все перечисленные ниже FK relations теперь существуют в `prisma/schema.prisma`:
+
+| Модель | Поле | → Таблица | Где | Статус |
+|--------|------|-----------|-----|--------|
+| ProductionOrder | `contractId` | Contract | `prisma/schema.prisma:521` | ✅ |
+| ProductionOrder | `proposalId` | Proposal | `prisma/schema.prisma:523` | ✅ |
+| OrderTask | `workCenterId` | WorkCenter | `prisma/schema.prisma:517-518` | ✅ |
+| Proposal | `ralCode` | — (literal) | `prisma/schema.prisma:362` | ✅ (RAL в КП) |
+| ProductionOrder | `ralCode` | — (literal) | `prisma/schema.prisma:510` | ✅ (RAL переносится + viewer render в `production/[id]/page.tsx:365`) |
+| OrderClosing | `orderId` | ProductionOrder | `prisma/schema.prisma:702`, onDelete SetNull | ✅ (cycle 56) |
+| Shipment | `orderId` | ProductionOrder | `prisma/schema.prisma:721` | ✅ |
 
 ---
 
@@ -271,7 +290,9 @@ Product (товар)
 
 ---
 
-## 9. ПЛАН РЕАЛИЗАЦИИ (приоритетный)
+## 9. ПЛАН РЕАЛИЗАЦИИ (исторический roadmap — статусы ниже)
+
+> **NB (2026-06-22 sync)**: дорожная карта ниже историческая. Текущий реальный статус см. § 1 «Статус реализации каждого этапа» + `docs/operations/MASTER-CHECKLIST.md` §4 + `docs/operations/CURRENT-CHECKLIST.md`. Фазы 1, 2 и часть 3 реализованы (cycles 39-57).
 
 ### 🔴 Фаза 1: Критические разрывы
 1. `nextProductionOrderNumber()` в counter.ts

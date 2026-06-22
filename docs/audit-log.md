@@ -3164,3 +3164,118 @@ SHIP-READY. 2 minor observations (cart POST не capture `user` для activity 
 - **OPTIONAL**: integration test для per-entity RBAC matrix (assert 403 for viewer → POST proposals/persons/organizations/etc). estimated 2-3 h.
 - **OPTIONAL**: continue D-A1 cleanup — GET handler security audit (verify no PII leakage, but per matrix GET floor allows viewer).
 - Ship-ready: список "Delivery scope backlog" (D-A3 Гантт DnD / D-A4 Снабжение / D-A5 Shipment UI / D-A6 Role panel) остаётся открытым для следующего цикла.
+
+<a id="cycle-14plus"></a>
+## Cycle 14+ (D-A3) — 2026-06-22 — Гантт DnD refactor: native Pointer Events &rarr; @dnd-kit/core + Zustand undo
+
+### Контекст
+Производственный gantt-chart.tsx работал, но implementation была на нативных pointer events (mousedown/mousemove/mouseup via document.addEventListener). Это давало 3-mode drag-and-drop (move + resize-left + resize-right) для plannedStart/plannedEnd, но без keyboard accessibility и без undo. User запрос «dnd-kit + Zustand state» — переход на канонический @dnd-kit (a11y, sensor abstraction, DragOverlay future-ready) + Zustand coordinator для undo snapshots.
+
+### Зависимости предустановлены (cycle prefix)
+- `@dnd-kit/core ^6.3.1` — в dependencies
+- `@dnd-kit/sortable ^10.0.0` — для SortableBlock (existing)
+- `@dnd-kit/utilities ^3.2.2`
+- `zustand ^5.0.14`
+
+### Phase A — Zustand coordinator
+
+**NEW** `src/stores/gantt-drag-store.ts` (~45 LOC)
+- `GanttDragSnapshot` interface: {id, itemId, type, previousStartDate, previousEndDate, newStartDate, newEndDate, description, appliedAt}
+- `useGanttDragStore`: {lastSnapshot, setSnapshot, clear}
+- Чисто синхронный state — без timers/effects (timer logic живёт page-level)
+
+### Phase B — DnD refactor (gantt-chart.tsx)
+
+**Было** (≈530 LOC):
+- `useState<DragState>` + `useEffect` document-level pointermove/pointerup
+- Ручной snap: `Math.round(deltaPx / dayWidth)`
+- Resize-left/right как nested divs с `onPointerDown` stopPropagation
+- НЕТ keyboard nav, НЕТ a11y announcements
+- API contract: `onItemUpdate({id, type, startDate, endDate})`
+
+**Стало** (≈620 LOC):
+- `<DndContext>` от @dnd-kit/core с sensors:
+  - `PointerSensor({ activationConstraint: { distance: 4 } })` — избегает accidental drag на click
+  - `KeyboardSensor` — Tab/Space/arrows accessibility из коробки
+- `<DraggableBar>` subcomponent (mandatory — useDraggable это hook) с поддержкой 3 modes:
+  - `${itemId}:move` — основная полоса, transform applied via setNodeRef
+  - `${itemId}:resize-left` — cursor: col-resize, 6px ширина
+  - `${itemId}:resize-right` — аналогично
+- `useDraggable({id, data: DraggableData, disabled: !onItemUpdate})` — disabled автоматически для production/[id]/page mini-Gantt (read-only mode)
+- `onDragEnd` вычисляет `Math.round(deltaX / dayWidth)` snap-to-day → identical API contract
+- Минимальная длительность 1 день enforced (preserved)
+
+### Phase C — Undo flow (page.tsx)
+
+**`src/app/(dashboard)/production/gantt/page.tsx`** (≈350 → ≈460 LOC):
+- Импорт `Undo2` icon + `useGanttDragStore`
+- В `handleItemUpdate`: capture `prevItem` BEFORE PUT; после successful PUT → `setDragSnapshot({...snap, description:+/-N дн.})`
+- Новый `handleUndo`: re-PUT с `previousStartDate/End` + state rollback + `clearDragSnapshot()`
+- `now` state через `useState(() => Date.now())` + conditional `setInterval(500ms)` (только когда snapshot exists — нет idle re-renders)
+- Fixed bottom-right toast с description + `Отменить` (Undo2) + close (X)
+- +500ms buffer на visibility (`now - appliedAt < UNDO_WINDOW_MS + 500`) для smooth animation
+- Cleanup на unmount + auto-dismiss через setTimeout
+
+### Phase D — cleanup (3 review iterations)
+
+Reviewer flagged: `activeDragInfo` dead state, `setActiveDragInfo` calls, empty `onDragStart={() => {}}` handler, unused `formatDateShort`, unused `useEffect` import. Удалены итеративно.
+
+### Verification (final):
+- TSC 0 errors
+- ESLint 0 errors / 0 warnings (gantt + store + page + full)
+- Vitest 342/343 (1 pre-existing rbac-matrix failure unrelated — open issue из cycle 60)
+- Build success
+- Code-reviewer-minimax-m3: SHIP-READY (3 passes: initial → 8 nits → 3 minor → DONE)
+
+### Что осталось (followups)
+- Resize handle visual feedback (currently no live width-update, dnd-kit transform applied only для mode=move) — polish
+- Bulk-multi-select drag (Shift-click несколько bars → перетащить group)
+- Worker workload DnD (drag task between workers)
+- Workflow date-lock API guard: productionOrder с status=completed нельзя PATCH plannedStart/End (cycle 55 number-lock расширить на dates)
+
+<a id="cycle-60plus"></a>
+## Cycle 60+ (D-A3 extension) — 2026-06-22 — Per-entity RBAC matrix + 3 production bug fixes
+
+### Контекст
+Cycle 60 (незакоммиченный) создал simplified 6-test RBAC файл, который в итоге имел 1 failing ('manager → POST /api/order-closings returns 500 instead of 403'). В этом цикле полностью переписали тест: 42 parameterized tests (describe.each over MATRIX) + 1 null-user edge case = 43 total. User spec: viewer deny 4 CRM routes + admin bypass + manager subset (CRM 200 / accountant-only 403).
+
+### Phase A — Test rewrite с cycle 60 lessons
+
+**`src/app/api/__tests__/rbac-matrix.test.ts`** (~190 LOC, full rewrite):
+- Mock strategy: vi.hoisted() mutable `userRecord` + `jwtPayload` → read by vi.mock factories
+- 3-boundary mocks: `@/lib/db` + `next/headers` + `@/lib/jwt`
+- beforeEach: `vi.clearAllMocks()` (NOT reset) — preserves stub implementations
+- Persistent `mockImplementation(() => Promise.resolve(mocks.userRecord))` reads live value per call
+- Handler dispatch: union type `HandlerFn | CartHandlerFn` потому что `cart/route.ts` POST это `POST()` (zero-arg, signature `() => Promise<Response>`)
+- Sentinel stubs (prisma.create.reject) для 7 models — safe потому что requireRole runs BEFORE request.json() для всех selected POST
+- Empty JSON body `{}` через NextRequest — предотвращает .json() native parse error в cycle 60 manifestation
+
+### Phase B — Production bug fixes (detected by matrix)
+
+Matrix tests обнаружили что 3 routes имели sin в catch handlers — только 'UNAUTHORIZED' обрабатывался, 'FORBIDDEN' падал в `catch-all 500`. Файлы:
+
+1. `src/app/api/order-closings/route.ts` POST catch — добавлена FORBIDDEN → 403
+2. `src/app/api/reconciliation-acts/route.ts` POST + GET catches (defensive на GETs) — добавлена FORBIDDEN → 403
+3. `src/app/api/incoming-invoices/route.ts` POST catch — добавлена FORBIDDEN → 403
+
+Это была РЕАЛЬНАЯ production bug — non-accountant роли при попытке POST получали 500 вместо 403. RBAC matrix правильно её нашёл. После fix: 12 previously-failing tests теперь проходят с 403.
+
+### Verification (final):
+- TSC: 0 errors (was TS2554 'Expected 0 arguments, but got 1' из-за cartPOST 0-arg vs HandlerFn 1-arg)
+- ESLint: 0 errors / 0 warnings (был 1 warning на unused ROLES const)
+- Vitest rbac-matrix: 43/43 (было 32/44)
+- Vitest full: 380/380 (было 369/381) — net +11 tests (-1 dropped redundant recheck test + 42 matrix -3 prior duplicates)
+- Build: success
+- Code-reviewer-minimax-m3: SHIP-READY (1 nit: defensive FORBIDDEN на GET unreachable, оставлен intentionally)
+
+### Phase D — Lessons applied (anti-patterns из cycle 60)
+
+Прямой вывод от 4 итераций cycle 60 который failed:
+1. `vi.clearAllMocks()` НЕ `vi.resetAllMocks()` (reset wipes stub implementations)
+2. Persistent `mockImplementation` НЕ `mockResolvedValueOnce` (else chain holes)
+3. Cart POST zero-arg обработан через HandlerFn | CartHandlerFn union + ternary dispatch
+
+### Что осталось (followups)
+- Expand matrix на оставшиеся 23 write-handlers (storage-items, suppliers, products, materials, users, status-workflows)
+- Body validation order cycle: assert что RBAC runs BEFORE zod (доказывает 400 vs 403 priority — defense in depth)
+- Cycle 47-extension Phase 2: applied date-lock на prodOrder (plannedStart/End immutable когда status=completed)
