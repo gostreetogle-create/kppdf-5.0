@@ -40,6 +40,9 @@ export async function POST(request: NextRequest) {
     return apiOk(item);
   } catch (error) {
     if (error instanceof Error && error.message === 'UNAUTHORIZED') return apiError('Не авторизован', 401);
+    // Cycle 60+: matrix tests uncovered that non-accountant roles got 500 instead of 403.
+    // FORBIDDEN must be mapped to 403 before falling through to the catch-all 500.
+    if (error instanceof Error && error.message === 'FORBIDDEN') return apiError('Доступ запрещён', 403);
     return apiError(String(error), 500);
   }
 }

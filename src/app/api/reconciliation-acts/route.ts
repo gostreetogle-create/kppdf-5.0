@@ -22,6 +22,8 @@ export async function GET(request: NextRequest) {
     return apiPaginated(items, total, page, limit);
   } catch (error) {
     if (error instanceof Error && error.message === 'UNAUTHORIZED') return apiError('Не авторизован', 401);
+    // Cycle 60+: matrix tests uncovered that non-accountant roles got 500 instead of 403.
+    if (error instanceof Error && error.message === 'FORBIDDEN') return apiError('Доступ запрещён', 403);
     return apiError(String(error), 500);
   }
 }
@@ -40,6 +42,8 @@ export async function POST(request: NextRequest) {
     return apiOk(item);
   } catch (error) {
     if (error instanceof Error && error.message === 'UNAUTHORIZED') return apiError('Не авторизован', 401);
+    // Cycle 60+: matrix tests uncovered that non-accountant roles got 500 instead of 403.
+    if (error instanceof Error && error.message === 'FORBIDDEN') return apiError('Доступ запрещён', 403);
     return apiError(String(error), 500);
   }
 }
