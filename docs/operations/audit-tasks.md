@@ -253,7 +253,7 @@ model ProposalItem {
 | 3 | 3.2 — Версионирование КП + sourceItemId | Medium | L | 42-43 ✅ |
 | 4 | 🆕 3.1 — ProposalEditor refactor | Medium | M | 44-45 ✅ |
 | 5 | 4.1 — Proposal editor 3-panel UX | Medium | M | 46-47 |
-| 6 | 6.1 — Tests isolation / integration | Low | M | 48-49 → ✅ done (b2ca9d0) |
+| 6 | 6.1 — Tests isolation / integration | Low | M | 48-49 → ✅ done (b2ca9d0 + 6ec0d4a Part 3) |
 | 7 | 7.1 — Zustand refresh TTL + silent preempt | Low | S | 50 |
 
 **Примерное количество циклов**: ~12 (с ревью и валидацией каждого блока).

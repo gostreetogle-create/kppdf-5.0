@@ -82,8 +82,8 @@
 
 | Модуль | Цикл | tsc | vitest | ADR | Smoke | Вердикт |
 |--------|------|-----|--------|-----|-------|---------|
-| `src/lib/env.ts` | 40 | ✅ 0 | ❌ нет тестов | implicit (Block 1.3) | ✅ manual | **CANDIDATE** — требует тестов из cycle 48-49 |
-| `src/lib/proposals/clone-items.ts` | 43 | ✅ 0 | ❌ нет тестов | pending (Round 3 discussion) | ✅ manual | **CANDIDATE** — требует тестов из cycle 48-49 |
+| `src/lib/env.ts` | 40 | ✅ 0 | ✅ 7/7 (env.test.ts) | implicit (Block 1.3) | ✅ manual | **TIER A** — cycle 48-49 Part 3 promoted (stubEnv + resetModules pattern; isProd/isDev strict equality; baseUrl set vs unset fallback) |
+| `src/lib/proposals/clone-items.ts` | 43 | ✅ 0 | ✅ 12/12 (clone-items.test.ts) | pending (Round 3 discussion) | ✅ manual | **TIER A** — cycle 48-49 Part 3 promoted (tx-injection contract; lineage sourceItemId; markupPercent null→0 coercion; tx isolation) |
 | `src/lib/status-workflow.ts` | 51 | ✅ 0 | ✅ 14/14 (status-workflow.test.ts) | ADR-003 (accepted) | ✅ manual | **TIER A** — cycle 48-49 promoted (cache + admin bypass + 'any' wildcard + INSUFFICIENT_ROLE + DB-empty fallback covered) |
 | `src/lib/warehouse/auto-receive-finished-goods.ts` | 53 | ✅ 0 | ✅ 11/11 (auto-receive-finished-goods.test.ts) | ADR-004 (accepted) | ✅ manual | **TIER A** — cycle 48-49 promoted (P2002 race + contract fallback + idempotency pre-check + edge cases covered) |
 | `src/stores/auth-refresh.ts` | 50 | ✅ 0 | ✅ 12/12 (auth-refresh.test.ts) | ADR-006 (accepted) | ✅ manual | **CANDIDATE** — tests passing, ready for Tier A promotion when cycles 48-49 land |
@@ -143,3 +143,4 @@
 | 2026-06-20 | Tier D expansion: 11 new files in `src/components/proposal-editor/` + `src/types/proposal-editor.ts` (cycle 44) — Block 3.1 refactor. Tier A/B/C unchanged. | 44 |
 | 2026-06-20 | Tier D polish (cycle 45) — Eliminated `ProposalPdfDataLike` (direct `ProposalPdfData` reuse); `ProposalEditorFinance` derived object → proposalBlocks deps 9→4 + pdfData deps 11→7; pdfData converted function → useMemo + lazy `useState(() => ({number, createdAt}))` Date.now() pattern; new `resetTemplateSelection` action replaces setState-in-effect. tsc 0 / vitest 88/88 / eslint 0. Tier A/B/C unchanged. | 45 |
 | 2026-06-22 | Tier C expansion (cycle 50): `auth-refresh.ts` (NEW helper, silent preemptive refresh). 12 vitest tests (parseJwtExpiry + createRefreshScheduler). tsc 0 / vitest 284/284 / eslint 0. Tier A `jwt.ts` NOT touched per Rule 3. ADR-006. | 50 |
+| 2026-06-22 | Tier C → Tier A completion (cycle 48-49 Part 3): `env.ts` + `proposals/clone-items.ts` promoted. 19 new integration tests (7 env + 12 clone-items). env.test.ts uses vi.stubEnv + vi.resetModules pattern; clone-items.test.ts uses local MockTx + asProdTx call-site cast. tsc 0 / vitest 337+ / eslint 0 / build 0. Auth-refresh remains CANDIDATE (cycle 50). | 48-49 P3 |
