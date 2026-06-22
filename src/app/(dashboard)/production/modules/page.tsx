@@ -2,8 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { CrudPage } from '@/components/crud-page';
-import { Trash2, Plus } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 
 interface ProductModule {
   [key: string]: unknown;
@@ -49,14 +47,14 @@ function ModuleForm({ item, onClose }: { item: ProductModule | null; onClose: ()
     weight: item?.weight ?? '',
     sortOrder: item?.sortOrder ?? 0,
   });
-  const [workTypes, setWorkTypes] = useState<ModuleWorkType[]>(
+  const [workTypes, _setWorkTypes] = useState<ModuleWorkType[]>(
     item?.workTypes?.map((wt) => ({
       workTypeId: wt.workTypeId,
       estimatedHours: wt.estimatedHours,
       sortOrder: wt.sortOrder ?? 0,
     })) ?? [],
   );
-  const [materials, setMaterials] = useState<ModuleMaterial[]>(
+  const [materials, _setMaterials] = useState<ModuleMaterial[]>(
     item?.materials?.map((m) => ({
       name: m.name,
       quantity: m.quantity,
@@ -66,50 +64,12 @@ function ModuleForm({ item, onClose }: { item: ProductModule | null; onClose: ()
   );
   const [saving, setSaving] = useState(false);
   const [products, setProducts] = useState<{ id: string; name: string; sku: string }[]>([]);
-  const [workTypesList, setWorkTypesList] = useState<{ id: string; name: string }[]>([]);
-  const [showCreateWorkType, setShowCreateWorkType] = useState(false);
-  const [newWorkTypeName, setNewWorkTypeName] = useState('');
-  const [creatingWorkType, setCreatingWorkType] = useState(false);
-
-  const loadWorkTypes = () => {
-    return fetch('/api/work-types?limit=100').then((r) => r.json()).then((d) => {
-      if (d.success) setWorkTypesList(d.data.items);
-    }).catch(() => {});
-  };
 
   useEffect(() => {
     fetch('/api/products?limit=500').then((r) => r.json()).then((d) => {
       if (d.success) setProducts(d.data.items);
     }).catch(() => {});
-    loadWorkTypes();
   }, []);
-
-  const handleCreateWorkType = async () => {
-    if (!newWorkTypeName.trim()) return;
-    setCreatingWorkType(true);
-    try {
-      const res = await fetch('/api/work-types', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: newWorkTypeName.trim() }),
-      });
-      const d = await res.json();
-      if (d.success) {
-        const newId = d.data?.id;
-        await loadWorkTypes();
-        if (newId) {
-          setWorkTypes([...workTypes, { workTypeId: newId, estimatedHours: 1 }]);
-        }
-        setNewWorkTypeName('');
-        setShowCreateWorkType(false);
-      }
-    } catch (err) {
-      console.error('Failed to create work type:', err);
-    }
-    finally {
-      setCreatingWorkType(false);
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -139,12 +99,6 @@ function ModuleForm({ item, onClose }: { item: ProductModule | null; onClose: ()
       setSaving(false);
     }
   };
-
-  const addWorkType = () => setWorkTypes([...workTypes, { workTypeId: '', estimatedHours: 1 }]);
-  const removeWorkType = (idx: number) => setWorkTypes(workTypes.filter((_, i) => i !== idx));
-
-  const addMaterial = () => setMaterials([...materials, { name: '', quantity: 1, unit: 'шт', isPurchased: true }]);
-  const removeMaterial = (idx: number) => setMaterials(materials.filter((_, i) => i !== idx));
 
   const inp = (label: string, key: string, type = 'text') => (
     <div key={key}>

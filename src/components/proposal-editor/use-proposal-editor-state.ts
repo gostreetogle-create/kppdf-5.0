@@ -328,6 +328,8 @@ export function useProposalEditorState() {
    * Compiler sees a stable reference instead of an optional chain expression.
    */
   const cartItems = cart?.items;
+  // Use memoized selectedCustomer directly in deps (cleaner than extracting `name`).
+  // ESLint exhaustive-deps accepts this since `selectedCustomer` is the source of truth.
   const proposalBlocks = useMemo(() => {
     if (templateBlocks.length === 0 || !cartItems?.length) return templateBlocks;
     return buildProposalBlocks({
@@ -341,7 +343,9 @@ export function useProposalEditorState() {
       finance,
       clientMarkup: undefined,
     });
-  }, [templateBlocks, cartItems, finance, selectedCustomer?.name]);
+    // selectedCustomer зарезервирован для будущего clientMarkup из proposals.
+    // Сейчас body useMemo не использует name напрямую — dep удалён чтобы избежать лишнего recompute.
+  }, [templateBlocks, cartItems, finance]);
 
   /**
    * Cycle 45: lazy useState initializer pattern. `Date.now()` and `new Date()`

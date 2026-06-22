@@ -4,7 +4,7 @@ import { assertNumberImmutable, NumberLockedError } from '../number-protection';
 describe('assertNumberImmutable', () => {
   it('должен проходить если entity не в frozenStatuses', () => {
     expect(() =>
-      assertNumberImmutable('proposal' as any, 'any_status', 'NEW-001', 'OLD-001'),
+      assertNumberImmutable('proposal', 'any_status', 'NEW-001', 'OLD-001'),
     ).not.toThrow();
   });
 

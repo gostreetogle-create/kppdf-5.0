@@ -39,7 +39,7 @@ export function GanttSkeleton() {
               <Skeleton shape="text-sm" className="w-32 h-3" />
               <Skeleton shape="text-sm" className="w-24 h-3" />
               <div className="flex-1 flex gap-1">
-                <Skeleton shape="text-sm" className="h-6 flex-1 rounded-sm opacity-60" style={{ maxWidth: `${60 + Math.random() * 30}%` }} />
+                <Skeleton shape="text-sm" className="h-6 flex-1 rounded-sm opacity-60" style={{ maxWidth: `${60 + ((i * 13) % 30)}%` }} />
               </div>
               <Skeleton shape="text-sm" className="w-16 h-3" />
             </div>

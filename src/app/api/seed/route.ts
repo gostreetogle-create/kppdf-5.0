@@ -92,9 +92,6 @@ export async function POST() {
       prods.push(prod);
     }
 
-    // Clients — теперь организации с ролью «Клиент»
-    const clientRole = await prisma.orgRole.findUnique({ where: { slug: 'client' } });
-
     // Work Types
     const wtData = [
       { name: 'Токарная обработка', hourlyRate: 1500 },

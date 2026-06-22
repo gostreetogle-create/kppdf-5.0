@@ -1,6 +1,6 @@
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Stack, Flex } from '@/components/ui/layout';
+import { Stack } from '@/components/ui/layout';
 
 export function EditorSkeleton() {
   return (
