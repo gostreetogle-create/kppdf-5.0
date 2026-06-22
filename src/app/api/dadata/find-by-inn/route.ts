@@ -1,13 +1,15 @@
 import { NextRequest } from 'next/server';
-import { requireAuth } from '@/lib/auth';
+import { requireEditor } from '@/lib/auth';
 import { apiOk, apiError } from '@/lib/api-response';
 
 const DADATA_API_KEY = process.env.DADATA_API_KEY;
 const DADATA_URL = 'https://suggestions.dadata.ru/suggestions/api/4_1/rs/findById/party';
 
+// POST /api/dadata/find-by-inn — поиск организации по ИНН через DaData.
+// D-A1 (cycle 47-extension): платный API proxy → requireEditor (block viewer).
 export async function POST(request: NextRequest) {
   try {
-    await requireAuth();
+    await requireEditor();
 
     if (!DADATA_API_KEY) {
       return apiError('DaData API key not configured (DADATA_API_KEY)', 500);
@@ -66,6 +68,7 @@ export async function POST(request: NextRequest) {
     return apiOk(result);
   } catch (error) {
     if (error instanceof Error && error.message === 'UNAUTHORIZED') return apiError('Не авторизован', 401);
+    if (error instanceof Error && error.message === 'FORBIDDEN') return apiError('Доступ запрещён', 403);
     console.error('DaData proxy error:', error);
     return apiError(String(error), 500);
   }

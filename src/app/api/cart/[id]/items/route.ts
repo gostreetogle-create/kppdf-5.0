@@ -1,12 +1,13 @@
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/db';
-import { requireAuth } from '@/lib/auth';
+import { requireRole } from '@/lib/auth';
 import { apiOk, apiError } from '@/lib/api-response';
 
-// POST /api/cart/[id]/items — добавить товар в корзину
+// POST /api/cart/[id]/items — добавить товар в корзину.
+// D-A1 (cycle 47-extension): cart = proposal-builder precursor → manager-only.
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    await requireAuth();
+    await requireRole(['manager']);
     const { id } = await params;
     const body = await request.json();
 
@@ -45,6 +46,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     return apiOk(item);
   } catch (error) {
     if (error instanceof Error && error.message === 'UNAUTHORIZED') return apiError('Не авторизован', 401);
+    if (error instanceof Error && error.message === 'FORBIDDEN') return apiError('Доступ запрещён', 403);
     return apiError(String(error), 500);
   }
 }

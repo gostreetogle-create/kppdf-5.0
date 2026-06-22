@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/db';
-import { requireAuth } from '@/lib/auth';
+import { requireAuth, requireRole } from '@/lib/auth';
 import { apiOk, apiError, apiPaginated, parseSearchParams } from '@/lib/api-response';
 import { nextProposalNumber } from '@/lib/counter';
 import { CreateProposalSchema } from '@/lib/validations/proposal';
@@ -40,9 +40,11 @@ export async function GET(request: NextRequest) {
   }
 }
 
+// POST /api/proposals — создать КП.
+// D-A1 (cycle 47-extension): POST → manager-only; GET остаётся requireAuth (read-only).
 export async function POST(request: NextRequest) {
   try {
-    const user = await requireAuth(); // Cycle 57: capture user for activity log
+    const user = await requireRole(['manager']); // Cycle 57: capture user for activity log
     const body = await request.json();
     const validation = validateBody(body, CreateProposalSchema);
     if (!validation.success) return validation.error;
@@ -75,6 +77,7 @@ export async function POST(request: NextRequest) {
     return apiOk(item);
   } catch (error) {
     if (error instanceof Error && error.message === 'UNAUTHORIZED') return apiError('Не авторизован', 401);
+    if (error instanceof Error && error.message === 'FORBIDDEN') return apiError('Доступ запрещён', 403);
     return apiError(String(error), 500);
   }
 }

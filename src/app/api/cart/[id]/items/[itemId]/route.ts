@@ -1,12 +1,13 @@
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/db';
-import { requireAuth, requireEditor } from '@/lib/auth';
+import { requireRole, requireEditor } from '@/lib/auth';
 import { apiOk, apiError } from '@/lib/api-response';
 
-// PATCH /api/cart/[id]/items/[itemId] — обновить количество или наценку
+// PATCH /api/cart/[id]/items/[itemId] — обновить количество или наценку.
+// D-A1 (cycle 47-extension): cart = proposal-builder precursor → manager-only.
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string; itemId: string }> }) {
   try {
-    await requireAuth();
+    await requireRole(['manager']);
     const { id, itemId } = await params;
     const body = await request.json();
 
