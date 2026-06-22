@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/db';
-import { requireAuth, requireRole } from '@/lib/auth';
+import { requireRole } from '@/lib/auth';
 import { apiOk, apiError, apiPaginated, parseSearchParams } from '@/lib/api-response';
 
 export async function GET(request: NextRequest) {

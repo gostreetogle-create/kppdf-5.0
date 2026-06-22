@@ -4,7 +4,6 @@ import { requireAuth, requireRole } from '@/lib/auth';
 import { apiOk, apiError, apiPaginated, parseSearchParams } from '@/lib/api-response';
 import { CreateDocTypeSchema } from '@/lib/validations/doc-type';
 import { validateBody } from '@/lib/validations';
-import { recordActivity } from '@/lib/activity-log'; // Cycle 47-extension Part 2 + Cycle 57
 import { getCached, invalidateByPrefix } from '@/lib/cache';
 
 const CACHE_PREFIX = 'doc-types';
