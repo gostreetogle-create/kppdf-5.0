@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/db';
-import { requireAuth } from '@/lib/auth';
+import { requireAuth, requireRole } from '@/lib/auth';
 import { apiOk, apiError } from '@/lib/api-response';
 import { CreateMaterialCategorySchema } from '@/lib/validations/material';
 import { validateBody } from '@/lib/validations';
@@ -21,7 +21,7 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    await requireAuth();
+    await requireRole(['admin', 'manager']);
     const body = await request.json();
     const validation = validateBody(body, CreateMaterialCategorySchema);
     if (!validation.success) return validation.error;

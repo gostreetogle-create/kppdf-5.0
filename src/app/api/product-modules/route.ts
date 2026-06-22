@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/db';
-import { requireAuth } from '@/lib/auth';
+import { requireAuth, requireRole } from '@/lib/auth';
 import { apiOk, apiError, apiPaginated, parseSearchParams } from '@/lib/api-response';
 import { CreateProductModuleSchema } from '@/lib/validations/product-module';
 import { validateBody } from '@/lib/validations';
@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    await requireAuth();
+    await requireRole(['admin', 'manager']);
     const body = await request.json();
     const validation = validateBody(body, CreateProductModuleSchema);
     if (!validation.success) return validation.error;
