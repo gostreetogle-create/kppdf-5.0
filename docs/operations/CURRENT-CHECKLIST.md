@@ -38,7 +38,7 @@
 | 44 | 🆕 3.1 — `<ProposalEditor>` refactor (structural) | ✅ done (2026-06-20) | нет |
 | 45 | 🆕 3.1 — `<ProposalEditor>` polish (memo audit + ESLint cleanup) | ✅ done (2026-06-20) | cycle 44 ✅ |
 | 46-47 | 4.1 — Proposal editor 3-panel UX | 📋 planned | 3.1 |
-| 48-49 | 6.1 — Tests isolation / integration | 📋 planned | нет |
+| 48-49 | 6.1 — Tests isolation / integration | ✅ done | cycle 48-49 landed — 24 integration теста в b2ca9d0 (status-workflow 14 + auto-receive-finished-goods 11) + helper mockPrisma.ts; vitest full suite 318/318 |
 | **50** | **🆕 7.1 — Zustand refresh TTL + silent preempt** | ✅ **DONE** (2026-06-22) | нет | NEW `src/stores/auth-refresh.ts` (parseJwtExpiry + createRefreshScheduler) + extended `src/stores/auth-store.ts` (tokenExpiryAt + module-level scheduler singleton) + 12 vitest tests. ADR-006. Tier C candidate. Tier A `jwt.ts` НЕ тронут. |
 
 ## 📋 ПЛАНИРУЕМЫЕ ЦИКЛЫ (бизнес-план v2)

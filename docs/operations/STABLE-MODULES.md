@@ -84,8 +84,8 @@
 |--------|------|-----|--------|-----|-------|---------|
 | `src/lib/env.ts` | 40 | ✅ 0 | ❌ нет тестов | implicit (Block 1.3) | ✅ manual | **CANDIDATE** — требует тестов из cycle 48-49 |
 | `src/lib/proposals/clone-items.ts` | 43 | ✅ 0 | ❌ нет тестов | pending (Round 3 discussion) | ✅ manual | **CANDIDATE** — требует тестов из cycle 48-49 |
-| `src/lib/status-workflow.ts` | 51 | ✅ 0 | ❌ нет тестов | ADR-003 (accepted) | ✅ manual | **CANDIDATE** — требует тестов из cycle 48-49 (cache + 5 PATCH routes integration) |
-| `src/lib/warehouse/auto-receive-finished-goods.ts` | 53 | ✅ 0 | ❌ нет тестов | ADR-004 (accepted) | ✅ manual | **CANDIDATE** — требует тестов из cycle 48-49 (race conditions + $transaction integrity + UNIQUE violation swallow) |
+| `src/lib/status-workflow.ts` | 51 | ✅ 0 | ✅ 14/14 (status-workflow.test.ts) | ADR-003 (accepted) | ✅ manual | **TIER A** — cycle 48-49 promoted (cache + admin bypass + 'any' wildcard + INSUFFICIENT_ROLE + DB-empty fallback covered) |
+| `src/lib/warehouse/auto-receive-finished-goods.ts` | 53 | ✅ 0 | ✅ 11/11 (auto-receive-finished-goods.test.ts) | ADR-004 (accepted) | ✅ manual | **TIER A** — cycle 48-49 promoted (P2002 race + contract fallback + idempotency pre-check + edge cases covered) |
 | `src/stores/auth-refresh.ts` | 50 | ✅ 0 | ✅ 12/12 (auth-refresh.test.ts) | ADR-006 (accepted) | ✅ manual | **CANDIDATE** — tests passing, ready for Tier A promotion when cycles 48-49 land |
 
 **Promotion criterion (Tier C → Tier A)**:

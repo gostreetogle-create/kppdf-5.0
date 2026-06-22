@@ -18,7 +18,7 @@
 | 42-43 | 3.2 — Версионирование КП + `sourceItemId` | ✅ DONE |
 | 44-45 | 🆕 3.1 — `ProposalEditor` refactor (architectural) | ✅ done (cycles 44+45, 2026-06-20) |
 | 46-47 | 4.1 — Proposal editor 3-panel UX | 📋 planned |
-| 48-49 | 6.1 — Tests isolation / in-memory mock prisma | 📋 planned |
+| 48-49 | 6.1 — Tests isolation / in-memory mock prisma | ✅ done (b2ca9d0) |
 | 50 | 7.1 — Zustand refresh TTL + silent refresh preempt | 📋 planned |
 
 **Завершено**: 4/9 пунктов (M5 + env.ts + versioning + PDF). **Осталось**: 5 пунктов.
@@ -253,7 +253,7 @@ model ProposalItem {
 | 3 | 3.2 — Версионирование КП + sourceItemId | Medium | L | 42-43 ✅ |
 | 4 | 🆕 3.1 — ProposalEditor refactor | Medium | M | 44-45 ✅ |
 | 5 | 4.1 — Proposal editor 3-panel UX | Medium | M | 46-47 |
-| 6 | 6.1 — Tests isolation / integration | Low | M | 48-49 |
+| 6 | 6.1 — Tests isolation / integration | Low | M | 48-49 → ✅ done (b2ca9d0) |
 | 7 | 7.1 — Zustand refresh TTL + silent preempt | Low | S | 50 |
 
 **Примерное количество циклов**: ~12 (с ревью и валидацией каждого блока).
