@@ -26,12 +26,12 @@
 | **52** | **B.6 — Роли в API guards (`requireRole`)** | **бизнес** | **🔴 Critical (foundation)** | ✅ **DONE** |
 | **53** | **B.1 — Производство → Склад (finished goods IN, auto)** | **бизнес** | **🔴 Critical** | ✅ **DONE** (2026-06-20) |
 | **54** | **B.2 — Client модель для юрлиц (B2B)** | **бизнес** | **🔴 Critical** | ✅ **DONE** (2026-06-20) |
-| 55 | B.4 — Защита номеров документов после sent/active/paid | бизнес | 🟡 High | 📋 planned |
-| 56 | B.5 — OrderClosing FK relation (audit-trail strict) | бизнес | 🟡 High | 📋 planned |
+| **55** | **B.4 — Защита номеров документов после sent/active/paid** | **бизнес** | **🟡 High** | ✅ **DONE** (2026-06-22) |
+| **56** | **B.5 — OrderClosing FK relation (audit-trail strict)** | **бизнес** | **🟡 High** | ✅ **DONE** (2026-06-22) |
 | 57 | B.7 — UserActivity UI (история для всех сущностей) | бизнес | 🟢 Low | 📋 planned |
 
 **Завершено технических**: 4/8 (50%).
-**Завершено бизнес**: 4/7 **foundation + business-critical layers** (B.3 + B.6 + B.1 + B.2).
+**Завершено бизнес**: 6/7 **foundation + business-critical + high-priority layers** (B.3 + B.6 + B.1 + B.2 + B.4 + B.5). Осталось: 1/7 (B.7 UserActivity UI, 🟢 Low).
 **Бизнес план v2**: 7 блоков (cycles 51-57), против исходного draft 8 блоков (cycles 51-58). B.7 и B.8 объединены в один блок B.7 (см. Round 2 консенсус).
 **Порядок**: foundation layer (51+52 ✅) → business-critical layer (53+54 ✅) → high/low business (55+56+57 next — параллельно; cycle 50+44-49 тех — независимые).
 
@@ -260,12 +260,10 @@ model OrderClosing {
 - B.6 placement: с позиции 6 на позицию 2 (foundation layer).
 - B.8 removed (merged with B.7).
 
-**Foundation layer ЗАВЕРШЁН** (cycles 51+52 ✅). **Business-critical layer ЗАВЕРШЁН** (cycles 53+54 ✅).
+**Foundation layer ЗАВЕРШЁН** (cycles 51+52 ✅). **Business-critical layer ЗАВЕРШЁН** (cycles 53+54 ✅). **High-priority business ЗАВЕРШЁН** (cycles 55+56 ✅).
 
-**Следующие блоки** (cycles 55+56+57 — могут стартовать параллельно после ADR-004):
-- **Cycle 55 (B.4 Защита номеров документов)** — frozen-statuses per doc + `assertNumberImmutable`.
-- **Cycle 56 (B.5 OrderClosing FK relation)** — formal FK + SetNull cascade.
-- **Cycle 57 (B.7 UserActivity UI)** — timeline component + `GET /api/activity-log`.
+**Следующий блок**:
+- **Cycle 57 (B.7 UserActivity UI)** — timeline component + `GET /api/activity-log` (🟢 Low, complexity M, independent).
 
 Cross-cutting правила: Tier A (`src/lib/jwt.ts`) не трогать. Tier B (`src/lib/pdf/index.ts`) API frozen. Новый helper `src/lib/warehouse/auto-receive-finished-goods.ts` — Tier C CANDIDATE (см. `STABLE-MODULES.md`).
 
@@ -296,4 +294,4 @@ Cross-cutting правила: Tier A (`src/lib/jwt.ts`) не трогать. Tie
 - [`docs/decisions/ADR-002-foundation-before-critical.md`](./docs/decisions/ADR-002-foundation-before-critical.md) — foundation-first.
 - [`docs/decisions/ADR-003-status-workflow-live-query.md`](./docs/decisions/ADR-003-status-workflow-live-query.md) — StatusWorkflow architecture (cycle 51).
 
-**Дата последнего обновления**: 2026-06-20 (v2.1: cycles 51+52 DONE; cycles 53+54 ready).
+**Дата последнего обновления**: 2026-06-22 (v2.2: cycles 55+56 DONE; cycle 57 остаётся 🟢 Low priority).

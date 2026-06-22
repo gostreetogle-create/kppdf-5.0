@@ -49,8 +49,8 @@
 | 52 | B.6 Roles API guards | ✅ done (2026-06-20) | — (foundation) |
 | **53** | **B.1 Finished Goods auto-IN** | ✅ **DONE** (2026-06-20) | [`tasks/current-task.md`](tasks/current-task.md) cycle-53 | См. ADR-004 | Commit `cycle-53` | tsc 0, vitest 88/88 |
 | **54** | **B.2 Client модель для юрлиц (B2B)** | ✅ **DONE** (2026-06-20) | [`tasks/current-task.md`](tasks/current-task.md) cycle-54 | См. ADR-004 | Commit pending | tsc 0, vitest 88/88 |
-| 55 | B.4 Защита номеров | 📋 planned | После B.3 |
-| 56 | B.5 OrderClosing FK | 📋 planned | независим |
+| **55** | **B.4 Защита номеров документов** | ✅ **DONE** (2026-06-22) | После B.3 ✅ | Frozen-statuses per doc + `assertNumberImmutable()` helper + интеграция в 5 PATCH routes (proposal/contract/productionOrder/supplierOrder/incomingInvoice) + 11 vitest tests в `src/lib/__tests__/number-protection.test.ts`. Tier C candidate. |
+| **56** | **B.5 OrderClosing FK relation** | ✅ **DONE** (2026-06-22) | независим | `OrderClosing.orderId` уже formal FK `@relation(fields:[orderId], references:[id], onDelete: SetNull)` — ProductionOrder может удаляться, OrderClosing остаётся как historical record. SetNull cascade защищает audit-trail. |
 | 57 | B.7 UserActivity UI | 📋 planned | независим |
 
 ---
@@ -61,7 +61,7 @@
 
 **Business-critical layer ЗАВЕРШЁН** (cycles 53 + 54 done 2026-06-20). B.1 (Finished Goods auto-IN) + B.2 (Client юрлица B2B) — оба ✅ DONE.
 
-**Next**: cycles 55 (B.4 Защита номеров) + 56 (B.5 OrderClosing FK) + 57 (B.7 UserActivity UI) — все три теперь могут стартовать параллельно после business-critical layer. Тех-циклы 44-50 — независимые.
+**Next**: cycle 57 (B.7 UserActivity UI) — only remaining business block (🟢 Low, complexity M). Тех-циклы 44-50 — независимые.
 
 **Подробности cycle 51+52**:
 - Cycle 51 — substantive: new helper `src/lib/status-workflow.ts` + cache + seed migration SQL + 5 PATCH route refactors (hardcoded VALID_TRANSITIONS → assertTransitionAllowed).
@@ -217,3 +217,4 @@ $ npm run build             → exit 0 ✅ (production-ready)
 | 2026-06-20 (now) | **cycle-bootstrap-escape ✅ DONE** (commit `378add7`) — bootstrap escape hatch в `src/app/api/seed/route.ts`; companion infra applied live (migrate deploy + DELETE FROM "RateLimitEntry"); audit-log anchor `<a id="cycle-bootstrap-escape">`. **3 followups добавлены в ↗ NEXT STEPS (D1+DD2+D3)** по команде пользователя. |
 | 2026-06-21 (audit) | **GENERAL AUDIT** (see cycle A1-A4 below): npm install + prisma generate unblocked gates; MASTER-CHECKLIST.md создан; 16 ESLint warnings → 0; BUSINESS-LOGIC.md stages 5-12 syncronized с реальностью; `npm run build` lazy proxy fix в db.ts. |
 | 2026-06-21 (cycle 54-fix) | **Cycle 54 schema integration** копия реального изменения: добавлен Organization.type discriminator (`legal \| entrepreneur \| individual`); миграция `20260622000000_add_organization_type_discriminator/migration.sql` (ALTER + CREATE INDEX); `src/lib/validations/organization.ts` переписан с Zod `discriminatedUnion` + type-aware Update + `applyTypeAwareValidation` helper. Gates: tsc 0 / vitest 272/272 / prisma generated. |
+| 2026-06-22 (cycle 55+56 sync) | **Cycles 55 + 56 DONE** — B.4 защита номеров (5 PATCH routes + 11 vitest tests + number-protection.ts + frozen-statuses.ts) + B.5 OrderClosing FK relation (already in schema as `productionOrder ProductionOrder? @relation(... onDelete: SetNull)`). Docs синхронизированы в CURRENT-CHECKLIST.md + audit-tasks-business.md (📋 planned → ✅ DONE). Gates: tsc 0 / vitest 272/272 (11 new tests pass) / eslint 0 warnings. |
