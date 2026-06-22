@@ -3119,3 +3119,48 @@ SHIP-READY. 2 minor observations (cart POST не capture `user` для activity 
 ### Следующее обслуживание
 - Если user asks «continue D-A1»: batches 2-N with remaining 70 routes + integration test для per-entity 403 assertion matrix.
 - Если user picks new direction: ship Гантт DnD (D-A3) или Shipment UI (D-A5) как alternative high-value work.
+
+<a id="cycle-59"></a>
+## Cycle 59 (D-A1 batch 2 — closure) — 2026-06-22 — CRM guards + cycle closure
+
+### Контекст
+Из cycle 58 (D-A1 batch 1) мигрировали cart/* + proposals POST + dadata. Re-audit 70 оставшихся requireAuth() обнаружил: большинство были УЖЕ мигрированы в cycle 47 partial (persons/[id]+product-modules/[id]+organizations/[id]+workers/[id]+order-closings/*+shipments/* — все requireEditor; order-closings POST+reconciliation-acts POST+inventory-movements POST+materials POST — все requireRole cycle 47/52). Реально оставались only **2 файла с requireAuth в write-handlers**:
+1. persons/route.ts POST
+2. organizations/route.ts POST
+
+### Phase B — final migration (batch 2)
+
+- `src/app/api/persons/route.ts` POST: `await requireAuth()` (recordActivity user capture) → `await requireRole(['manager'])`. Comment: "D-A1 batch 2 (cycle 47-extension): CRM managers add contacts". FORBIDDEN catch handler added.
+- `src/app/api/organizations/route.ts` POST: `await requireAuth()` → `await requireRole(['manager'])`. Comment: "D-A1 batch 2 (cycle 47-extension): CRM managers register counterparties". FORBIDDEN catch handler added.
+
+### Re-audit outcome
+**D-A1 cycle 47-extension завершён:**
+- Cycle 47 partial: 9 routes (cycle 47 historical)
+- Cycle D-A1 batch 1 (cycle 58): 6 routes (cart/* + dadata + proposals)
+- Cycle D-A1 batch 2 (cycle 59): 2 routes (persons + organizations POST)
+- **ИТОГО: 17 routes migrated** (включая cycle 47 partial duplicates — final 17 unique handlers migrated)
+
+Оставшиеся 50 requireAuth() = GET handlers (read-only floor) per matrix. **Никаких write-handler requireAuth не осталось после cycle 59.**
+
+### Validation
+- `npx tsc --noEmit` → 0 errors
+- `npx eslint src --max-warnings=999` → 0 issues
+- `npx vitest run` → **337/337 passing** (22 test files)
+- `npm run build` → success
+
+### Architectural decision
+- Admin bypass works across all requireRole checks (это в auth.ts:67). Делать admin explicit в role lists — избыточно, since bypass is implicit.
+- For organizations POST, выбор `['manager']` (admin через bypass) — coherent с другими CRM write-handlers (persons, contracts).
+- `user` capture pattern сохранён в обоих POST handlers (cycle 57 activity log invariant).
+
+### Reviewer verdict
+**SHIP-READY.** 1 nit (cycle 54 B.2 spec implied admin/manager explicit но admin через bypass достаточно — keep `['manager']` for consistency with CRM peers).
+
+### Commits
+- `a821a5e` cycle 58 (D-A1 batch 1) — 6 routes cart/* + dadata + proposals
+- Cycle 59 commit — 2 routes persons + organizations POST (current batch)
+
+### Следующее обслуживание
+- **OPTIONAL**: integration test для per-entity RBAC matrix (assert 403 for viewer → POST proposals/persons/organizations/etc). estimated 2-3 h.
+- **OPTIONAL**: continue D-A1 cleanup — GET handler security audit (verify no PII leakage, but per matrix GET floor allows viewer).
+- Ship-ready: список "Delivery scope backlog" (D-A3 Гантт DnD / D-A4 Снабжение / D-A5 Shipment UI / D-A6 Role panel) остаётся открытым для следующего цикла.
