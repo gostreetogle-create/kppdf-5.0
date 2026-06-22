@@ -56,6 +56,23 @@ function createPrismaClient() {
   return new PrismaClient({ adapter });
 }
 
-export const prisma = globalForPrisma.prisma ?? createPrismaClient();
-
-if (!isProd) globalForPrisma.prisma = prisma;
+/**
+ * Lazy Prisma proxy.
+ *
+ * Why: Next.js `next build` analyzes all routes. If `createPrismaClient()` runs
+ * at module load (as before), the `DATABASE_URL` check throws and breaks the
+ * production build. The proxy defers instantiation until the first actual
+ * query `prisma.X.method(...)` is invoked at runtime — so `next build` can
+ * analyze routes without needing DATABASE_URL. If DATABASE_URL is missing at
+ * runtime, `createPrismaClient()` throws exactly as before (intentional).
+ *
+ * Cycle v3.4 — FINAL migration. PostgreSQL-only logic in createPrismaClient().
+ */
+export const prisma: PrismaClient = new Proxy({} as PrismaClient, {
+  get(_target, prop) {
+    if (!globalForPrisma.prisma) {
+      globalForPrisma.prisma = createPrismaClient();
+    }
+    return Reflect.get(globalForPrisma.prisma, prop);
+  },
+});
