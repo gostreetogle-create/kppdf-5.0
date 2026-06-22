@@ -3,10 +3,14 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
-import { BarChart3, RefreshCw, X, Calendar, Clock, User, MapPin, FileText } from 'lucide-react';
+import { BarChart3, RefreshCw, X, Calendar, Clock, User, MapPin, FileText, Undo2 } from 'lucide-react';
 import { StatusBadge, ORDER_STATUS } from '@/lib/constants/statuses';
 import { GanttSkeleton } from '@/components/skeletons';
 import type { GanttItem, GanttItemUpdate } from '@/components/ui/gantt-chart';
+// Cycle 14+ (D-A3): Zustand undo coordinator для drag-to-resize.
+import { useGanttDragStore } from '@/stores/gantt-drag-store';
+
+const UNDO_WINDOW_MS = 5000;
 
 // Code-split: GanttChart (~400 lines, DnD) → отдельный чанк
 const GanttChart = dynamic(() => import('@/components/ui/gantt-chart').then(m => ({ default: m.GanttChart })), {
@@ -80,12 +84,16 @@ export default function GanttPage() {
     setSelectedItem(item);
   }, []);
 
+  const setDragSnapshot = useGanttDragStore((s) => s.setSnapshot);
+
   const handleItemUpdate = useCallback(async (update: GanttItemUpdate) => {
     const apiPath = update.type === 'order' ? '/api/production-orders' : '/api/order-tasks';
     const body = {
       plannedStart: update.startDate,
       plannedEnd: update.endDate,
     };
+    // Capture previous dates из current state для возможности undo.
+    const prevItem = items.find((i) => i.id === update.id);
     try {
       await fetch(`${apiPath}/${update.id}`, {
         method: 'PUT',
@@ -99,12 +107,84 @@ export default function GanttPage() {
         }
         return i;
       }));
+      // Cycle 14+: register undo snapshot (page-level timer handles auto-dismiss).
+      if (prevItem && (prevItem.startDate !== update.startDate || prevItem.endDate !== update.endDate)) {
+        const deltaDaysStart = Math.round(
+          (new Date(update.startDate).getTime() - new Date(prevItem.startDate).getTime()) / 86400000,
+        );
+        const labelPrefix = update.type === 'order' ? 'Заказ' : 'Задача';
+        const description = deltaDaysStart === 0
+          ? `${labelPrefix}: изменены сроки`
+          : `${labelPrefix}: ${deltaDaysStart > 0 ? '+' : ''}${deltaDaysStart} дн.`;
+        setDragSnapshot({
+          id: `${update.id}:${Date.now()}`,
+          itemId: update.id,
+          type: update.type,
+          previousStartDate: prevItem.startDate,
+          previousEndDate: prevItem.endDate,
+          newStartDate: update.startDate,
+          newEndDate: update.endDate,
+          description,
+          appliedAt: Date.now(),
+        });
+      }
     } catch (err) {
       console.error('Failed to update item dates:', err);
       // Reload on error to reset
       loadData();
     }
-  }, [loadData]);
+  }, [items, loadData, setDragSnapshot]);
+
+  const clearDragSnapshot = useGanttDragStore((s) => s.clear);
+  const lastSnapshot = useGanttDragStore((s) => s.lastSnapshot);
+
+  const handleUndo = useCallback(async () => {
+    if (!lastSnapshot) return;
+    const snap = lastSnapshot;
+    const apiPath = snap.type === 'order' ? '/api/production-orders' : '/api/order-tasks';
+    try {
+      await fetch(`${apiPath}/${snap.itemId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          plannedStart: snap.previousStartDate,
+          plannedEnd: snap.previousEndDate,
+        }),
+      });
+      setItems((prev) => prev.map((i) =>
+        i.id === snap.itemId
+          ? { ...i, startDate: snap.previousStartDate, endDate: snap.previousEndDate }
+          : i,
+      ));
+    } catch (err) {
+      console.error('Failed to undo item dates:', err);
+      loadData();
+    } finally {
+      clearDragSnapshot();
+    }
+  }, [lastSnapshot, loadData, clearDragSnapshot]);
+
+  // Cycle 14+: тикающий «now» timestamp для visibility check в render.
+  // Только когда есть активный snapshot — иначе idle re-renders 1×/сек на холостом ходу.
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!lastSnapshot) return;
+    const timer = setInterval(() => setNow(Date.now()), 500);
+    return () => clearInterval(timer);
+  }, [lastSnapshot]);
+
+  // Auto-dismiss snapshot после UNDO_WINDOW_MS (cleanup).
+  useEffect(() => {
+    if (!lastSnapshot) return;
+    const elapsed = Date.now() - lastSnapshot.appliedAt;
+    if (elapsed >= UNDO_WINDOW_MS) {
+      clearDragSnapshot();
+      return;
+    }
+    const remaining = UNDO_WINDOW_MS - elapsed;
+    const timer = setTimeout(() => clearDragSnapshot(), remaining);
+    return () => clearTimeout(timer);
+  }, [lastSnapshot, clearDragSnapshot]);
 
   const formatDate = (d: string) => {
     try {
@@ -150,6 +230,38 @@ export default function GanttPage() {
         onItemClick={handleItemClick}
         onItemUpdate={handleItemUpdate}
       />
+
+      {/* Cycle 14+: undo toast — появляется на 5 сек после drag-and-drop API commit. +500ms buffer
+          для animation smoothness — так toast исчезает слитно с auto-dismiss таймером. */}
+      {lastSnapshot && now - lastSnapshot.appliedAt < UNDO_WINDOW_MS + 500 && (
+        <div className="fixed bottom-6 right-6 z-50 max-w-md animate-slide-up">
+          <div className="flex items-center gap-3 bg-[var(--card)] border border-[var(--border)] rounded-xl shadow-2xl px-4 py-3">
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-[var(--foreground)] truncate">
+                {lastSnapshot.description}
+              </p>
+              <p className="text-[10px] text-[var(--muted-foreground)] mt-0.5">
+                Изменения сохранены
+              </p>
+            </div>
+            <button
+              onClick={handleUndo}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--primary)] text-[var(--primary-foreground)] text-xs font-semibold hover:opacity-90 transition-all active:scale-[0.97]"
+              title="Восстановить предыдущие даты"
+            >
+              <Undo2 className="h-3.5 w-3.5" />
+              Отменить
+            </button>
+            <button
+              onClick={clearDragSnapshot}
+              className="p-1.5 rounded-lg hover:bg-[var(--muted)] transition-colors"
+              title="Закрыть"
+            >
+              <X className="h-3.5 w-3.5 text-[var(--muted-foreground)]" />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Detail dialog */}
       {selectedItem && (

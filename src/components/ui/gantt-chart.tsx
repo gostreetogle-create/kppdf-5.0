@@ -1,6 +1,15 @@
 'use client';
 
-import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
+import { useState, useMemo, useCallback, useRef } from 'react';
+import {
+  DndContext,
+  PointerSensor,
+  KeyboardSensor,
+  useSensor,
+  useSensors,
+  useDraggable,
+  type DragEndEvent,
+} from '@dnd-kit/core';
 import { ChevronLeft, ChevronRight, Calendar, LayoutList, LayoutGrid, Users, Filter, X } from 'lucide-react';
 
 export interface GanttItem {
@@ -35,6 +44,10 @@ interface GanttChartProps {
   onItemUpdate?: (update: GanttItemUpdate) => void;
 }
 
+// ========================================
+// Constants
+// ========================================
+
 const STATUS_COLORS: Record<string, string> = {
   planned: '#a78bfa',
   in_progress: '#facc15',
@@ -63,16 +76,27 @@ const MIN_BAR_WIDTH = 4;
 type ZoomPreset = 'day' | 'week' | 'month';
 const ZOOM_SCALES: Record<ZoomPreset, number> = { day: 1, week: 0.4, month: 0.15 };
 
+/**
+ * Cycle 14+ (D-A3): refactor на @dnd-kit. Три режима DnD:
+ * - 'move' — перетащить всю полосу (plannedStart + plannedEnd сдвигаются вместе)
+ * - 'resize-left' — изменить только plannedStart (plannedEnd фиксирован)
+ * - 'resize-right' — изменить только plannedEnd (plannedStart фиксирован)
+ *
+ * Идентификатор draggable: `${itemId}:${mode}` — ensures 3 distinct drag instances per bar.
+ */
 type DragMode = 'move' | 'resize-left' | 'resize-right';
 
-interface DragState {
+interface DraggableData {
   itemId: string;
   mode: DragMode;
-  startMouseX: number;
+  item: GanttItem;
   originalStartMs: number;
   originalEndMs: number;
-  currentDeltaDays: number;
 }
+
+// ========================================
+// Helpers
+// ========================================
 
 function isWeekend(date: Date): boolean {
   const d = date.getDay();
@@ -83,18 +107,200 @@ function toISODate(ms: number): string {
   return new Date(ms).toISOString().split('T')[0] + 'T00:00:00.000Z';
 }
 
+// ========================================
+// DraggableBar — subcomponent (uses useDraggable hook per bar/handle)
+// ========================================
+
+interface DraggableBarProps {
+  item: GanttItem;
+  /** 'move' = весь bar; 'resize-left' = left edge; 'resize-right' = right edge. */
+  mode: DragMode;
+  dayWidth: number;
+  startDateMs: number;
+  statusColor: string;
+  priorityColor: string;
+  progress: number;
+  hasActual: boolean;
+  actualDiffers: boolean;
+  actualLeftPx?: number;
+  actualWidthPx?: number;
+  /** Set когда chart установлен в read-only mode. */
+  disabled: boolean;
+  /** Click on bar — only when not dragging. */
+  onClick: (item: GanttItem) => void;
+}
+
+/**
+ * Внутренний компонент: один draggable (move или resize handle).
+ * useDraggable возвращает setNodeRef + listeners + attributes + transform — всё живёт
+ * на этом компоненте, поэтому его НЕЛЬЗЯ встроить в цикл — обязательно как subcomponent.
+ */
+function DraggableBar({
+  item,
+  mode,
+  dayWidth,
+  startDateMs,
+  statusColor,
+  priorityColor,
+  progress,
+  hasActual,
+  actualDiffers,
+  actualLeftPx,
+  actualWidthPx,
+  disabled,
+  onClick,
+}: DraggableBarProps) {
+  const dragId = `${item.id}:${mode}`;
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: dragId,
+    data: {
+      itemId: item.id,
+      mode,
+      item,
+      originalStartMs: new Date(item.startDate).getTime(),
+      originalEndMs: new Date(item.endDate).getTime(),
+    } satisfies DraggableData,
+    disabled,
+  });
+
+  const originalStartMs = new Date(item.startDate).getTime();
+  const originalEndMs = new Date(item.endDate).getTime();
+  const startX = ((originalStartMs - startDateMs) / MS_IN_DAY) * dayWidth;
+  const barWidth = Math.max(((originalEndMs - originalStartMs) / MS_IN_DAY) * dayWidth, MIN_BAR_WIDTH);
+
+  // dnd-kit transform: применяется только для 'move' режима внешний transform,
+  // для resize мы двигаем не transformRelative но width/left внутренних элементов —
+  // useDraggable активен но фактический визуальный shift мы делаем через getBarStyle.
+  // Тут мы просто применяем transform к элементу для move режима (= визуальное feedback).
+  const transformStyle = transform
+    ? `translate3d(${transform.x}px, ${transform.y}px, 0)`
+    : undefined;
+
+  // Для resize режимов: dnd-kit transform не визуально полезен (мы меняем ширину, не позицию),
+  // поэтому мы НЕ применяем transform для resize-* handles. Координаты обновляются
+  // при дальнейшей логике через бар-стиль.
+  const style: React.CSSProperties = {
+    left: `${startX}px`,
+    width: `${barWidth}px`,
+    minWidth: `${MIN_BAR_WIDTH}px`,
+    height: hasActual ? '14px' : '20px',
+    backgroundColor: statusColor,
+    borderLeft: `3px solid ${priorityColor}`,
+    opacity: hasActual && !isDragging ? 0.7 : isDragging ? 0.65 : 0.9,
+    ...(mode === 'move' && transformStyle ? { transform: transformStyle } : {}),
+  };
+
+  if (mode === 'resize-left' || mode === 'resize-right') {
+    const isLeft = mode === 'resize-left';
+    return (
+      <div
+        ref={setNodeRef}
+        style={{
+          ...style,
+          position: 'absolute',
+          top: 0,
+          bottom: 0,
+          [isLeft ? 'left' : 'right']: 0,
+          width: `${HANDLE_WIDTH}px`,
+          backgroundColor: 'transparent',
+          cursor: 'col-resize',
+          opacity: isDragging ? 0.9 : 0.4,
+          borderLeft: 'none',
+          zIndex: 20,
+          transition: 'opacity 150ms',
+        }}
+        {...attributes}
+        {...(disabled ? {} : listeners)}
+        onClick={(e) => {
+          e.stopPropagation();
+          if (!disabled && !isDragging) onClick(item);
+        }}
+        title={isLeft ? 'Изменить начало' : 'Изменить окончание'}
+      />
+    );
+  }
+
+  // mode === 'move' — рендер всей полосы (с move listener + progress fill + label)
+  const startDate = new Date(item.startDate);
+  const endDate = new Date(item.endDate);
+  const formatDateFull = (d: Date) => d.toLocaleDateString('ru-RU', { day: '2-digit', month: 'long', year: 'numeric' });
+
+  return (
+    <>
+      <div
+        ref={setNodeRef}
+        className={`absolute top-1/2 -translate-y-[60%] rounded flex items-center overflow-hidden select-none ${
+          isDragging ? 'shadow-lg opacity-70' : disabled ? 'cursor-default' : 'hover:brightness-110 hover:shadow-md cursor-grab active:cursor-grabbing'
+        }`}
+        style={style}
+        {...attributes}
+        {...(disabled ? {} : listeners)}
+        onClick={(e) => {
+          e.stopPropagation();
+          if (!disabled && !isDragging) onClick(item);
+        }}
+        title={`${item.title} (план): ${formatDateFull(startDate)} → ${formatDateFull(endDate)}${isDragging ? ' — перетаскивание' : ''}`}
+      >
+        {progress > 0 && (
+          <div
+            className="absolute inset-0 bg-white/25 rounded-r pointer-events-none"
+            style={{ width: `${progress}%` }}
+          />
+        )}
+        {barWidth > 60 && (
+          <span
+            className="text-[10px] text-white font-medium px-1.5 truncate w-full relative z-10 pointer-events-none"
+            style={{ textShadow: '0 1px 2px rgba(0,0,0,0.3)' }}
+          >
+            {item.title} {progress > 0 ? `${progress}%` : ''}
+          </span>
+        )}
+      </div>
+
+      {/* Actual bar (если расходится с планом) — НЕ draggable */}
+      {actualDiffers && actualLeftPx !== undefined && actualWidthPx !== undefined && (
+        <div
+          className="absolute top-1/2 translate-y-[10%] rounded border-2 cursor-pointer transition-all hover:brightness-110"
+          style={{
+            left: `${actualLeftPx}px`,
+            width: `${actualWidthPx}px`,
+            minWidth: '4px',
+            height: '14px',
+            borderColor: statusColor,
+            backgroundColor: 'transparent',
+          }}
+          title={`${item.title} (факт): ${formatDateFull(new Date(item.actualStart!))} → ${formatDateFull(new Date(item.actualEnd!))}`}
+          onClick={(e) => {
+            e.stopPropagation();
+            onClick(item);
+          }}
+        />
+      )}
+    </>
+  );
+}
+
+// ========================================
+// Main GanttChart
+// ========================================
+
 export function GanttChart({ items, loading = false, onItemClick, onItemUpdate }: GanttChartProps) {
   const [zoom, setZoom] = useState<ZoomPreset>('week');
   const scale = ZOOM_SCALES[zoom];
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [typeFilter, setTypeFilter] = useState<string>('');
   const [workerFilter, setWorkerFilter] = useState<string>('');
-  const [drag, setDrag] = useState<DragState | null>(null);
-  const hasMoved = useRef(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(KeyboardSensor),
+  );
+
+  const isReadOnly = !onItemUpdate;
+
   const filtered = useMemo(() => {
-    return items.filter(i => {
+    return items.filter((i) => {
       if (statusFilter && i.status !== statusFilter) return false;
       if (typeFilter && i.type !== typeFilter) return false;
       if (workerFilter && i.assignee !== workerFilter) return false;
@@ -110,7 +316,13 @@ export function GanttChart({ items, loading = false, onItemClick, onItemUpdate }
     if (filtered.length === 0) {
       const start = new Date(now.getFullYear(), now.getMonth(), 1);
       const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-      return { startDate: start, endDate: end, totalDays: Math.ceil((end.getTime() - start.getTime()) / MS_IN_DAY) + 1, dayWidth: 48 * scale, today: todayDate };
+      return {
+        startDate: start,
+        endDate: end,
+        totalDays: Math.ceil((end.getTime() - start.getTime()) / MS_IN_DAY) + 1,
+        dayWidth: 48 * scale,
+        today: todayDate,
+      };
     }
 
     const dates = filtered.flatMap((item) => [new Date(item.startDate), new Date(item.endDate)]);
@@ -141,7 +353,7 @@ export function GanttChart({ items, loading = false, onItemClick, onItemUpdate }
 
   const workload = useMemo(() => {
     const map = new Map<string, { count: number; inProgress: number }>();
-    filtered.forEach(i => {
+    filtered.forEach((i) => {
       if (i.assignee) {
         const w = map.get(i.assignee) || { count: 0, inProgress: 0 };
         w.count++;
@@ -153,127 +365,99 @@ export function GanttChart({ items, loading = false, onItemClick, onItemUpdate }
   }, [filtered]);
 
   const uniqueStatuses = useMemo(() => {
-    const s = new Set(items.map(i => i.status));
+    const s = new Set(items.map((i) => i.status));
     return Array.from(s);
   }, [items]);
 
   const uniqueWorkers = useMemo(() => {
-    const s = new Set(items.filter(i => i.assignee).map(i => i.assignee!));
+    const s = new Set(items.filter((i) => i.assignee).map((i) => i.assignee!));
     return Array.from(s);
   }, [items]);
 
   const timelineWidth = totalDays * dayWidth;
   const formatDateFull = (d: Date) => d.toLocaleDateString('ru-RU', { day: '2-digit', month: 'long', year: 'numeric' });
-  const formatDateShort = (d: Date) => d.toLocaleDateString('ru-RU', { day: '2-digit', month: 'short' });
-
-  const getBarStyle = (startStr: string, endStr: string, dragItem?: DragState | null) => {
-    let startMs = new Date(startStr).getTime();
-    let endMs = new Date(endStr).getTime();
-
-    // Apply drag delta if this is the dragged item
-    if (dragItem) {
-      const deltaMs = dragItem.currentDeltaDays * MS_IN_DAY;
-      if (dragItem.mode === 'move') {
-        startMs = dragItem.originalStartMs + deltaMs;
-        endMs = dragItem.originalEndMs + deltaMs;
-      } else if (dragItem.mode === 'resize-left') {
-        startMs = dragItem.originalStartMs + deltaMs;
-        // Keep end fixed
-      } else if (dragItem.mode === 'resize-right') {
-        endMs = dragItem.originalEndMs + deltaMs;
-        // Keep start fixed
-      }
-    }
-
-    const left = ((startMs - startDate.getTime()) / MS_IN_DAY) * dayWidth;
-    const width = Math.max(((endMs - startMs) / MS_IN_DAY) * dayWidth, MIN_BAR_WIDTH);
-    return { left: `${left}px`, width: `${width}px` };
-  };
-
-  const applyDragForItem = (item: GanttItem): DragState | null => {
-    if (drag && drag.itemId === item.id) return drag;
-    return null;
-  };
 
   const todayLeft = useMemo(() => {
     if (today < startDate || today > endDate) return null;
     return ((today.getTime() - startDate.getTime()) / MS_IN_DAY) * dayWidth;
   }, [today, startDate, endDate, dayWidth]);
 
-  // ── Drag handlers ──────────────────────────────────────────
+  // ── DnD central handlers ───────────────────────────────────
 
-  const startDrag = useCallback((item: GanttItem, mode: DragMode, clientX: number) => {
-    hasMoved.current = false;
-    setDrag({
-      itemId: item.id,
-      mode,
-      startMouseX: clientX,
-      originalStartMs: new Date(item.startDate).getTime(),
-      originalEndMs: new Date(item.endDate).getTime(),
-      currentDeltaDays: 0,
-    });
-  }, []);
+  const handleDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      const data = event.active.data.current as DraggableData | undefined;
+      if (!data || isReadOnly) return;
 
-  // Handle pointer events at document level for cross-element drag
-  useEffect(() => {
-    if (!drag) return;
-    const handleMove = (e: PointerEvent) => {
-      const deltaPx = e.clientX - drag.startMouseX;
+      const { itemId, mode, item, originalStartMs, originalEndMs } = data;
+      const deltaPx = event.delta.x;
       const deltaDays = Math.round(deltaPx / dayWidth);
-      if (Math.abs(deltaDays) > 0) hasMoved.current = true;
-      setDrag(prev => prev ? { ...prev, currentDeltaDays: deltaDays } : null);
-    };
-    const handleUp = () => {
-      if (!drag || !onItemUpdate) { setDrag(null); return; }
-      const item = items.find(i => i.id === drag.itemId);
-      if (!item) { setDrag(null); return; }
+      if (deltaDays === 0) return;
 
-      const deltaMs = drag.currentDeltaDays * MS_IN_DAY;
-      let newStartMs = drag.originalStartMs;
-      let newEndMs = drag.originalEndMs;
+      let newStartMs = originalStartMs;
+      let newEndMs = originalEndMs;
 
-      if (drag.mode === 'move') {
-        newStartMs = drag.originalStartMs + deltaMs;
-        newEndMs = drag.originalEndMs + deltaMs;
-      } else if (drag.mode === 'resize-left') {
-        newStartMs = drag.originalStartMs + deltaMs;
-      } else if (drag.mode === 'resize-right') {
-        newEndMs = drag.originalEndMs + deltaMs;
+      if (mode === 'move') {
+        newStartMs = originalStartMs + deltaDays * MS_IN_DAY;
+        newEndMs = originalEndMs + deltaDays * MS_IN_DAY;
+      } else if (mode === 'resize-left') {
+        newStartMs = originalStartMs + deltaDays * MS_IN_DAY;
+      } else if (mode === 'resize-right') {
+        newEndMs = originalEndMs + deltaDays * MS_IN_DAY;
       }
 
+      // Min 1 day duration
       if (newEndMs - newStartMs < MS_IN_DAY) {
-        if (drag.mode === 'resize-left') {
+        if (mode === 'resize-left') {
           newStartMs = newEndMs - MS_IN_DAY;
         } else {
           newEndMs = newStartMs + MS_IN_DAY;
         }
       }
 
-      if (newStartMs !== drag.originalStartMs || newEndMs !== drag.originalEndMs) {
-        onItemUpdate({
-          id: item.id,
+      if (newStartMs !== originalStartMs || newEndMs !== originalEndMs) {
+        onItemUpdate?.({
+          id: itemId,
           type: item.type,
           startDate: toISODate(newStartMs),
           endDate: toISODate(newEndMs),
         });
       }
+    },
+    [dayWidth, isReadOnly, onItemUpdate],
+  );
 
-      setDrag(null);
-    };
+  // Cycle 14+: zoom change cancels any in-progress drag automatically (dnd-kit sensors reset
+  // activation on key change). Нам не нужен explicit cleanup — этот useEffect ранее был здесь для
+  // clear() старого local state, который теперь удалён.
 
-    document.addEventListener('pointermove', handleMove);
-    document.addEventListener('pointerup', handleUp);
-    return () => {
-      document.removeEventListener('pointermove', handleMove);
-      document.removeEventListener('pointerup', handleUp);
-    };
-  }, [drag, items, onItemUpdate, dayWidth]);
+  const getPriorityColor = (item: GanttItem) => {
+    const p = Math.min(item.priority || 0, PRIORITY_COLORS.length - 1);
+    return PRIORITY_COLORS[p];
+  };
 
-  // Cancel drag on zoom change
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setDrag(null);
-  }, [zoom]);
+  const weekendCols = useMemo(() => {
+    if (zoom === 'month') return [];
+    const cols: { left: number; width: number }[] = [];
+    let inWeekend = false;
+    let weekendStart = 0;
+    const cursor = new Date(startDate);
+    let x = 0;
+    while (cursor <= endDate) {
+      const d = new Date(cursor);
+      if (isWeekend(d) && !inWeekend) {
+        inWeekend = true;
+        weekendStart = x;
+      } else if (!isWeekend(d) && inWeekend) {
+        inWeekend = false;
+        cols.push({ left: weekendStart, width: x - weekendStart });
+      }
+      x += dayWidth;
+      cursor.setDate(cursor.getDate() + 1);
+    }
+    if (inWeekend) cols.push({ left: weekendStart, width: x - weekendStart });
+    return cols;
+  }, [startDate, endDate, dayWidth, zoom]);
 
   const renderMonthHeaders = () => {
     const headers: { label: string; width: number; start: number }[] = [];
@@ -315,37 +499,12 @@ export function GanttChart({ items, loading = false, onItemClick, onItemUpdate }
   const handleScroll = (direction: number) => {
     const container = containerRef.current?.querySelector('.gantt-timeline') as HTMLElement | null;
     if (container) {
-      container.scrollBy({ left: direction * dayWidth * (zoom === 'day' ? 3 : zoom === 'week' ? 7 : 30), behavior: 'smooth' });
+      container.scrollBy({
+        left: direction * dayWidth * (zoom === 'day' ? 3 : zoom === 'week' ? 7 : 30),
+        behavior: 'smooth',
+      });
     }
   };
-
-  const getPriorityColor = (item: GanttItem) => {
-    const p = Math.min((item.priority || 0), PRIORITY_COLORS.length - 1);
-    return PRIORITY_COLORS[p];
-  };
-
-  const weekendCols = useMemo(() => {
-    if (zoom === 'month') return [];
-    const cols: { left: number; width: number }[] = [];
-    let inWeekend = false;
-    let weekendStart = 0;
-    const cursor = new Date(startDate);
-    let x = 0;
-    while (cursor <= endDate) {
-      const d = new Date(cursor);
-      if (isWeekend(d) && !inWeekend) {
-        inWeekend = true;
-        weekendStart = x;
-      } else if (!isWeekend(d) && inWeekend) {
-        inWeekend = false;
-        cols.push({ left: weekendStart, width: x - weekendStart });
-      }
-      x += dayWidth;
-      cursor.setDate(cursor.getDate() + 1);
-    }
-    if (inWeekend) cols.push({ left: weekendStart, width: x - weekendStart });
-    return cols;
-  }, [startDate, endDate, dayWidth, zoom]);
 
   const scrollToToday = useCallback(() => {
     const container = containerRef.current?.querySelector('.gantt-timeline') as HTMLElement | null;
@@ -354,113 +513,12 @@ export function GanttChart({ items, loading = false, onItemClick, onItemUpdate }
     }
   }, [todayLeft]);
 
-  const renderBar = (item: GanttItem, rowH = 36) => {
-    const start = new Date(item.startDate);
-    const end = new Date(item.endDate);
-    const dragItem = applyDragForItem(item);
-    const isDragging = !!dragItem;
-    const barStyle = getBarStyle(item.startDate, item.endDate, dragItem);
-    const statusColor = STATUS_COLORS[item.status] || '#94a3b8';
-    const priorityColor = getPriorityColor(item);
-    const progress = item.progress || 0;
-    const hasActual = item.actualStart && item.actualEnd;
-    const actualDiffers = hasActual && (item.actualStart !== item.startDate || item.actualEnd !== item.endDate);
-
-    return (
-      <div key={item.id} className="relative" style={{ height: `${rowH}px` }}>
-        {/* Planned bar */}
-        <div
-          className={`absolute top-1/2 -translate-y-[60%] rounded flex items-center overflow-hidden select-none ${
-            isDragging ? 'shadow-lg opacity-70' : 'hover:brightness-110 hover:shadow-md cursor-grab active:cursor-grabbing'
-          } ${onItemClick ? 'cursor-pointer' : ''}`}
-          style={{
-            ...barStyle,
-            minWidth: `${MIN_BAR_WIDTH}px`,
-            height: hasActual ? '14px' : '20px',
-            backgroundColor: statusColor,
-            borderLeft: `3px solid ${priorityColor}`,
-            opacity: hasActual && !isDragging ? 0.7 : isDragging ? 0.65 : 0.9,
-          }}
-          onClick={() => {
-            if (!drag && !hasMoved.current) onItemClick?.(item);
-          }}
-          onPointerDown={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            startDrag(item, 'move', e.clientX);
-          }}
-          title={`${item.title} (план): ${formatDateFull(start)} → ${formatDateFull(end)}${isDragging ? ' — перетаскивание' : ''}`}
-        >
-          {/* Resize handle: left edge */}
-          <div
-            className="absolute left-0 top-0 bottom-0 cursor-col-resize hover:bg-white/30 transition-colors z-20"
-            style={{ width: `${HANDLE_WIDTH}px` }}
-            onPointerDown={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              startDrag(item, 'resize-left', e.clientX);
-            }}
-          />
-
-          {/* Progress fill */}
-          {progress > 0 && (
-            <div
-              className="absolute inset-0 bg-white/25 rounded-r pointer-events-none"
-              style={{ width: `${progress}%` }}
-            />
-          )}
-          {barStyle.width && parseFloat(barStyle.width) > 60 && (
-            <span className="text-[10px] text-white font-medium px-1.5 truncate w-full relative z-10 pointer-events-none" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.3)' }}>
-              {item.title} {progress > 0 ? `${progress}%` : ''}
-            </span>
-          )}
-
-          {/* Resize handle: right edge */}
-          <div
-            className="absolute right-0 top-0 bottom-0 cursor-col-resize hover:bg-white/30 transition-colors z-20"
-            style={{ width: `${HANDLE_WIDTH}px` }}
-            onPointerDown={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              startDrag(item, 'resize-right', e.clientX);
-            }}
-          />
-        </div>
-
-        {/* Actual bar (if dates differ from planned) */}
-        {actualDiffers && (
-          <div
-            className="absolute top-1/2 translate-y-[10%] rounded border-2 cursor-pointer transition-all hover:brightness-110"
-            style={{
-              ...getBarStyle(item.actualStart!, item.actualEnd!),
-              minWidth: '4px',
-              height: '14px',
-              borderColor: statusColor,
-              backgroundColor: 'transparent',
-            }}
-            title={`${item.title} (факт): ${formatDateFull(new Date(item.actualStart!))} → ${formatDateFull(new Date(item.actualEnd!))}`}
-          />
-        )}
-
-        {/* Drag delta tooltip */}
-        {isDragging && (
-          <div
-            className="absolute top-0 -translate-y-full mb-1 left-0 bg-[var(--card)] border border-[var(--border)] rounded-md px-2 py-1 text-[10px] font-medium text-[var(--foreground)] shadow-lg z-50 whitespace-nowrap pointer-events-none"
-            style={{ marginLeft: '8px' }}
-          >
-            {dragItem.mode === 'resize-left' ? 'Начало:' : dragItem.mode === 'resize-right' ? 'Окончание:' : ''}
-            {dragItem.mode !== 'move' ? ' ' : ''}
-            {dragItem.currentDeltaDays > 0 ? '+' : ''}{dragItem.currentDeltaDays} дн.
-            {dragItem.mode === 'move' && (
-              <>
-                {' '}&rarr; {formatDateShort(new Date(dragItem.originalStartMs + dragItem.currentDeltaDays * MS_IN_DAY))}
-              </>
-            )}
-          </div>
-        )}
-      </div>
-    );
-  };
+  const handleItemClick = useCallback(
+    (item: GanttItem) => {
+      onItemClick?.(item);
+    },
+    [onItemClick],
+  );
 
   if (loading) {
     return (
@@ -471,267 +529,392 @@ export function GanttChart({ items, loading = false, onItemClick, onItemUpdate }
   }
 
   const hasFilters = statusFilter || typeFilter || workerFilter;
+  const startDateMs = startDate.getTime();
 
   return (
-    <div className="flex gap-4" ref={containerRef}>
-      {/* Main chart */}
-      <div className="flex-1 min-w-0 bg-[var(--card)] border border-[var(--border)] rounded-xl overflow-hidden shadow-sm">
-        {/* Toolbar */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border)] gap-3">
-          <div className="flex items-center gap-2">
-            <button onClick={() => handleScroll(-1)} className="p-1.5 rounded-lg hover:bg-[var(--muted)] transition-colors">
-              <ChevronLeft className="h-4 w-4 text-[var(--muted-foreground)]" />
-            </button>
-            <button onClick={scrollToToday} className="h-7 px-2.5 rounded-md text-[10px] font-semibold border border-[var(--border)] hover:bg-[var(--muted)] transition-colors text-[var(--muted-foreground)]">
-              Сегодня
-            </button>
-            <button onClick={() => handleScroll(1)} className="p-1.5 rounded-lg hover:bg-[var(--muted)] transition-colors">
-              <ChevronRight className="h-4 w-4 text-[var(--muted-foreground)]" />
-            </button>
-            <span className="text-xs text-[var(--muted-foreground)] ml-2 hidden sm:inline">
-              {formatDateFull(startDate)} — {formatDateFull(endDate)}
+    <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+      <div className="flex gap-4" ref={containerRef}>
+        {/* Main chart */}
+        <div className="flex-1 min-w-0 bg-[var(--card)] border border-[var(--border)] rounded-xl overflow-hidden shadow-sm">
+          {/* Toolbar */}
+          <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border)] gap-3">
+            <div className="flex items-center gap-2">
+              <button onClick={() => handleScroll(-1)} className="p-1.5 rounded-lg hover:bg-[var(--muted)] transition-colors">
+                <ChevronLeft className="h-4 w-4 text-[var(--muted-foreground)]" />
+              </button>
+              <button onClick={scrollToToday} className="h-7 px-2.5 rounded-md text-[10px] font-semibold border border-[var(--border)] hover:bg-[var(--muted)] transition-colors text-[var(--muted-foreground)]">
+                Сегодня
+              </button>
+              <button onClick={() => handleScroll(1)} className="p-1.5 rounded-lg hover:bg-[var(--muted)] transition-colors">
+                <ChevronRight className="h-4 w-4 text-[var(--muted-foreground)]" />
+              </button>
+              <span className="text-xs text-[var(--muted-foreground)] ml-2 hidden sm:inline">
+                {formatDateFull(startDate)} — {formatDateFull(endDate)}
+              </span>
+            </div>
+
+            {/* Zoom presets */}
+            <div className="flex items-center gap-1 p-0.5 rounded-lg bg-[var(--muted)]">
+              {(['day', 'week', 'month'] as ZoomPreset[]).map((z) => (
+                <button
+                  key={z}
+                  onClick={() => setZoom(z)}
+                  className={`flex items-center gap-1 h-7 px-2.5 rounded-md text-[10px] font-semibold transition-all ${
+                    zoom === z
+                      ? 'bg-[var(--card)] text-[var(--foreground)] shadow-sm'
+                      : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'
+                  }`}
+                >
+                  {z === 'day' ? <LayoutList size={12} /> : z === 'week' ? <LayoutGrid size={12} /> : <Calendar size={12} />}
+                  {z === 'day' ? 'День' : z === 'week' ? 'Нед.' : 'Мес.'}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Filters */}
+          <div className="flex items-center gap-2 px-4 py-2 border-b border-[var(--border)] bg-[var(--muted)]/10 flex-wrap">
+            <Filter size={12} className="text-[var(--muted-foreground)]" />
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="h-7 px-2 rounded-md border border-[var(--border)] bg-[var(--background)] text-[10px] font-medium focus:outline-none focus:ring-1 focus:ring-[var(--ring)]"
+            >
+              <option value="">Все статусы</option>
+              {uniqueStatuses.map((s) => (
+                <option key={s} value={s}>
+                  {STATUS_LABELS[s] || s}
+                </option>
+              ))}
+            </select>
+            <select
+              value={typeFilter}
+              onChange={(e) => setTypeFilter(e.target.value)}
+              className="h-7 px-2 rounded-md border border-[var(--border)] bg-[var(--background)] text-[10px] font-medium focus:outline-none focus:ring-1 focus:ring-[var(--ring)]"
+            >
+              <option value="">Заказы + задачи</option>
+              <option value="order">Только заказы</option>
+              <option value="task">Только задачи</option>
+            </select>
+            {uniqueWorkers.length > 0 && (
+              <select
+                value={workerFilter}
+                onChange={(e) => setWorkerFilter(e.target.value)}
+                className="h-7 px-2 rounded-md border border-[var(--border)] bg-[var(--background)] text-[10px] font-medium focus:outline-none focus:ring-1 focus:ring-[var(--ring)]"
+              >
+                <option value="">Все сотрудники</option>
+                {uniqueWorkers.map((w) => (
+                  <option key={w} value={w}>
+                    {w}
+                  </option>
+                ))}
+              </select>
+            )}
+            {hasFilters && (
+              <button
+                onClick={() => {
+                  setStatusFilter('');
+                  setTypeFilter('');
+                  setWorkerFilter('');
+                }}
+                className="h-7 px-2 rounded-md text-[10px] font-medium text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--muted)] transition-colors flex items-center gap-1"
+              >
+                <X size={10} /> Сброс
+              </button>
+            )}
+            <span className="ml-auto text-[10px] text-[var(--muted-foreground)]">
+              {filtered.length} из {items.length}
             </span>
           </div>
 
-          {/* Zoom presets */}
-          <div className="flex items-center gap-1 p-0.5 rounded-lg bg-[var(--muted)]">
-            {(['day', 'week', 'month'] as ZoomPreset[]).map(z => (
-              <button
-                key={z}
-                onClick={() => setZoom(z)}
-                className={`flex items-center gap-1 h-7 px-2.5 rounded-md text-[10px] font-semibold transition-all ${
-                  zoom === z
-                    ? 'bg-[var(--card)] text-[var(--foreground)] shadow-sm'
-                    : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'
-                }`}
-              >
-                {z === 'day' ? <LayoutList size={12} /> : z === 'week' ? <LayoutGrid size={12} /> : <Calendar size={12} />}
-                {z === 'day' ? 'День' : z === 'week' ? 'Нед.' : 'Мес.'}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Filters */}
-        <div className="flex items-center gap-2 px-4 py-2 border-b border-[var(--border)] bg-[var(--muted)]/10 flex-wrap">
-          <Filter size={12} className="text-[var(--muted-foreground)]" />
-          <select
-            value={statusFilter}
-            onChange={e => setStatusFilter(e.target.value)}
-            className="h-7 px-2 rounded-md border border-[var(--border)] bg-[var(--background)] text-[10px] font-medium focus:outline-none focus:ring-1 focus:ring-[var(--ring)]"
-          >
-            <option value="">Все статусы</option>
-            {uniqueStatuses.map(s => (
-              <option key={s} value={s}>{STATUS_LABELS[s] || s}</option>
-            ))}
-          </select>
-          <select
-            value={typeFilter}
-            onChange={e => setTypeFilter(e.target.value)}
-            className="h-7 px-2 rounded-md border border-[var(--border)] bg-[var(--background)] text-[10px] font-medium focus:outline-none focus:ring-1 focus:ring-[var(--ring)]"
-          >
-            <option value="">Заказы + задачи</option>
-            <option value="order">Только заказы</option>
-            <option value="task">Только задачи</option>
-          </select>
-          {uniqueWorkers.length > 0 && (
-            <select
-              value={workerFilter}
-              onChange={e => setWorkerFilter(e.target.value)}
-              className="h-7 px-2 rounded-md border border-[var(--border)] bg-[var(--background)] text-[10px] font-medium focus:outline-none focus:ring-1 focus:ring-[var(--ring)]"
-            >
-              <option value="">Все сотрудники</option>
-              {uniqueWorkers.map(w => (
-                <option key={w} value={w}>{w}</option>
-              ))}
-            </select>
-          )}
-          {hasFilters && (
-            <button
-              onClick={() => { setStatusFilter(''); setTypeFilter(''); setWorkerFilter(''); }}
-              className="h-7 px-2 rounded-md text-[10px] font-medium text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--muted)] transition-colors flex items-center gap-1"
-            >
-              <X size={10} /> Сброс
-            </button>
-          )}
-          <span className="ml-auto text-[10px] text-[var(--muted-foreground)]">
-            {filtered.length} из {items.length}
-          </span>
-        </div>
-
-        {/* Today indicator */}
-        {todayLeft !== null && todayLeft >= 0 && (
-          <div className="px-4 py-1 border-b border-[var(--border)] bg-[var(--status-danger-bg)]">
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-[var(--status-danger-solid)]" />
-              <span className="text-[10px] font-semibold text-destructive">
-                Сегодня — {today.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })}
-              </span>
+          {/* Today indicator */}
+          {todayLeft !== null && todayLeft >= 0 && (
+            <div className="px-4 py-1 border-b border-[var(--border)] bg-[var(--status-danger-bg)]">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-[var(--status-danger-solid)]" />
+                <span className="text-[10px] font-semibold text-destructive">
+                  Сегодня — {today.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })}
+                </span>
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-[var(--muted-foreground)]">
-            <p className="text-sm font-medium">{items.length === 0 ? 'Нет задач для отображения' : 'Нет результатов по фильтрам'}</p>
-            <p className="text-xs mt-1">{items.length === 0 ? 'Создайте производственные заказы, чтобы увидеть их на диаграмме' : 'Измените фильтры'}</p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto" style={{ maxWidth: '100%' }}>
-            <div className="flex" style={{ minWidth: `${Math.max(timelineWidth + 280, 800)}px` }}>
-              {/* Left: item names */}
-              <div className="flex-shrink-0 border-r border-[var(--border)]" style={{ width: '260px' }}>
-                <div className="h-10 border-b border-[var(--border)] px-4 flex items-center bg-[var(--muted)]/20">
-                  <span className="text-xs font-semibold text-[var(--muted-foreground)] uppercase tracking-wider">Название</span>
-                </div>
-                {dayHeaders && (
-                  <div className="h-7 border-b border-[var(--border)] bg-[var(--muted)]/10" />
-                )}
-                {Array.from(groups.grouped.entries()).map(([groupName, groupItems]) => (
-                  <div key={groupName}>
-                    <div className="h-8 px-4 flex items-center bg-[var(--muted)]/30 border-b border-[var(--border)]">
-                      <span className="text-[11px] font-semibold text-[var(--foreground)] truncate">{groupName}</span>
-                      <span className="ml-auto text-[10px] text-[var(--muted-foreground)]">{groupItems.length}</span>
+          {filtered.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 text-[var(--muted-foreground)]">
+              <p className="text-sm font-medium">{items.length === 0 ? 'Нет задач для отображения' : 'Нет результатов по фильтрам'}</p>
+              <p className="text-xs mt-1">{items.length === 0 ? 'Создайте производственные заказы, чтобы увидеть их на диаграмме' : 'Измените фильтры'}</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto" style={{ maxWidth: '100%' }}>
+              <div className="flex" style={{ minWidth: `${Math.max(timelineWidth + 280, 800)}px` }}>
+                {/* Left: item names */}
+                <div className="flex-shrink-0 border-r border-[var(--border)]" style={{ width: '260px' }}>
+                  <div className="h-10 border-b border-[var(--border)] px-4 flex items-center bg-[var(--muted)]/20">
+                    <span className="text-xs font-semibold text-[var(--muted-foreground)] uppercase tracking-wider">Название</span>
+                  </div>
+                  {dayHeaders && <div className="h-7 border-b border-[var(--border)] bg-[var(--muted)]/10" />}
+                  {Array.from(groups.grouped.entries()).map(([groupName, groupItems]) => (
+                    <div key={groupName}>
+                      <div className="h-8 px-4 flex items-center bg-[var(--muted)]/30 border-b border-[var(--border)]">
+                        <span className="text-[11px] font-semibold text-[var(--foreground)] truncate">{groupName}</span>
+                        <span className="ml-auto text-[10px] text-[var(--muted-foreground)]">{groupItems.length}</span>
+                      </div>
+                      {groupItems.map((item) => (
+                        <div
+                          key={item.id}
+                          onClick={() => handleItemClick(item)}
+                          className="h-9 px-4 flex items-center border-b border-[var(--border)] hover:bg-[var(--muted)]/20 cursor-pointer transition-colors gap-2"
+                        >
+                          <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: getPriorityColor(item) }} />
+                          <span className="text-xs truncate text-[var(--foreground)]">{item.title}</span>
+                          {item.assignee && (
+                            <span className="ml-auto text-[10px] text-[var(--muted-foreground)] flex-shrink-0">{item.assignee.split(' ')[0]}</span>
+                          )}
+                        </div>
+                      ))}
                     </div>
-                    {groupItems.map((item) => (
+                  ))}
+                  {groups.standalone.map((item) => (
+                    <div
+                      key={item.id}
+                      onClick={() => handleItemClick(item)}
+                      className="h-9 px-4 flex items-center border-b border-[var(--border)] hover:bg-[var(--muted)]/20 cursor-pointer transition-colors gap-2"
+                    >
+                      <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: getPriorityColor(item) }} />
+                      <span className="text-xs truncate text-[var(--foreground)]">{item.title}</span>
+                      {item.assignee && (
+                        <span className="ml-auto text-[10px] text-[var(--muted-foreground)] flex-shrink-0">{item.assignee.split(' ')[0]}</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Right: timeline */}
+                <div className="flex-1 overflow-hidden gantt-timeline relative">
+                  {/* Month headers */}
+                  <div className="flex h-10 border-b border-[var(--border)] bg-[var(--muted)]/20">
+                    {monthHeaders.map((h, i) => (
                       <div
-                        key={item.id}
-                        onClick={() => onItemClick?.(item)}
-                        className="h-9 px-4 flex items-center border-b border-[var(--border)] hover:bg-[var(--muted)]/20 cursor-pointer transition-colors gap-2"
+                        key={i}
+                        className="flex-shrink-0 border-r border-[var(--border)] px-2 flex items-center"
+                        style={{ width: `${h.width}px` }}
                       >
-                        <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: getPriorityColor(item) }} />
-                        <span className="text-xs truncate text-[var(--foreground)]">{item.title}</span>
-                        {item.assignee && (
-                          <span className="ml-auto text-[10px] text-[var(--muted-foreground)] flex-shrink-0">{item.assignee.split(' ')[0]}</span>
+                        <span className="text-[10px] font-semibold text-[var(--muted-foreground)]">{h.label}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Day/week headers */}
+                  {dayHeaders && (
+                    <div className="flex h-7 border-b border-[var(--border)]">
+                      {dayHeaders.map((h, i) => (
+                        <div
+                          key={i}
+                          className={`flex-shrink-0 border-r border-[var(--border)]/30 px-1 flex items-center ${
+                            h.isWeekend ? 'bg-[var(--muted)]/30' : ''
+                          }`}
+                          style={{ width: `${h.width}px` }}
+                        >
+                          <span className={`text-[11px] font-medium ${h.isWeekend ? 'text-[var(--muted-foreground)]/50' : 'text-[var(--muted-foreground)]'}`}>
+                            {h.label}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Timeline rows */}
+                  <div className="relative" style={{ minHeight: '100px' }}>
+                    {/* Weekend columns */}
+                    {weekendCols.map((c, i) => (
+                      <div
+                        key={i}
+                        className="absolute top-0 bottom-0 bg-[var(--muted)]/20 pointer-events-none"
+                        style={{ left: `${c.left}px`, width: `${c.width}px` }}
+                      />
+                    ))}
+
+                    {/* Today vertical line */}
+                    {todayLeft !== null && (
+                      <div
+                        className="absolute top-0 bottom-0 w-0.5 bg-[var(--status-danger-solid)] z-30 pointer-events-none"
+                        style={{ left: `${todayLeft}px` }}
+                      />
+                    )}
+
+                    {/* Grouped items */}
+                    {Array.from(groups.grouped.entries()).map(([groupName, groupItems]) => (
+                      <div key={groupName}>
+                        <div className="h-8 border-b border-[var(--border)] bg-[var(--muted)]/10" />
+                        {groupItems.map((item) => (
+                          <div key={item.id} className="relative" style={{ height: '36px' }}>
+                            <DraggableBar
+                              item={item}
+                              mode="move"
+                              dayWidth={dayWidth}
+                              startDateMs={startDateMs}
+                              statusColor={STATUS_COLORS[item.status] || '#94a3b8'}
+                              priorityColor={getPriorityColor(item)}
+                              progress={item.progress || 0}
+                              hasActual={!!(item.actualStart && item.actualEnd)}
+                              actualDiffers={!!(item.actualStart && item.actualEnd && (item.actualStart !== item.startDate || item.actualEnd !== item.endDate))}
+                              actualLeftPx={
+                                item.actualStart
+                                  ? ((new Date(item.actualStart).getTime() - startDateMs) / MS_IN_DAY) * dayWidth
+                                  : undefined
+                              }
+                              actualWidthPx={
+                                item.actualStart && item.actualEnd
+                                  ? Math.max(((new Date(item.actualEnd).getTime() - new Date(item.actualStart).getTime()) / MS_IN_DAY) * dayWidth, MIN_BAR_WIDTH)
+                                  : undefined
+                              }
+                              disabled={isReadOnly}
+                              onClick={handleItemClick}
+                            />
+                            {/* Resize handles — отдельные draggable instances */}
+                            {!isReadOnly && (
+                              <>
+                                <DraggableBar
+                                  item={item}
+                                  mode="resize-left"
+                                  dayWidth={dayWidth}
+                                  startDateMs={startDateMs}
+                                  statusColor={STATUS_COLORS[item.status] || '#94a3b8'}
+                                  priorityColor={getPriorityColor(item)}
+                                  progress={item.progress || 0}
+                                  hasActual={false}
+                                  actualDiffers={false}
+                                  disabled={isReadOnly}
+                                  onClick={handleItemClick}
+                                />
+                                <DraggableBar
+                                  item={item}
+                                  mode="resize-right"
+                                  dayWidth={dayWidth}
+                                  startDateMs={startDateMs}
+                                  statusColor={STATUS_COLORS[item.status] || '#94a3b8'}
+                                  priorityColor={getPriorityColor(item)}
+                                  progress={item.progress || 0}
+                                  hasActual={false}
+                                  actualDiffers={false}
+                                  disabled={isReadOnly}
+                                  onClick={handleItemClick}
+                                />
+                              </>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    ))}
+                    {/* Standalone items */}
+                    {groups.standalone.map((item) => (
+                      <div key={item.id} className="relative" style={{ height: '36px' }}>
+                        <DraggableBar
+                          item={item}
+                          mode="move"
+                          dayWidth={dayWidth}
+                          startDateMs={startDateMs}
+                          statusColor={STATUS_COLORS[item.status] || '#94a3b8'}
+                          priorityColor={getPriorityColor(item)}
+                          progress={item.progress || 0}
+                          hasActual={!!(item.actualStart && item.actualEnd)}
+                          actualDiffers={!!(item.actualStart && item.actualEnd && (item.actualStart !== item.startDate || item.actualEnd !== item.endDate))}
+                          actualLeftPx={
+                            item.actualStart
+                              ? ((new Date(item.actualStart).getTime() - startDateMs) / MS_IN_DAY) * dayWidth
+                              : undefined
+                          }
+                          actualWidthPx={
+                            item.actualStart && item.actualEnd
+                              ? Math.max(((new Date(item.actualEnd).getTime() - new Date(item.actualStart).getTime()) / MS_IN_DAY) * dayWidth, MIN_BAR_WIDTH)
+                              : undefined
+                          }
+                          disabled={isReadOnly}
+                          onClick={handleItemClick}
+                        />
+                        {!isReadOnly && (
+                          <>
+                            <DraggableBar
+                              item={item}
+                              mode="resize-left"
+                              dayWidth={dayWidth}
+                              startDateMs={startDateMs}
+                              statusColor={STATUS_COLORS[item.status] || '#94a3b8'}
+                              priorityColor={getPriorityColor(item)}
+                              progress={item.progress || 0}
+                              hasActual={false}
+                              actualDiffers={false}
+                              disabled={isReadOnly}
+                              onClick={handleItemClick}
+                            />
+                            <DraggableBar
+                              item={item}
+                              mode="resize-right"
+                              dayWidth={dayWidth}
+                              startDateMs={startDateMs}
+                              statusColor={STATUS_COLORS[item.status] || '#94a3b8'}
+                              priorityColor={getPriorityColor(item)}
+                              progress={item.progress || 0}
+                              hasActual={false}
+                              actualDiffers={false}
+                              disabled={isReadOnly}
+                              onClick={handleItemClick}
+                            />
+                          </>
                         )}
                       </div>
                     ))}
                   </div>
-                ))}
-                {groups.standalone.map((item) => (
-                  <div
-                    key={item.id}
-                    onClick={() => onItemClick?.(item)}
-                    className="h-9 px-4 flex items-center border-b border-[var(--border)] hover:bg-[var(--muted)]/20 cursor-pointer transition-colors gap-2"
-                  >
-                    <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: getPriorityColor(item) }} />
-                    <span className="text-xs truncate text-[var(--foreground)]">{item.title}</span>
-                    {item.assignee && (
-                      <span className="ml-auto text-[10px] text-[var(--muted-foreground)] flex-shrink-0">{item.assignee.split(' ')[0]}</span>
-                    )}
-                  </div>
-                ))}
-              </div>
-
-              {/* Right: timeline */}
-              <div className="flex-1 overflow-hidden gantt-timeline relative">
-                {/* Month headers */}
-                <div className="flex h-10 border-b border-[var(--border)] bg-[var(--muted)]/20">
-                  {monthHeaders.map((h, i) => (
-                    <div
-                      key={i}
-                      className="flex-shrink-0 border-r border-[var(--border)] px-2 flex items-center"
-                      style={{ width: `${h.width}px` }}
-                    >
-                      <span className="text-[10px] font-semibold text-[var(--muted-foreground)]">{h.label}</span>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Day/week headers */}
-                {dayHeaders && (
-                  <div className="flex h-7 border-b border-[var(--border)]">
-                    {dayHeaders.map((h, i) => (
-                      <div
-                        key={i}
-                        className={`flex-shrink-0 border-r border-[var(--border)]/30 px-1 flex items-center ${
-                          h.isWeekend ? 'bg-[var(--muted)]/30' : ''
-                        }`}
-                        style={{ width: `${h.width}px` }}
-                      >
-                        <span className={`text-[11px] font-medium ${h.isWeekend ? 'text-[var(--muted-foreground)]/50' : 'text-[var(--muted-foreground)]'}`}>
-                          {h.label}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* Timeline rows */}
-                <div className="relative" style={{ minHeight: '100px' }}>
-                  {/* Weekend columns */}
-                  {weekendCols.map((c, i) => (
-                    <div
-                      key={i}
-                      className="absolute top-0 bottom-0 bg-[var(--muted)]/20 pointer-events-none"
-                      style={{ left: `${c.left}px`, width: `${c.width}px` }}
-                    />
-                  ))}
-
-                  {/* Today vertical line */}
-                  {todayLeft !== null && (
-                    <div                              className="absolute top-0 bottom-0 w-0.5 bg-[var(--status-danger-solid)] z-30 pointer-events-none"
-                      style={{ left: `${todayLeft}px` }}
-                    />
-                  )}
-
-                  {/* Grouped items */}
-                  {Array.from(groups.grouped.entries()).map(([groupName, groupItems]) => (
-                    <div key={groupName}>
-                      <div className="h-8 border-b border-[var(--border)] bg-[var(--muted)]/10" />
-                      {groupItems.map((item) => renderBar(item))}
-                    </div>
-                  ))}
-                  {/* Standalone items */}
-                  {groups.standalone.map((item) => renderBar(item))}
                 </div>
               </div>
             </div>
+          )}
+
+          {/* Footer stats */}
+          <div className="px-4 py-2 border-t border-[var(--border)] text-[10px] text-[var(--muted-foreground)] flex items-center gap-4">
+            <span>Элементов: {filtered.length}</span>
+            <span>·</span>
+            <span>Диапазон: {totalDays} дн.</span>
+            <span>·</span>
+            <span>Масштаб: {zoom === 'day' ? 'День' : zoom === 'week' ? 'Неделя' : 'Месяц'}</span>
+            {hasFilters && <span className="ml-auto text-[var(--primary)]">Фильтры активны</span>}
+            <span className={isReadOnly ? 'ml-auto text-[var(--muted-foreground)]' : 'ml-auto text-[10px] text-[var(--primary)]'}>
+              {isReadOnly ? '🔒 Просмотр (DnD отключён)' : '🖱 Перетаскивайте полосы для изменения сроков'}
+            </span>
+          </div>
+        </div>
+
+        {/* Workload panel */}
+        {workload.length > 0 && (
+          <div className="w-48 flex-shrink-0 bg-[var(--card)] border border-[var(--border)] rounded-xl overflow-hidden shadow-sm hidden lg:block">
+            <div className="px-4 py-3 border-b border-[var(--border)] flex items-center gap-2">
+              <Users size={14} className="text-[var(--muted-foreground)]" />
+              <span className="text-xs font-semibold text-[var(--foreground)]">Загрузка</span>
+            </div>
+            <div className="divide-y divide-[var(--border)] max-h-[600px] overflow-y-auto">
+              {workload.map(([name, w]) => (
+                <div key={name} className="px-4 py-2.5">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[11px] font-medium text-[var(--foreground)] truncate">{name.split(' ')[0]}</span>
+                    <span className="text-[10px] text-[var(--muted-foreground)]">{w.count}</span>
+                  </div>
+                  <div className="h-1.5 rounded-full bg-[var(--muted)] overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-[var(--primary)] transition-all"
+                      style={{ width: `${Math.min(100, w.count * 20)}%` }}
+                    />
+                  </div>
+                  {w.inProgress > 0 && (
+                    <div className="text-[9px] text-[var(--muted-foreground)] mt-1">
+                      {w.inProgress} в работе
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
         )}
-
-        {/* Footer stats */}
-        <div className="px-4 py-2 border-t border-[var(--border)] text-[10px] text-[var(--muted-foreground)] flex items-center gap-4">
-          <span>Элементов: {filtered.length}</span>
-          <span>·</span>
-          <span>Диапазон: {totalDays} дн.</span>
-          <span>·</span>
-          <span>Масштаб: {zoom === 'day' ? 'День' : zoom === 'week' ? 'Неделя' : 'Месяц'}</span>
-          {hasFilters && <span className="ml-auto text-[var(--primary)]">Фильтры активны</span>}
-          {onItemUpdate && <span className="ml-auto text-[10px] text-[var(--primary)]">🖱 Перетаскивайте полосы для изменения сроков</span>}
-        </div>
       </div>
-
-      {/* Workload panel */}
-      {workload.length > 0 && (
-        <div className="w-48 flex-shrink-0 bg-[var(--card)] border border-[var(--border)] rounded-xl overflow-hidden shadow-sm hidden lg:block">
-          <div className="px-4 py-3 border-b border-[var(--border)] flex items-center gap-2">
-            <Users size={14} className="text-[var(--muted-foreground)]" />
-            <span className="text-xs font-semibold text-[var(--foreground)]">Загрузка</span>
-          </div>
-          <div className="divide-y divide-[var(--border)] max-h-[600px] overflow-y-auto">
-            {workload.map(([name, w]) => (
-              <div key={name} className="px-4 py-2.5">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-[11px] font-medium text-[var(--foreground)] truncate">{name.split(' ')[0]}</span>
-                  <span className="text-[10px] text-[var(--muted-foreground)]">{w.count}</span>
-                </div>
-                <div className="h-1.5 rounded-full bg-[var(--muted)] overflow-hidden">
-                  <div
-                    className="h-full rounded-full bg-[var(--primary)] transition-all"
-                    style={{ width: `${Math.min(100, w.count * 20)}%` }}
-                  />
-                </div>
-                {w.inProgress > 0 && (
-                  <div className="text-[9px] text-[var(--muted-foreground)] mt-1">
-                    {w.inProgress} в работе
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
+    </DndContext>
   );
 }
