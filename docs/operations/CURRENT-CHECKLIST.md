@@ -28,6 +28,7 @@
 | **45** | **🆕 3.1 — `<ProposalEditor>` polish (memo audit + ESLint cleanup)** | ✅ **DONE** (2026-06-20) | cycle-45 commit (5344998) | Eliminated `ProposalPdfDataLike` → direct `ProposalPdfData` reuse. Created `ProposalEditorFinance` derived object → proposalBlocks deps 9→4, pdfData deps 11→7. pdfData function → useMemo + lazy useState Date.now(). New `resetTemplateSelection` action (eliminates setState-in-effect). Tsc 0 / vitest 88/88 / eslint 0. |
 | **46** | **🆕 Cleanup: ESLint src/lib/auth.ts (cycle 39 re-export debt)** | ✅ **DONE** (2026-06-20) | cycle-46 | ESLint clean — устранены 3 unused-import warnings `(signAccessToken, signRefreshToken, JwtPayload)`. |
 | **47** | **🆕 B.6-extension: requireAuth→requireRole (partial silo migration)** | ✅ **DONE** (2026-06-20) | cycle-47 | 9 write-handler routes upgraded: requireAuth→requireRole(specific). Остальные 18 с requireEditor() оставлены как viewer-floor (Tier C). |
+| **D-A1** | **🆕 Cycle 47-extension batch 1 (2026-06-22)** | ✅ **DONE** (a821a5e) | D-A1 | 6 write-handlers migrated cart/* POST/PATCH + proposals/route.ts POST + dadata/find-by-inn (requireEditor for paid API proxy). 70 requireAuth() остаётся в batches 2-N (warehouses/finance/admin routes). |
 
 **Foundation layer стартовал параллельно** — разные файлы, готовит B.1+B.2.
 

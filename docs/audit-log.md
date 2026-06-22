@@ -3063,3 +3063,59 @@ User feedback + code-reviewer (v3.1.1 review): "Postgres branch is dead code giv
 - Added: 3 lines to .gitignore (public/uploads/, agent-queue.json, login_test.js).
 - Deleted: 1 untracked file (public/uploads/...png).
 - Working tree now fully clean.
+
+<a id="cycle-58"></a>
+## Cycle 58 (D-A1 batch 1) — 2026-06-22 — Extended RBAC migration (cart + proposals + dadata)
+
+### Контекст
+Из cycles 39+47+52 foundation: `requireAuth()` для всех write-handlers — показывает только «authenticated». B.6 в cycle 47 мигрировала только 9 critical entity routes (proposals/contracts/PO/incoming-invoices/supplier-orders). Остаётся ~76 `requireAuth()` calls. D-A1 — multi-batch cleanup всех write-handlers per-entity role guard.
+
+### Phase A — design (thinker-with-files-gemini)
+- Recommendation matrix per entity:
+  - cart/* POST/PATCH → `['manager']` (cart = proposal-builder precursor)
+  - proposals POST → `['manager']`
+  - dadata find-by-inn POST → `requireEditor()` (paid API proxy, blocks viewer)
+  - 70+ routes в batches 2-N (warehouses/finance/admin) — out of scope batch 1
+
+### Code (6 files migrated в batch 1)
+- `src/app/api/cart/route.ts` POST: requireAuth → requireRole(['manager'])
+- `src/app/api/cart/[id]/items/route.ts` POST: requireAuth → requireRole(['manager'])
+- `src/app/api/cart/[id]/items/[itemId]/route.ts` PATCH: requireAuth → requireRole(['manager'])
+- `src/app/api/cart/[id]/convert/route.ts` POST: requireAuth → requireRole(['manager'])
+- `src/app/api/dadata/find-by-inn/route.ts` POST: requireAuth → requireEditor (paid API)
+- `src/app/api/proposals/route.ts` POST: requireAuth → requireRole(['manager'])
+
+### Patterns (deliberate unchanged)
+- seed/route.ts: already dual (requireAuth + requireRole(['admin'])) — leave as-is
+- cart/[id]/route.ts GET/DELETE: GET requireAuth (read-only), DELETE requireEditor — leave as-is
+- dadata proxy: `requireEditor` blocks viewer (paid API protection) without breaking other editors
+
+### Architecture
+- Admin bypass implicit в requireRole per `src/lib/auth.ts:67`
+- Read-only GET floor: viewer role allowed (requireAuth doesn't block viewer)
+- Write-handlers: explicit per-entity role mapping per matrix
+- Catch blocks uniformly handles UNAUTHORIZED→401 + FORBIDDEN→403 + 500 дефолт
+
+### Validation
+- `npx tsc --noEmit` → 0 errors
+- `npx eslint src --max-warnings=999` → 0 issues
+- `npx vitest run` → **337/337 passed** (22 test files; stderr из intentional best-effort swallower tests — false negative)
+- `npm run build` → success
+
+### Code-review verdict
+SHIP-READY. 2 minor observations (cart POST не capture `user` для activity log — opportunity для cycle 57 B.7-extension; CSV diff suggestion для commits — doc tooling recommendation).
+
+### Commits
+- `a821a5e` — test(security): cycle 47-extension (D-A1) batch 1 — 6 routes requireAuth→requireRole (pushed)
+
+### Remaining 70 requireAuth() calls (batches 2-N)
+Предполагается multi-batch cleanup с per-entity role mapping per thinker matrix. Candidates:
+- warehouses/route.ts, organization-roles, inventory, persons, workers
+- purchase-requests/[id], order-tasks/[id], reconciliation-acts
+- ship-ments, validations for orders/PATCH endpoints
+
+**Effort estimate:** 3-5 hours для full migration (batches 2+3+4) + integration tests per-entity RBAC matrix.
+
+### Следующее обслуживание
+- Если user asks «continue D-A1»: batches 2-N with remaining 70 routes + integration test для per-entity 403 assertion matrix.
+- Если user picks new direction: ship Гантт DnD (D-A3) или Shipment UI (D-A5) как alternative high-value work.
