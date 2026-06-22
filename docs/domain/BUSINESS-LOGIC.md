@@ -48,15 +48,15 @@
 | 2 | Витрина КП (Showcase) | ✅ Готов | Корзина, поиск, фильтр, drag A4 canvas, выбор организации/клиента |
 | 3 | КП (Proposal) | ✅ Готов | Авто-номер КП-XXXX, снэпшот цен, статусы, PDF |
 | 4 | Договор (Contract) | ✅ Готов | Авто-номер Д-XXXX, конвертация из КП, перенос товаров |
-| **5** | **Оплата → Производство** | 🔴 НЕТ | Авто-конвертация КП в ProductionOrder при смене статуса на «оплачено» |
-| **6** | **Производственный заказ** | ⚠️ Частично | CRUD есть, авто-номера нет, связи с КП/Договором нет |
-| 7 | Гантт | ⚠️ Частично | Визуализация есть, today-линия, plan vs actual, фильтры, загрузка. DnD-редактирования нет |
-| **8** | **Снабжение** | 🔴 НЕТ | Модуль отсутствует. Должен авто-формировать список закупок из модулей товара |
-| **9** | **Изготовление** | 🔴 НЕТ | Распределение по работам, учёт времени, статусы задач |
-| **10** | **Покраска (RAL)** | 🔴 НЕТ | Поле RAL в КП → передаётся в заказ → видно на этапе покраски |
-| **11** | **Отгрузка** | 🔴 НЕТ | Акт приёма-передачи, частичная отгрузка, фото, история |
-| **12** | **Закрытие заказа** | ⚠️ Частично | OrderClosing CRUD есть, но без авто-заполнения, без связи с этапами |
-| 13 | Роли сотрудников | ⚠️ Частично | Базовая модель User, нет ролевой панели |
+| **5** | **Оплата → Производство** | ✅ Готов | Cycle 53: PATCH `Proposal.status='paid'` → автоматически создаёт `ProductionOrder` + tasks из `Product.modules`. См. `src/app/api/proposals/[id]/route.ts` (lines 142-260) |
+| **6** | **Производственный заказ** | ✅ Готов | CRUD + авто-номера (`nextProductionOrderNumber`) + FK к Contract/Proposal + `InventoryMovement.autoReceiveFinishedGoods` на completed (cycle 53). См. `src/app/api/production-orders/*` |
+| 7 | Гантт | ⚠️ Частично | Визуализация, today-линия, plan vs actual, фильтры, загрузка workers. DnD-редактирования нет (deferred to cycle 14+) |
+| **8** | **Снабжение** | ⚠️ Частично | Route `/api/procurement-needs` существует, базовая модель есть. Авто-формирование из BOM модулей — pending future cycle |
+| **9** | **Изготовление** | ✅ Готов | `distributeTasksByDays()` в `convert-to-production/route.ts` + WorkType/WorkCenter/Worker model + tasks с estimatedHours |
+| **10** | **Покраска (RAL)** | ✅ Готов | `Proposal.ralCode` + `ProductionOrder.ralCode` в schema; `module-workflow.text-sm` показывает RAL в viewer'ах |
+| **11** | **Отгрузка** | ⚠️ Частично | Route `/api/shipments` с GET/POST + Shipment model (number, orderId, status, items JSON, photos JSON). Частичная отгрузка + Акт приёма-передачи UI — pending |
+| **12** | **Закрытие заказа** | ✅ Готов | `OrderClosing` model + FK к `ProductionOrder` (cycle 56) + `nextOrderClosingNumber()` авто-нумерация. UI форма с авто-заполнением |
+| 13 | Роли сотрудников | ⚠️ Частично | Базовая модель User + 6 ролей (admin/manager/production/storekeeper/accountant/viewer + org-roles справочник через `OrgRole`). Ролевая панель UI — pending |
 
 ---
 
