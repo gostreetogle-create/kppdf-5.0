@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
 import { apiOk, apiError, apiPaginated, parseSearchParams } from '@/lib/api-response';
 import { getCached, invalidateByPrefix } from '@/lib/cache';
+import { recordActivity } from '@/lib/activity-log'; // Cycle 57
 
 const CACHE_PREFIX = 'product-categories';
 const LIST_TTL = 60 * 1000; // 1 min — categories rarely change
@@ -44,10 +45,19 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    await requireAuth();
+    const user = await requireAuth(); // Cycle 57: capture user for activity log
     const body = await request.json();
     const item = await prisma.productCategory.create({ data: body });
     invalidateByPrefix(CACHE_PREFIX);
+    // Cycle 57 (B.7): audit event for timeline.
+    await recordActivity({
+      userId: user.id,
+      userName: user.displayName || user.username || 'System',
+      action: 'create',
+      entity: 'product_category',
+      entityId: item.id,
+      details: { name: item.name },
+    });
     return apiOk(item);
   } catch (error) {
     if (error instanceof Error && error.message === 'UNAUTHORIZED') return apiError('Не авторизован', 401);

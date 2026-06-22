@@ -4,6 +4,7 @@ import { requireAuth, requireRole } from '@/lib/auth';
 import { apiOk, apiError, apiPaginated, parseSearchParams } from '@/lib/api-response';
 import { CreateMaterialSchema } from '@/lib/validations/material';
 import { validateBody } from '@/lib/validations';
+import { recordActivity } from '@/lib/activity-log'; // Cycle 57
 import { getCached, invalidateByPrefix } from '@/lib/cache';
 
 const CACHE_PREFIX = 'materials';
@@ -54,12 +55,21 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    await requireRole(['admin', 'manager']);
+    const user = await requireRole(['admin', 'manager']); // Cycle 57: capture user for activity log
     const body = await request.json();
     const validation = validateBody(body, CreateMaterialSchema);
     if (!validation.success) return validation.error;
     const item = await prisma.material.create({ data: validation.data, include: { supplier: true, category: true } });
     invalidateByPrefix(CACHE_PREFIX);
+    // Cycle 57 (B.7): audit event for timeline.
+    await recordActivity({
+      userId: user.id,
+      userName: user.displayName || user.username || 'System',
+      action: 'create',
+      entity: 'material',
+      entityId: item.id,
+      details: { name: item.name },
+    });
     return apiOk(item);
   } catch (error) {
     if (error instanceof Error && error.message === 'UNAUTHORIZED') return apiError('Не авторизован', 401);

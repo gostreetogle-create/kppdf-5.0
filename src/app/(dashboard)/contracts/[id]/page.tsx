@@ -7,6 +7,7 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { ContractPreview } from '@/components/ui/contract-preview';
 import type { ContractPdfData } from '@/lib/pdf';
 import { CONTRACT_STATUS, getStatus } from '@/lib/constants/statuses';
+import { ActivityLog } from '@/components/activity-log'; // Cycle 57 (B.7)
 
 interface ContractItem {
   id: string;
@@ -321,6 +322,8 @@ export default function ContractDetailPage() {
             <h2 className="text-lg font-semibold mb-4">Документы</h2>
             <ContractPreview data={pdfData} />
           </div>
+          {/* Cycle 57 (B.7): UserActivity timeline below preview */}
+          <ActivityLog entity="contract" entityId={contract.id} />
         </div>
       </div>
       <ConfirmDialog

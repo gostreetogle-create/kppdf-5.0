@@ -4,6 +4,7 @@ import { requireAuth, requireRole } from '@/lib/auth';
 import { apiOk, apiError, apiPaginated, parseSearchParams } from '@/lib/api-response';
 import { CreateSupplierOrderSchema } from '@/lib/validations/supplier-order';
 import { validateBody } from '@/lib/validations';
+import { recordActivity } from '@/lib/activity-log'; // Cycle 57
 
 export async function GET(request: NextRequest) {
   try {
@@ -40,7 +41,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    await requireRole(['admin', 'storekeeper']);
+    const user = await requireRole(['admin', 'storekeeper']); // Cycle 57: capture user for activity log
     const body = await request.json();
     const validation = validateBody(body, CreateSupplierOrderSchema);
     if (!validation.success) return validation.error;
@@ -56,6 +57,15 @@ export async function POST(request: NextRequest) {
         items: items ? { create: items } : undefined,
       },
       include: { items: true },
+    });
+    // Cycle 57 (B.7): audit event for timeline.
+    await recordActivity({
+      userId: user.id,
+      userName: user.displayName || user.username || 'System',
+      action: 'create',
+      entity: 'supplier_order',
+      entityId: item.id,
+      details: { number: item.number },
     });
     return apiOk(item);
   } catch (error) {

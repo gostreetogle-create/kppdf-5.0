@@ -7,6 +7,7 @@ import { logOrderAction } from '@/lib/order-history';
 import { assertTransitionAllowed, WorkflowError } from '@/lib/status-workflow';
 // Cycle 53 (B.1): авто-приёмка готовой продукции на склад при completed.
 import { autoReceiveFinishedGoods } from '@/lib/warehouse/auto-receive-finished-goods';
+import { recordActivity } from '@/lib/activity-log'; // Cycle 57
 
 // Cycle 51 (B.3): VALID_TRANSITIONS удалён — теперь live query через assertTransitionAllowed.
 
@@ -156,6 +157,18 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       where: { id },
       data: { status, actualStart: status === 'in_progress' ? new Date() : undefined, actualEnd: status === 'completed' ? new Date() : undefined },
       include: { tasks: true, workType: true, workCenter: true },
+    });
+
+    // Cycle 57 (B.7): audit event for status transition (UI timeline).
+    // Placed BEFORE side-effects (autoReceive, logOrderAction) per ADR-007/code-review:
+    // даже если downstream throw, timeline все равно получит событие (best-effort в helper).
+    await recordActivity({
+      userId: user.id,
+      userName: user.displayName || user.username || 'System',
+      action: 'update_status',
+      entity: 'production_order',
+      entityId: id,
+      details: { from: current.status, to: status, number: current.number },
     });
 
     // Cycle 53 (B.1): авто-IN готовой продукции на склад при completed.

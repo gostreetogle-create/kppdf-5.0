@@ -6,6 +6,7 @@ import { apiOk, apiError } from '@/lib/api-response';
 import { assertTransitionAllowed, WorkflowError } from '@/lib/status-workflow';
 // Cycle 55 (B.4): protection to frozen-statuses.
 import { assertNumberImmutable, NumberLockedError } from '@/lib/number-protection';
+import { recordActivity } from '@/lib/activity-log'; // Cycle 57
 
 const include = { items: true, customer: { select: { name: true } }, organization: true, proposal: true };
 
@@ -106,6 +107,15 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     }
 
     const item = await prisma.contract.update({ where: { id }, data, include });
+    // Cycle 57 (B.7): audit event for status transition.
+    await recordActivity({
+      userId: user.id,
+      userName: user.displayName || user.username || 'System',
+      action: 'update_status',
+      entity: 'contract',
+      entityId: id,
+      details: { from: current.status, to: status, signedAt: data.signedAt ?? null },
+    });
     return apiOk(item);
   } catch (error) {
     if (error instanceof Error && error.message === 'UNAUTHORIZED') return apiError('Не авторизован', 401);

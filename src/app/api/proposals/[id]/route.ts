@@ -5,6 +5,7 @@ import { apiOk, apiError } from '@/lib/api-response';
 import { nextProductionOrderNumber } from '@/lib/counter';
 import { assertTransitionAllowed, WorkflowError } from '@/lib/status-workflow';
 import { assertNumberImmutable, NumberLockedError } from '@/lib/number-protection';
+import { recordActivity } from '@/lib/activity-log'; // Cycle 57
 
 const include = { items: { include: { product: true } }, customer: { select: { name: true } }, organization: true };
 
@@ -209,6 +210,15 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     }
 
     const item = await prisma.proposal.update({ where: { id }, data: { status }, include });
+    // Cycle 57 (B.7): audit event for status transition.
+    await recordActivity({
+      userId: user.id,
+      userName: user.displayName || user.username || 'System',
+      action: 'update_status',
+      entity: 'proposal',
+      entityId: id,
+      details: { from: current.status, to: status },
+    });
     return apiOk(item);
   } catch (error) {
     if (error instanceof Error && error.message === 'UNAUTHORIZED') return apiError('Не авторизован', 401);

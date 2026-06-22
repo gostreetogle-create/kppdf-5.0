@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db';
 import { requireRole } from '@/lib/auth';
 import { apiOk, apiError } from '@/lib/api-response';
 import { nextProductionOrderNumber } from '@/lib/counter';
+import { recordActivity } from '@/lib/activity-log'; // Cycle 57
 
 /**
  * Распределить задачи по рабочим дням, начиная с startDate.
@@ -87,7 +88,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    await requireRole(['manager']);
+    const user = await requireRole(['manager']); // Cycle 57: capture user for activity log
     const { id } = await params;
 
     // Получаем договор с товарами и КП
@@ -216,6 +217,20 @@ export async function POST(
     ]);
 
     const taskCount = productionOrder.tasks.length;
+    // Cycle 57 (B.7): audit event for contract → production_order conversion.
+    await recordActivity({
+      userId: user.id,
+      userName: user.displayName || user.username || 'System',
+      action: 'convert_to_production',
+      entity: 'contract',
+      entityId: id,
+      details: {
+        targetEntity: 'production_order',
+        targetId: productionOrder.id,
+        targetNumber: productionOrder.number,
+        tasksCount: taskCount,
+      },
+    });
     return apiOk(productionOrder, `Производственный заказ №${number} создан (${taskCount} задач)`);
   } catch (error) {
     if (error instanceof Error && error.message === 'UNAUTHORIZED')

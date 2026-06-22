@@ -28,7 +28,7 @@
 | **54** | **B.2 — Client модель для юрлиц (B2B)** | **бизнес** | **🔴 Critical** | ✅ **DONE** (2026-06-20) |
 | **55** | **B.4 — Защита номеров документов после sent/active/paid** | **бизнес** | **🟡 High** | ✅ **DONE** (2026-06-22) |
 | **56** | **B.5 — OrderClosing FK relation (audit-trail strict)** | **бизнес** | **🟡 High** | ✅ **DONE** (2026-06-22) |
-| 57 | B.7 — UserActivity UI (история для всех сущностей) | бизнес | 🟢 Low | 📋 planned |
+| **57** | **B.7 — UserActivity UI (история для всех сущностей) | бизнес | 🟢 Low | 📋 planned |
 
 **Завершено технических**: 4/8 (50%).
 **Завершено бизнес**: 6/7 **foundation + business-critical + high-priority layers** (B.3 + B.6 + B.1 + B.2 + B.4 + B.5). Осталось: 1/7 (B.7 UserActivity UI, 🟢 Low).
@@ -213,7 +213,7 @@ model OrderClosing {
 
 ## 🟢 Бизнес-блоки НИЗКОГО приоритета
 
-### 🟢 B.7 — UserActivity UI (история для всех сущностей)
+### ✅ Cycle 57 (B.7) — UserActivity UI (история для всех сущностей)
 
 **Приоритет**: 🟢 Low
 **Сложность**: M

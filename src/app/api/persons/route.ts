@@ -5,6 +5,7 @@ import { apiOk, apiError, apiPaginated, parseSearchParams } from '@/lib/api-resp
 import { CreatePersonSchema } from '@/lib/validations/person';
 import { validateBody } from '@/lib/validations';
 import { getCached, invalidateByPrefix } from '@/lib/cache';
+import { recordActivity } from '@/lib/activity-log'; // Cycle 57
 
 const CACHE_PREFIX = 'persons';
 const LIST_TTL = 30 * 1000;
@@ -48,12 +49,21 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    await requireAuth();
+    const user = await requireAuth(); // Cycle 57: capture user for activity log
     const body = await request.json();
     const validation = validateBody(body, CreatePersonSchema);
     if (!validation.success) return validation.error;
     const item = await prisma.person.create({ data: validation.data });
     invalidateByPrefix(CACHE_PREFIX);
+    // Cycle 57 (B.7): audit event for timeline.
+    await recordActivity({
+      userId: user.id,
+      userName: user.displayName || user.username || 'System',
+      action: 'create',
+      entity: 'person',
+      entityId: item.id,
+      details: { name: `${item.lastName} ${item.firstName}` },
+    });
     return apiOk(item);
   } catch (error) {
     if (error instanceof Error && error.message === 'UNAUTHORIZED') return apiError('Не авторизован', 401);

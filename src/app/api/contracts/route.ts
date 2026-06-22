@@ -5,6 +5,7 @@ import { apiOk, apiError, apiPaginated, parseSearchParams } from '@/lib/api-resp
 import { nextContractNumber } from '@/lib/counter';
 import { CreateContractSchema } from '@/lib/validations/contract';
 import { validateBody } from '@/lib/validations';
+import { recordActivity } from '@/lib/activity-log'; // Cycle 57
 
 export async function GET(request: NextRequest) {
   try {
@@ -41,7 +42,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    await requireAuth();
+    const user = await requireAuth(); // Cycle 57: capture user for activity log
     const body = await request.json();
     const validation = validateBody(body, CreateContractSchema);
     if (!validation.success) return validation.error;
@@ -58,6 +59,15 @@ export async function POST(request: NextRequest) {
         items: items ? { create: items } : undefined,
       },
       include: { items: true, customer: { select: { name: true } }, organization: true },
+    });
+    // Cycle 57 (B.7): audit event for timeline.
+    await recordActivity({
+      userId: user.id,
+      userName: user.displayName || user.username || 'System',
+      action: 'create',
+      entity: 'contract',
+      entityId: item.id,
+      details: { number: item.number, title: item.title },
     });
     return apiOk(item);
   } catch (error) {

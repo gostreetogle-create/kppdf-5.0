@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db';
 import { requireRole } from '@/lib/auth';
 import { apiOk, apiError } from '@/lib/api-response';
 import { nextContractNumber } from '@/lib/counter';
+import { recordActivity } from '@/lib/activity-log'; // Cycle 57
 
 // POST /api/proposals/[id]/convert — конвертировать КП в договор
 export async function POST(
@@ -10,7 +11,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    await requireRole(['manager']);
+    const user = await requireRole(['manager']); // Cycle 57: capture user for activity log
     const { id } = await params;
 
     // Получаем КП с товарами
@@ -80,6 +81,19 @@ export async function POST(
       }),
     ]);
 
+    // Cycle 57 (B.7): audit event for KP → contract conversion.
+    await recordActivity({
+      userId: user.id,
+      userName: user.displayName || user.username || 'System',
+      action: 'convert',
+      entity: 'proposal',
+      entityId: id,
+      details: {
+        targetEntity: 'contract',
+        targetId: contract.id,
+        targetNumber: contract.number,
+      },
+    });
     return apiOk(contract, 'Договор создан');
   } catch (error) {
     if (error instanceof Error && error.message === 'UNAUTHORIZED')

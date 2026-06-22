@@ -5,6 +5,7 @@ import { apiOk, apiError, apiPaginated, parseSearchParams } from '@/lib/api-resp
 import { CreateOrganizationSchema } from '@/lib/validations/organization';
 import { validateBody } from '@/lib/validations';
 import { getCached, invalidateByPrefix } from '@/lib/cache';
+import { recordActivity } from '@/lib/activity-log'; // Cycle 57
 
 const CACHE_PREFIX = 'organizations';
 const LIST_TTL = 30 * 1000;
@@ -54,7 +55,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    await requireAuth();
+    const user = await requireAuth(); // Cycle 57: capture user for activity log
     const body = await request.json();
     const validation = validateBody(body, CreateOrganizationSchema);
     if (!validation.success) return validation.error;
@@ -70,6 +71,15 @@ export async function POST(request: NextRequest) {
       include: { roles: true, contacts: { include: { person: { select: { lastName: true, firstName: true, patronymic: true } } } } },
     });
     invalidateByPrefix(CACHE_PREFIX);
+    // Cycle 57 (B.7): audit event for timeline.
+    await recordActivity({
+      userId: user.id,
+      userName: user.displayName || user.username || 'System',
+      action: 'create',
+      entity: 'organization',
+      entityId: item.id,
+      details: { name: item.name, inn: item.inn },
+    });
     return apiOk(item);
   } catch (error) {
     if (error instanceof Error && error.message === 'UNAUTHORIZED') return apiError('Не авторизован', 401);
