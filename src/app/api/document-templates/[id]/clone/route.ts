@@ -1,11 +1,10 @@
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/db';
-import { requireAuth } from '@/lib/auth';
+import { requireAuth, requireRole } from '@/lib/auth';
 import { apiOk, apiError } from '@/lib/api-response';
 
 export async function POST(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  try {
-    await requireAuth();
+  try {await requireRole(["admin","manager"]);
     const { id } = await params;
 
     const original = await prisma.documentTemplate.findUnique({

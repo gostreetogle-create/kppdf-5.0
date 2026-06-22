@@ -1,9 +1,10 @@
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/db';
-import { requireAuth } from '@/lib/auth';
+import { requireAuth, requireRole } from '@/lib/auth';
 import { apiOk, apiError, apiPaginated, parseSearchParams } from '@/lib/api-response';
 import { CreateDocTypeSchema } from '@/lib/validations/doc-type';
 import { validateBody } from '@/lib/validations';
+import { recordActivity } from '@/lib/activity-log'; // Cycle 47-extension Part 2 + Cycle 57
 import { getCached, invalidateByPrefix } from '@/lib/cache';
 
 const CACHE_PREFIX = 'doc-types';
@@ -42,7 +43,8 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    await requireAuth();
+    // Cycle 47-extension Part 2: dict entities — admin only.
+    await requireRole(['admin']);
     const body = await request.json();
     const validation = validateBody(body, CreateDocTypeSchema);
     if (!validation.success) return validation.error;

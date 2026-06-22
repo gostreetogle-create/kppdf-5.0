@@ -1,13 +1,12 @@
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/db';
-import { requireAuth } from '@/lib/auth';
+import { requireAuth, requireRole } from '@/lib/auth';
 import { apiOk, apiError, apiPaginated, parseSearchParams } from '@/lib/api-response';
 import { CreateDocumentTemplateSchema } from '@/lib/validations/document-template';
 import { validateBody } from '@/lib/validations';
 
 export async function GET(request: NextRequest) {
-  try {
-    await requireAuth();
+  try {await requireRole(["admin","manager"]);
     const { page, limit } = parseSearchParams(new URL(request.url).searchParams);
     const docTypeId = new URL(request.url).searchParams.get('docTypeId');
 
@@ -33,8 +32,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  try {
-    await requireAuth();
+  try {await requireRole(["admin","manager"]);
     const body = await request.json();
     const validation = validateBody(body, CreateDocumentTemplateSchema);
     if (!validation.success) return validation.error;

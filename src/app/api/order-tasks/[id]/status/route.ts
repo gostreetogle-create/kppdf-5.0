@@ -1,11 +1,10 @@
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/db';
-import { requireAuth } from '@/lib/auth';
+import { requireAuth, requireRole } from '@/lib/auth';
 import { apiOk, apiError } from '@/lib/api-response';
 
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  try {
-    await requireAuth();
+  try {await requireRole(["admin","manager","production"]);
     const { id } = await params;
     const { status } = await request.json();
 

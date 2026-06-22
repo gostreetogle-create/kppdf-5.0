@@ -1,9 +1,10 @@
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/db';
-import { requireAuth } from '@/lib/auth';
+import { requireAuth, requireRole } from '@/lib/auth';
 import { apiOk, apiError, apiPaginated, parseSearchParams } from '@/lib/api-response';
 import { CreateCertificateSchema } from '@/lib/validations/certificate';
 import { validateBody } from '@/lib/validations';
+import { recordActivity } from '@/lib/activity-log'; // Cycle 47-extension Part 2 + Cycle 57
 
 export async function GET(request: NextRequest) {
   try {
@@ -34,7 +35,9 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    await requireAuth();
+    // Cycle 47-extension Part 2: admin/manager создают certs (catalog/dict).
+    // Cycle 57: capture user for activity log.
+    const user = await requireRole(['admin', 'manager']);
     const body = await request.json();
     const validation = validateBody(body, CreateCertificateSchema);
     if (!validation.success) return validation.error;
@@ -43,9 +46,19 @@ export async function POST(request: NextRequest) {
       if (existing) return apiError(`Документ с номером ${validation.data.number} уже существует`, 400);
     }
     const item = await prisma.certificate.create({ data: validation.data });
+    // Cycle 57 (B.7): audit event for timeline.
+    await recordActivity({
+      userId: user.id,
+      userName: user.displayName || user.username || 'System',
+      action: 'create',
+      entity: 'certificate',
+      entityId: item.id,
+      details: { number: item.number, title: item.title },
+    });
     return apiOk(item);
   } catch (error) {
     if (error instanceof Error && error.message === 'UNAUTHORIZED') return apiError('Не авторизован', 401);
+    if (error instanceof Error && error.message === 'FORBIDDEN') return apiError('Доступ запрещён', 403);
     return apiError(String(error), 500);
   }
 }

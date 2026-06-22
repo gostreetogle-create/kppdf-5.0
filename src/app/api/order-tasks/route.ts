@@ -1,11 +1,10 @@
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/db';
-import { requireAuth } from '@/lib/auth';
+import { requireAuth, requireRole } from '@/lib/auth';
 import { apiOk, apiError, apiPaginated, parseSearchParams } from '@/lib/api-response';
 
 export async function GET(request: NextRequest) {
-  try {
-    await requireAuth();
+  try {await requireRole(["admin","manager","production"]);
     const { searchParams } = new URL(request.url);
     const { page, limit, search, sortField, sortOrder } = parseSearchParams(searchParams);
 
@@ -37,8 +36,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  try {
-    await requireAuth();
+  try {await requireRole(["admin","manager","production"]);
     const body = await request.json();
     const item = await prisma.orderTask.create({
       data: body,
