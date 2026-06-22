@@ -78,6 +78,15 @@ model Organization {
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
+  // Cycle 54 (B.2): discriminator for counterparty type.
+  // Влияет на правила валидации в src/lib/validations/organization.ts (Zod DU):
+  //   legal       — ООО/ОАО/ЗАО/ПАО: ИНН 10 цифр, КПП 9 цифр, ОГРН 13 цифр
+  //   entrepreneur — ИП:                 ИНН 12 цифр, ОГРН 15 цифр, без КПП
+  //   individual  — Физ.лицо:           ИНН 12 цифр optional, без КПП/ОГРН
+  // Default 'legal' для backward-compat: существующие записи получают 'legal'
+  // (все имеющие ИНН/КПП/ОГРН в БД). Миграция: ADD COLUMN ... DEFAULT 'legal'.
+  type             String   @default("legal") // legal | entrepreneur | individual
+
   roles            OrgRole[]
   proposals        Proposal[] @relation("ProposalOrg")
   contracts        Contract[] @relation("ContractOrg")
@@ -90,6 +99,7 @@ model Organization {
 
   @@index([name])
   @@index([inn])
+  @@index([type])  // fast filter by counterparty type
 }
 
 model OrgRole {
