@@ -44,13 +44,20 @@ export interface ButtonProps
 }
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, asChild = false, loading = false, disabled, children, ...props }, ref) => {
+  ({ className, variant, size, asChild = false, loading = false, disabled, children, type, ...props }, ref) => {
     const Comp = asChild ? Slot : 'button';
     const isDisabled = disabled || loading;
+    // По умолчанию ставим type="button" — иначе внутри <form> кнопка
+    // случайно submit-ит (HTML-spec: <button> без type = "submit").
+    // При asChild мы прокидываем type через ...props как раньше — Slot
+    // не имеет смысла без явного указания, и нельзя насильно ставить
+    // type="button" на дочернем <a>/<Link>.
+    const resolvedType = asChild ? type : (type ?? 'button');
 
     return (
       <Comp
         ref={ref as never}
+        type={resolvedType}
         disabled={isDisabled}
         className={cn(buttonVariants({ variant, size }), className)}
         {...props}

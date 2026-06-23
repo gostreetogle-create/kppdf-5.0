@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/providers";
+import { baseUrl } from "@/lib/env";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -14,17 +15,26 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  // metadataBase: обязателен для абсолютных URL OpenGraph/Twitter Card image и canonical.
+  // baseUrl из @/lib/env: production берёт NEXT_PUBLIC_BASE_URL, dev — localhost:3000.
+  metadataBase: new URL(baseUrl),
   title: {
     default: "KP CRM",
     template: "%s — KP CRM",
   },
   description: "Система управления коммерческими предложениями и производством",
+  // Canonical URL: убирает дублирование контента для SEO (когда один и тот же
+  // page доступен с трейлинг-слэшем, query-params и т.п.).
+  alternates: {
+    canonical: '/',
+  },
   openGraph: {
     title: 'KP CRM',
     description: 'Система управления коммерческими предложениями и производством',
     siteName: 'KP CRM',
     locale: 'ru_RU',
     type: 'website',
+    url: '/',
   },
   twitter: {
     card: 'summary_large_image',

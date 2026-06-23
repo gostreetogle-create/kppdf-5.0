@@ -18,6 +18,37 @@ const eslintConfig = defineConfig([
         varsIgnorePattern: "^_",
         caughtErrorsIgnorePattern: "^_",
       }],
+      // Modular Monolith (cycle 60 — docs/features/CONVENTIONS.md): запрет
+      // глубоких импортов между фичами. Контракт фичи = только то, что она
+      // явно реэкспортирует через index.ts (barrel export). Глубокие файлы
+      // — private; их нельзя дёргать из соседней фичи напрямую.
+      //
+      // Примеры разрешённых импортов между фичами:
+      //   import { ProposalEditor } from '@/features/proposals'         // ✓ public barrel
+      //   import { formatCurrency } from '@/shared'                    // ✓ from shared layer
+      //   import { cn } from '@/lib/utils'                              // ✓ from explicit lib
+      //
+      // Примеры запрещённых:
+      //   import { EditorHeader } from '@/features/proposals/editor-header' // ✗ deep
+      //   import { useDraft } from '@/features/templates/hooks/use-draft'    // ✗ deep
+      //
+      // Правило сейчас warn (не error) — старые импорты продолжают работать.
+      // Перевод в error после cycle-61, когда фичи будут формально расщеплены.
+      "no-restricted-imports": ["warn", {
+        patterns: [
+          // Modular Monolith: запрещаем ЛЮБОЕ sub-path под @/features/*, включая
+          // /index и /public. Использовать ТОЛЬКО bare @/features/<name> (barrel).
+          // Простая glob-семантика без extglob — ESLint no-restricted-imports не
+          // поддерживает !(...) negation в gitignore-patterns (только *, **, ?, []).
+          // С single pattern ниже: всё, что глубже одного сегмента (@/features/x/*),
+          // подсвечивается как warn — пользователь либо использует barrel, либо
+          // делает explicit allow через inline disable.
+          {
+            group: ["@/features/*/*"],
+            message: "Modular Monolith: import через '@/features/<name>' (barrel). Глубокие файлы — private API фичи.",
+          },
+        ],
+      }],
       "no-restricted-syntax": [
         "error",
         // Direct member access: process.env.NODE_ENV

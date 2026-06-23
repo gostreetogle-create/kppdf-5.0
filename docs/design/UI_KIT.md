@@ -771,7 +771,25 @@ const variants = cva('base', {
 
 ---
 
-## 6. История версий
+## 6. AI Skill Reference (v3.1)
+
+Дополнительные reference-документы для аудита и расширения дизайн-системы — взяты из подмножества `ui-ux-pro-max-skill-2.6.2/` (был полностью удалён, осталось **~124 КБ** в этой папке).
+
+| Файл | Назначение | Когда использовать |
+|------|------------|---------------------|
+| `docs/design/ai-skill-reference/ui-ux-pro-max-rules.md` | 161 industry-правил + 10 Quick-Reference категорий (Accessibility, Touch, Performance, Style, Layout, Typography, Animation, Forms, Navigation, Charts) | Любой UI/UX review, pre-delivery чек |
+| `docs/design/ai-skill-reference/shadcn-components.md` | Каталог shadcn-компонентов (Form, Navigation Menu, Command, Combobox, Data Table) | Перед написанием нового компонента — проверить, нет ли уже shadcn-варианта |
+| `docs/design/ai-skill-reference/shadcn-theming.md` | Theming + CSS variables + dark mode setup | При выборе нового паттерна темизации |
+| `docs/design/ai-skill-reference/shadcn-accessibility.md` | ARIA patterns, keyboard nav, screen reader | Решение спорных A11y вопросов |
+| `docs/design/ai-skill-reference/stacks/nextjs.csv` | Stack-guidelines для Next.js (RSC, bundle, suspense, cache) | При больших рефакторах на Server Components |
+| `docs/design/ai-skill-reference/stacks/react.csv` | React performance (rerender, memo, list) | При оптимизации render-blocking мест |
+| `docs/design/ai-skill-reference/design-tokens-starter.json` | Стартовый JSON для design-tokens Cmd (3-layer: primitive → semantic → component) | Если решите генерировать токены из конфига вместо CSS-vars |
+
+**Не используем** (явно вырезано): canvas-fonts (~20 МБ TTF), slides/ (Chart.js презентации), banner-design/, design/ (logo/icon генерация), cli/ (npm-пакет), .claude-plugin/ (marketplace).
+
+---
+
+## 7. История версий
 
 | Версия | Дата | Изменения |
 |--------|------|-----------|

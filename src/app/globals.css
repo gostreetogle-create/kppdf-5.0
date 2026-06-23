@@ -628,3 +628,27 @@ input, select, textarea {
   background-size: 200% 200%;
   animation: gradientShift 8s ease infinite;
 }
+
+/* === Reduced motion support — WCAG §7 / Apple Reduced Motion / MD === */
+/* При включённой настройке системы «уменьшить движение» (prefers-reduced-motion:
+   reduce) глушим ВСЕ анимации и transitions до ~0ms, чтобы пользователи
+   с вестибулярными нарушениями не страдали от motion-эффектов (slide-in,
+   fadeIn, scaleIn, spin, glass-blur repaint и т.д.). scroll-behavior → auto
+   сохраняет читаемость overscroll-эффектов на iOS. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  /* .animate-spin — единственное исключение: спиннер загрузки остаётся
+     видимым, иначе пользователь не получит feedback “что-то происходит”.
+     Переопределяем нашу 0.01ms-zero-duration обратно в linear 1s. */
+  .animate-spin {
+    animation-duration: 1s !important;
+    animation-iteration-count: infinite !important;
+  }
+}

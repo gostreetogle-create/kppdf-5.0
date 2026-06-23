@@ -1,4 +1,8 @@
-'use client';
+// Server Component — нет client-side hooks/state. SSR-рендер обеспечивает
+// корректный HTTP 404 status (Next.js ставит его автоматически только когда
+// not-found.tsx рендерится server-side, не гидратируется на клиенте).
+// Раньше был лишний 'use client' (Next.js Link работает в обоих режимах, но
+// client-рендер ломает HTTP-status code в некоторых edge-cases кеша).
 
 import Link from 'next/link';
 

@@ -42,13 +42,23 @@ function ToastContainer({ toasts, removeToast }: { toasts: Toast[]; removeToast:
   if (!mounted) return null;
 
   return (
-    <div className="fixed bottom-4 right-4 z-[--z-toast] flex flex-col gap-2 pointer-events-none">
+    // role="status" + aria-live="polite" — screen readers (NVDA / VoiceOver)
+    // announce new toasts without stealing focus (WCAG §8 toast-accessibility).
+    // role="status" preferred over role="alert" для success/info/warning, чтобы
+    // не прерывать текущую озвучку. Для error toasts — отдельный alert-channel.
+    <div
+      role="status"
+      aria-live="polite"
+      aria-atomic="false"
+      className="fixed bottom-4 right-4 z-[--z-toast] flex flex-col gap-2 pointer-events-none"
+    >
       {toasts.map((t) => {
         const config = variantConfig[t.variant];
         const Icon = config.icon;
         return (
           <div
             key={t.id}
+            role={t.variant === 'error' ? 'alert' : undefined}
             className={cn(
               'pointer-events-auto flex items-start gap-3 rounded-lg border glass-surface-soft px-4 py-3 shadow-lg animate-slide-in-right',
               config.styles,
@@ -60,6 +70,7 @@ function ToastContainer({ toasts, removeToast }: { toasts: Toast[]; removeToast:
               {t.description && <p className="text-sm opacity-80 mt-0.5">{t.description}</p>}
               {t.action && (
                 <button
+                  type="button"
                   onClick={t.action.onClick}
                   className="mt-1.5 text-xs font-medium underline underline-offset-2 hover:opacity-80"
                 >
@@ -68,7 +79,9 @@ function ToastContainer({ toasts, removeToast }: { toasts: Toast[]; removeToast:
               )}
             </div>
             <button
+              type="button"
               onClick={() => removeToast(t.id)}
+              aria-label="Закрыть уведомление"
               className="shrink-0 opacity-70 hover:opacity-100 transition-opacity"
             >
               <X className="h-4 w-4" />

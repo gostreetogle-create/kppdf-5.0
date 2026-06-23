@@ -18,6 +18,13 @@ export default defineConfig({
   },
   resolve: {
     alias: {
+      // Единственный нужный alias. `@/` matches любой путь в src/ через tsconfig
+      // paths, поэтому '@/features/warehouse' уже resolved в './src/features/warehouse'.
+      // ВАЖНО: vitest alias (vite resolve.alias) НЕ поддерживает wildcards, поэтому
+      // дополнительные '@/features' / '@/shared' НЕ добавляем — они бы только захватывали
+      // bare-импорт без суффикса. Полные пути покрывает '@'.
+      // Modular Monolith path aliases @/features/* и @/shared/* живут в tsconfig.json —
+      // TypeScript компиляция их резолвит, а vitest прозрачно следует за тем же паттерном.
       '@': path.resolve(__dirname, './src'),
     },
   },

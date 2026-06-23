@@ -35,8 +35,10 @@ export function EditorCart() {
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
                     <button
+                      type="button"
                       onClick={() => void actions.updateQuantity(item.id, item.quantity - 1)}
                       disabled={item.quantity <= 1}
+                      aria-label={`Уменьшить количество товара ${item.product.name}`}
                       className="h-5 w-5 rounded border border-[var(--border)] flex items-center justify-center hover:bg-[var(--muted)] disabled:opacity-30"
                     >
                       <Minus className="h-2.5 w-2.5" />
@@ -45,7 +47,9 @@ export function EditorCart() {
                       {item.quantity}
                     </span>
                     <button
+                      type="button"
                       onClick={() => void actions.updateQuantity(item.id, item.quantity + 1)}
+                      aria-label={`Увеличить количество товара ${item.product.name}`}
                       className="h-5 w-5 rounded border border-[var(--border)] flex items-center justify-center hover:bg-[var(--muted)]"
                     >
                       <Plus className="h-2.5 w-2.5" />
@@ -55,7 +59,9 @@ export function EditorCart() {
                     {formatCurrency(total)}
                   </span>
                   <button
+                    type="button"
                     onClick={() => void actions.removeItem(item.id)}
+                    aria-label={`Удалить товар ${item.product.name} из корзины`}
                     className="text-[var(--muted-foreground)] hover:text-[var(--destructive)] shrink-0"
                   >
                     <Trash2 className="h-3 w-3" />
