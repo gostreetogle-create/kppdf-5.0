@@ -82,7 +82,7 @@
 
 | ID | Задача | Тэги | Effort |
 |----|--------|------|--------|
-| **P2.1** | **Cycle 54 schema completion**: добавить `Client.type` discriminator в `prisma/schema.prisma` (B2B/B2C/физлицо). Миграция + Zod DU. | В2B, schema | 2-4h |
+| **P2.1** | ➜ **DONE (2026-06-22)**: **Cycle 54 schema completion** — `Client.type` discriminator в `prisma/schema.prisma` (legal/entrepreneur/individual). Миграция `20260622000000_add_organization_type_discriminator` + Zod DU в `src/lib/validations/organization.ts` + production-bug fix (POST инжектит `pickValidType` default `legal` для backward-compat UI не отправлял type) + wire-in `applyTypeAwareValidation` в PUT с DB-type-aware refinement + 27 unit tests (`validations-organization.test.ts`) | В2B, schema | ✅ |
 | **P2.2** | **Verify cycle 47**: проверить что ВСЕ 9 entity routes имеют role-guard в PATCH/PUT/DELETE (не только критические 5) | requireRole | 2h |
 | **P2.3** | **Verify cycle 47 fully**: 9 routes → `production-orders`, `supplier-orders`, `incoming-invoices`, `tenders`, `shipments`, `purchase-requests` и т.д. | guards | 4h |
 

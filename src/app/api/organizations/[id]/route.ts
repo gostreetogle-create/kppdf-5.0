@@ -3,8 +3,9 @@ import { prisma } from '@/lib/db';
 import { requireAuth, requireEditor } from '@/lib/auth';
 import { apiOk, apiError } from '@/lib/api-response';
 import { invalidateByPrefix } from '@/lib/cache';
-import { UpdateOrganizationSchema } from '@/lib/validations/organization';
+import { UpdateOrganizationSchema, applyTypeAwareValidation, OrganizationType } from '@/lib/validations/organization';
 import { validateBody } from '@/lib/validations';
+import { z } from 'zod';
 
 const CACHE_PREFIX = 'organizations';
 
@@ -30,8 +31,31 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     await requireEditor();
     const { id } = await params;
     const body = await request.json();
+    // Cycle 54 / P2.1 — load DB entity first to run type-aware refinement (ИНН/КПП
+    // зависят от типа контрагента: legal=10 цифр, entrepreneur/individual=12, КПП
+    // только у legal). Если не найден → 404.
+    const existing = await prisma.organization.findUnique({ where: { id }, select: { id: true, type: true } });
+    if (!existing) return apiError('Не найдено', 404);
+    // Defensive guard: CHECР constraint не включён в миграции (см. migration.sql),
+    // поэтому теоретически в БД может оказаться неизвестный type. Проверяем явно.
+    const VALID_TYPES: OrganizationType[] = ['legal', 'entrepreneur', 'individual'];
+    if (!VALID_TYPES.includes(existing.type as OrganizationType)) {
+      return apiError('Некорректный тип контрагента в БД', 500);
+    }
     const validation = validateBody(body, UpdateOrganizationSchema);
     if (!validation.success) return validation.error;
+    // Сбор errors от applyTypeAwareValidation в mock-контекст (наша helper
+    // принимает z.RefinementCtx — нам нужен только addIssue + params).
+    const typeErrors: string[] = [];
+    const mockCtx = {
+      addIssue: (issue: { message?: string; path?: (string | number)[] }) => {
+        typeErrors.push(`${issue.path?.join('.') ?? '?'}: ${issue.message ?? ''}`);
+      },
+    } as unknown as z.RefinementCtx;
+    applyTypeAwareValidation(validation.data, existing.type as OrganizationType, mockCtx);
+    if (typeErrors.length > 0) {
+      return apiError(`Ошибка валидации: ${typeErrors.join('; ')}`, 400);
+    }
     const { roleIds, contactPersonIds, ...orgData } = validation.data;
     const item = await prisma.organization.update({
       where: { id },

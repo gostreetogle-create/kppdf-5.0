@@ -2,13 +2,23 @@ import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requireAuth, requireRole } from '@/lib/auth';
 import { apiOk, apiError, apiPaginated, parseSearchParams } from '@/lib/api-response';
-import { CreateOrganizationSchema } from '@/lib/validations/organization';
+import { CreateOrganizationSchema, OrganizationType } from '@/lib/validations/organization';
 import { validateBody } from '@/lib/validations';
 import { getCached, invalidateByPrefix } from '@/lib/cache';
 import { recordActivity } from '@/lib/activity-log'; // Cycle 57
 
 const CACHE_PREFIX = 'organizations';
 const LIST_TTL = 30 * 1000;
+
+// Cycle 54 / P2.1 — нормализация дискриминатора для backward-compat.
+// Принимает rawBody.type (string | undefined) или любую form-coerced вариацию,
+// возвращает валидный OrganizationType literal. Невалидные значения → 'legal'
+// fallback. Используется в POST перед Zod DU parse.
+const VALID_ORG_TYPES: OrganizationType[] = ['legal', 'entrepreneur', 'individual'];
+export function pickValidType(raw: unknown): OrganizationType {
+  if (typeof raw !== 'string') return 'legal';
+  return (VALID_ORG_TYPES as string[]).includes(raw) ? (raw as OrganizationType) : 'legal';
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -58,7 +68,14 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const user = await requireRole(['manager']); // Cycle 57: capture user for activity log
-    const body = await request.json();
+    const rawBody = await request.json();
+    // Cycle 54 / P2.1 — backward-compat: UI OrganizationForm не отправляет `type`.
+    // Сервер инжектит дефолт 'legal' (юр.лицо) если поле отсутствует/пустое/нестрока,
+    // чтобы Zod discriminatedUnion не падал на старых payload'ах.
+    // Когда UI получит dropdown выбора типа контрагента — fallback можно убрать,
+    // но нормализация пустой строки остаётся (защита от rawBody.type === '').
+    const candidateType = pickValidType(rawBody?.type);
+    const body = { ...(rawBody && typeof rawBody === 'object' ? rawBody : {}), type: candidateType };
     const validation = validateBody(body, CreateOrganizationSchema);
     if (!validation.success) return validation.error;
     const { roleIds, contactPersonIds, ...orgData } = validation.data;

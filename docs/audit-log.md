@@ -3279,3 +3279,55 @@ Matrix tests обнаружили что 3 routes имели sin в catch handle
 - Expand matrix на оставшиеся 23 write-handlers (storage-items, suppliers, products, materials, users, status-workflows)
 - Body validation order cycle: assert что RBAC runs BEFORE zod (доказывает 400 vs 403 priority — defense in depth)
 - Cycle 47-extension Phase 2: applied date-lock на prodOrder (plannedStart/End immutable когда status=completed)
+
+<a id="cycle-p2-1-cycle-54-discriminator"></a>
+## Cycle P2.1 (Cycle 54 \u2014 Organization.type discriminator) \u2014 2026-06-22 \u2014 Wire-in + production-bug fix
+
+### \u041a\u043e\u043d\u0442\u0435\u043a\u0441\u0442
+
+User-scoped \u0446\u0438\u043a\u043b: \"\u0421\u0442\u0430\u0440\u0442\u0443\u0439 \u043d\u043e\u0432\u0443\u044e \u0441\u0435\u0441\u0441\u0438\u044e \u0441 P2.1 \u2014 Cycle 54 Organization.type discriminator (schema migration + Zod DU, 2-4h)\".
+
+Schema + Zod DU + migration \u0443\u0436\u0435 \u0431\u044b\u043b\u0438 \u043d\u0430\u043f\u0438\u0441\u0430\u043d\u044b \u0432 prior commit (`2e638fb` v3.8 + `20260622000000_add_organization_type_discriminator/migration.sql`). MASTER-CHECKLIST \u00a72 \u043f\u043e\u043c\u0435\u0442\u0438\u043b Cycle 54 \u043a\u0430\u043a \"\u26a0\ufe0f \u0422\u0440\u0435\u0431\u0443\u0435\u0442 \u0434\u043e\u0440\u0430\u0431\u043e\u0442\u043a\u0438\", \u043f\u043e\u0442\u043e\u043c\u0443 \u0447\u0442\u043e \u0434\u0438\u0441\u043a\u0440\u0438\u043c\u0438\u043d\u0430\u0442\u043e\u0440 \u0431\u044b\u043b \u0432 schema, \u043d\u043e **wire-in \u0431\u044b\u043b incomplete**.
+
+### \u0427\u0442\u043e \u0440\u0435\u0430\u043b\u044c\u043d\u043e \u0431\u044b\u043b\u043e \u0432 \u043a\u043e\u0434\u0435 \u0434\u043e \u0446\u0438\u043a\u043b\u0430
+
+- `prisma/schema.prisma` \u2014 Organization \u0438\u043c\u0435\u0435\u0442 `type String @default(\"legal\")` + \u0438\u043d\u0434\u0435\u043a\u0441 (\u2705 \u0443\u0436\u0435)
+- `prisma/migrations/20260622000000_add_organization_type_discriminator/migration.sql` \u2014 `ALTER TABLE \u2026 ADD COLUMN \"type\" TEXT NOT NULL DEFAULT 'legal'` + `CREATE INDEX Organization_type_idx` (CHECK constraint \u0437\u0430\u043a\u043e\u043c\u043c\u0435\u043d\u0442\u0438\u0440\u043e\u0432\u0430\u043d \u2014 soft enforcement) (\u2705 \u0443\u0436\u0435)
+- `src/lib/validations/organization.ts` \u2014 `CreateOrganizationSchema = z.discriminatedUnion('type', [LegalEntity, Entrepreneur, Individual])` + flat `UpdateOrganizationSchema` \u0441 `superRefine` + `applyTypeAwareValidation(...)` exported helper (\u2705 \u0443\u0436\u0435, \u043d\u043e \u041d\u0415 \u0438\u0441\u043f\u043e\u043b\u044c\u0437\u0443\u0435\u0442\u0441\u044f)
+- `src/app/api/organizations/route.ts` POST \u2014 `validateBody(body, CreateOrganizationSchema)` (\u2705 wired)
+- `src/app/api/organizations/[id]/route.ts` PUT \u2014 `validateBody(body, UpdateOrganizationSchema)` (basic superRefine OK, \u043d\u043e DB-type-aware refinement \u041d\u0415 wired)
+
+### \u0422\u0440\u0438 \u043a\u0440\u0438\u0442\u0438\u0447\u0435\u0441\u043a\u0438\u0445 GAP'\u0430 \u043a\u043e\u0442\u043e\u0440\u044b\u0435 \u043c\u044b \u0432\u044b\u044f\u0432\u0438\u043b\u0438 \u043f\u0440\u0438 recon
+
+#### GAP #1 \u2014 Prod bug: UI \u043d\u0435 \u043e\u0442\u043f\u0440\u0430\u0432\u043b\u044f\u043b `type`
+
+`src/app/(dashboard)/organizations/client.tsx` \u2014 `OrganizationForm` `useState` initializer \u041d\u0415 \u0432\u043a\u043b\u044e\u0447\u0430\u043b `type`, `handleSubmit` \u0441\u0442\u0440\u043e\u0438\u043b payload \u0431\u0435\u0437 type. POST \u0447\u0435\u0440\u0435\u0437 DU \u043f\u043e\u043b\u0443\u0447\u0430\u043b payload \u0431\u0435\u0437 discriminator \u2192 `z.discriminatedUnion('type', ...)` parsing fail \u2192 400 \u00abInvalid discriminator value\u00bb. **\u0424\u043e\u0440\u043c\u0430 \u043d\u0435 \u0440\u0430\u0431\u043e\u0442\u0430\u043b\u0430 \u0432 \u043f\u0440\u043e\u0434\u0435 \u0441 \u043c\u043e\u043c\u0435\u043d\u0442\u0430, \u043a\u0430\u043a DU \u0431\u044b\u043b \u0432\u043d\u0435\u0434\u0440\u0451\u043d \u0432 commit `2e638fb`.**
+
+**Fix (cycle P2.1)**: server-side normalization helper `pickValidType(raw: unknown): OrganizationType` \u0432 route.ts + spot before `validateBody`:
+```typescript
+const candidateType = pickValidType(rawBody?.type);
+const body = { ...(rawBody && typeof rawBody === 'object' ? rawBody : {}), type: candidateType };
+```
+- \u0415\u0441\u043b\u0438 rawBody.type \u2014 \u0441\u0442\u0440\u043e\u043a\u0430 \u0432 VALID_ORG_TYPES (legal/entrepreneur/individual) \u2014 passes as-is.
+- \u0418\u043d\u0430\u0447\u0435 (undefined / \u043f\u0443\u0441\u0442\u0430\u044f \u0441\u0442\u0440\u043e\u043a\u0430 / \u043d\u0435\u0438\u0437\u0432\u0435\u0441\u0442\u043d\u0430\u044f \u0441\u0442\u0440\u043e\u043a\u0430 / \u043d\u0435\u0441\u0442\u0440\u043e\u043a\u0430 / \u043e\u0431\u044a\u0435\u043a\u0442) \u2014 fallback `'legal'`.
+
+#### GAP #2 \u2014 Dead code: `applyTypeAwareValidation` exported, \u043d\u043e \u043d\u0438\u043a\u0435\u043c \u043d\u0435 \u0432\u044b\u0437\u044b\u0432\u0430\u043b\u0441\u044f
+
+3 matches \u0432 code-search \u0447\u0435\u0440\u0435\u0437 ripgrep \u2014 \u0432\u0441\u0435 \u0432\u043d\u0443\u0442\u0440\u0438 `validations/organization.ts` (1 comment + 1 docstring + 1 export). 0 reference \u0438\u0437 route handlers. PUT \u0431\u0435\u0437 \u044d\u0442\u043e\u0433\u043e \u043d\u0435 \u0434\u0435\u043b\u0430\u043b type-aware \u0418\u041d\u041d length check (legal \u043e\u0436\u0438\u0434\u0430\u0435\u0442 10 \u0446\u0438\u0444\u0440, entrepreneur/individual \u043e\u0436\u0438\u0434\u0430\u0435\u0442 12).
+
+**Fix (cycle P2.1)**: wire-in \u0432 PUT route:
+- \u041f\u0435\u0440\u0435\u0434 validateBody: `findUnique({ where: { id }, select: { id: true, type: true } })` \u0434\u043b\u044f \u0437\u0430\u0433\u0440\u0443\u0437\u043a\u0438 DB type. 404 \u0435\u0441\u043b\u0438 \u043d\u0435 \u043d\u0430\u0439\u0434\u0435\u043d.
+- VALID_TYPES guard: `if (!['legal','entrepreneur','individual'].includes(existing.type)) return apiError('\u041d\u0435\u043a\u043e\u0440\u0440\u0435\u043a\u0442\u043d\u044b\u0439 \u0442\u0438\u043f \u043a\u043e\u043d\u0442\u0440\u0430\u0433\u0435\u043d\u0442\u0430 \u0432 \u0411\u0414', 500)` \u2014 \u0437\u0430\u0449\u0438\u0442\u0430 \u043e\u0442 \u0442\u0435\u043e\u0440\u0435\u0442\u0438\u0447\u0435\u0441\u043a\u0438\u0445 \u043d\u0435\u0438\u0437\u0432\u0435\u0441\u0442\u043d\u044b\u0445 \u0437\u043d\u0430\u0447\u0435\u043d\u0438\u0439 (CHECK constraint \u043d\u0435 enforced \u0432 \u0411\u0414).
+- \u041f\u043e\u0441\u043b\u0435 validateBody parse OK \u2014 run `applyTypeAwareValidation(validation.data, existing.type as OrganizationType, mockCtx)` \u0433\u0434\u0435 mockCtx \u044d\u0442\u043e `as unknown as z.RefinementCtx` \u0441 `addIssue(:issue)` \u043a\u043e\u0442\u043e\u0440\u044b\u0439 \u043f\u0443\u0448\u0438\u0442 errors \u0432 string array.
+- \u0415\u0441\u043b\u0438 errors > 0 \u2192 return 400 \u0441 concat \u0441\u043e\u043e\u0431\u0449\u0435\u043d\u0438\u0435\u043c.
+
+\u0414\u0430, \u0434\u043e\u043f\u043e\u043b\u043d\u0438\u0442\u0435\u043b\u044c\u043d\u044b\u0439 `findUnique` \u2014 1 \u043b\u0438\u0448\u043d\u0438\u0439 \u0437\u0430\u043f\u0440\u043e\u0441 \u043f\u0435\u0440\u0435\u0434 update. Cost ~5-10ms (PK lookup). Acceptable tradeoff \u0434\u043b\u044f correctness.
+
+#### GAP #3 \u2014 Missing tests
+
+`src/lib/__tests__/validations-reference.test.ts` covers Certificate / RppEntry / Worker / WorkType / WorkCenter / StorageItem \u2014 **Organization \u043f\u043e\u043b\u043d\u043e\u0441\u0442\u044c\u044e \u043e\u0442\u0441\u0443\u0442\u0441\u0442\u0432\u043e\u0432\u0430\u043b**. Coverage gap \u0434\u043b\u044f discriminator'\u0430 \u0431\u044b\u043b \u0431\u044b \u043d\u0435\u0432\u0438\u0434\u0438\u043c.
+
+**Fix (cycle P2.1)**: NEW `src/lib/__tests__/validations-organization.test.ts` \u2014 **27 vitest tests** \u0432 4 describe blocks:
+1. **CreateOrganizationSchema DU happy paths** (3 tests): legal + entrepreneur + individual valid payload \u2192 success.
+2. **CreateOrganizationSchema DU rejection** (4 tests): unknown type reject, legal \u0418\u041d\u041d=12 fail, entrepreneur \u0418\u041d\u041d=10 fail, \u041a\u041f\u041f strip \u0434\u043b\u044f entrepreneur (\u0418\u0433\u043d\u043e\u0440\u0438\u0440\u0443\u0435\u0442\u0441\u044f \u043f\u043e\u0442\u043e\u043c\u0443 \u0447\u0442\u043e \u043d\u0435\u0442 \u0432 DU branch).
+3. **UpdateOrganizationSchema** (6 tests): empty partial ok, \u0418\u041d\u041d=11 fail, \u0418\u041d\u041d \u0441 \u043d\u0435\u0446\u0438\u0444\u0440\u0430\u0
