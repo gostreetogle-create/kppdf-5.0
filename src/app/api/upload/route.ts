@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireEditor } from '@/lib/auth';
+import { requireRole } from '@/lib/auth';
 import { apiError } from '@/lib/api-response';
 import { writeFile, mkdir } from 'fs/promises';
 import path from 'path';
@@ -10,7 +10,7 @@ const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 
 export async function POST(request: NextRequest) {
   try {
-    await requireEditor();
+    await requireRole(['admin', 'manager']); // P2.3: upload — controlled; production/storekeeper/accountant не должны загружать файлы напрямую (через свои компоненты они могут использовать upload, но explicit prevent здесь просто консолидирует security model)
 
     const formData = await request.formData();
     const file = formData.get('file') as File | null;
@@ -44,6 +44,9 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Upload error:', error);
     if (error instanceof Error && error.message === 'UNAUTHORIZED') return apiError('Не авторизован', 401);
+    // P2.3 fix: requireRole(['admin','manager']) может throw FORBIDDEN (production/storekeeper/accountant/viewer → 403).
+    // Без этой строки ошибка упала бы в 500 «Внутренняя ошибка сервера» — плохой UX.
+    if (error instanceof Error && error.message === 'FORBIDDEN') return apiError('Доступ запрещён', 403);
     return apiError('Внутренняя ошибка сервера', 500);
   }
 }

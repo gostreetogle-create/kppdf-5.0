@@ -23,8 +23,10 @@ export async function GET(request: NextRequest) {
       const lastName = parts[1]?.trim() || undefined;
       const workers = await prisma.worker.findMany({
         where: {
-          firstName: { contains: firstName },
-          ...(lastName ? { lastName: { contains: lastName } } : {}),
+          // P2.3: tighten `contains` → `equals` чтобы избежать privacy leak при похожих displayName
+          // (бывший `contains` мог случайно матчить worker "Иван Петрович" по одному displayName="Иван")
+          firstName: { equals: firstName },
+          ...(lastName ? { lastName: { equals: lastName } } : {}),
         },
         select: { id: true },
         orderBy: { id: 'asc' },

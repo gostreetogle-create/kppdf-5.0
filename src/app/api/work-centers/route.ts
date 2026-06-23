@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/db';
-import { requireAuth } from '@/lib/auth';
+import { requireAuth, requireRole } from '@/lib/auth';
 import { apiOk, apiError, apiPaginated, parseSearchParams } from '@/lib/api-response';
 import { CreateWorkCenterSchema } from '@/lib/validations/work-center';
 import { validateBody } from '@/lib/validations';
@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    await requireAuth();
+    await requireRole(['admin', 'manager', 'production']); // P2.2: work-center — производственный справочник; production должен иметь доступ к own справочникам
     const body = await request.json();
     const validation = validateBody(body, CreateWorkCenterSchema);
     if (!validation.success) return validation.error;

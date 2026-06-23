@@ -1,15 +1,15 @@
 import { NextRequest } from 'next/server';
-import { requireEditor } from '@/lib/auth';
+import { requireRole } from '@/lib/auth';
 import { apiOk, apiError } from '@/lib/api-response';
 
 const DADATA_API_KEY = process.env.DADATA_API_KEY;
 const DADATA_URL = 'https://suggestions.dadata.ru/suggestions/api/4_1/rs/findById/party';
 
 // POST /api/dadata/find-by-inn — поиск организации по ИНН через DaData.
-// D-A1 (cycle 47-extension): платный API proxy → requireEditor (block viewer).
+// P2.3: платный API proxy → requireRole(['admin', 'manager']) (CRM-операция DaData lookup для заполнения карточки контрагента; viewer/production/storekeeper/accountant не должны иметь прямой доступ к API key).
 export async function POST(request: NextRequest) {
   try {
-    await requireEditor();
+    await requireRole(['admin', 'manager']);
 
     if (!DADATA_API_KEY) {
       return apiError('DaData API key not configured (DADATA_API_KEY)', 500);

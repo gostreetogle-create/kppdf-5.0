@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/db';
-import { requireAuth } from '@/lib/auth';
+import { requireAuth, requireRole } from '@/lib/auth';
 import { apiOk, apiError, apiPaginated, parseSearchParams } from '@/lib/api-response';
 import { getCached, invalidateByPrefix } from '@/lib/cache';
 import { recordActivity } from '@/lib/activity-log'; // Cycle 57
@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const user = await requireAuth(); // Cycle 57: capture user for activity log
+    const user = await requireRole(['admin', 'manager']); // P2.2: create category — reference data setup, не для viewer/production/storekeeper/accountant
     const body = await request.json();
     const item = await prisma.productCategory.create({ data: body });
     invalidateByPrefix(CACHE_PREFIX);

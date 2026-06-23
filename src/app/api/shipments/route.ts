@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/db';
-import { requireAuth, requireEditor } from '@/lib/auth';
+import { requireAuth, requireRole } from '@/lib/auth';
 import { apiOk, apiError, apiPaginated, parseSearchParams } from '@/lib/api-response';
 import { nextCounter, formatDocNumber } from '@/lib/counter';
 
@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    await requireEditor();
+    await requireRole(['admin', 'manager', 'storekeeper']); // P2.3: отгрузка — storekeeper ответственный за shipping, manager/admin для администрирования
     const body = await request.json();
 
     // Авто-генерация номера (атомарно)
